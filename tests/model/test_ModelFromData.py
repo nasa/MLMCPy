@@ -20,17 +20,16 @@ def output_data_file():
     return output_data_file
 
 
-@pytest.mark.parametrize("index", [(6), (368), (599), (612), (987)])
-
+@pytest.mark.parametrize("index", [6, 368, 599, 612, 987])
 def test_model_from_data_evaluate(input_data_file, output_data_file, index):
 
-    #Initialize model from spring-mass example data files:
-    data_model = ModelFromData(input_data_file, output_data_file)
+    # Initialize model from spring-mass example data files:
+    data_model = ModelFromData(input_data_file, output_data_file, 1.)
 
     input_data = np.genfromtxt(input_data_file)
     output_data = np.genfromtxt(output_data_file)
 
-    #Model expects arrays as inputs/outputs
+    # Model expects arrays as inputs/outputs
     model_output = data_model.evaluate([input_data[index]])
 
     true_output = output_data[index]
@@ -39,11 +38,11 @@ def test_model_from_data_evaluate(input_data_file, output_data_file, index):
 
 def test_model_from_data_invalid_input(input_data_file, output_data_file):
 
-    data_model = ModelFromData(input_data_file, output_data_file)
+    data_model = ModelFromData(input_data_file, output_data_file, 1.)
 
     bogus_input = -999.0
 
     with pytest.raises(ValueError):
         output = data_model.evaluate([bogus_input])
-
+        pass
 
