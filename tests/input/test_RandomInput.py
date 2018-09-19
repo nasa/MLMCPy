@@ -53,4 +53,6 @@ def test_draw_samples_invalid_arguments(uniform_distribution_input):
     with pytest.raises(TypeError):
         uniform_distribution_input.draw_samples(1.)
 
+    with pytest.raises(ValueError):
+        uniform_distribution_input.draw_samples(0)
 

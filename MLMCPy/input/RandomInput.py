@@ -7,7 +7,7 @@ class RandomInput:
     distribution as the default. Any distribution function provided
     must accept a "size" parameter that determines the sample size.
 
-    :param distribution_function function that returns a sample of a distribution
+    :param distribution_function returns a sample of a distribution
         with the sample sized determined by a "size" parameter.
     :type function
     :param distribution_function_args any arguments required by the distribution
@@ -34,6 +34,9 @@ class RandomInput:
 
         if not isinstance(num_samples, int):
             raise TypeError("num_samples must be an integer.")
+
+        if num_samples <= 0:
+            raise ValueError("num_samples must be a positive integer.")
 
         # Pass in num_samples as size argument to distribution function.
         self.args['size'] = num_samples
