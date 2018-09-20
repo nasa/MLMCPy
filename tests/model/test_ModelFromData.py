@@ -6,7 +6,7 @@ from MLMCPy.model import ModelFromData
 
 #Access spring mass data:
 my_path = os.path.dirname(os.path.abspath(__file__))
-data_path = my_path + "/../../examples/spring_mass/from_data/data"
+data_path = my_path + "/../testing_data"
 
 
 @pytest.fixture
