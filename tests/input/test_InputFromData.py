@@ -4,35 +4,41 @@ import numpy as np
 
 from MLMCPy.input import InputFromData
 
-# Access spring mass data:
+# Create list of paths for each data file.
+# Used to parametrize tests.
 my_path = os.path.dirname(os.path.abspath(__file__))
-data_path = my_path + "/../../examples/spring_mass/from_data/data"
+data_path = my_path + "/../testing_data"
+
+data_file_names = ["spring_mass_1D_inputs.txt", "2D_test_data.csv"]
+
+data_file_paths = []
+for data_file in data_file_names:
+    data_file_paths.append(os.path.join(data_path, data_file))
 
 
-@pytest.fixture
-def spring_data_filename():
-    input_data_file = os.path.join(data_path, "spring_mass_1D_inputs.txt")
-    return input_data_file
+# Pull all scrambled sample data from a file as one ndarray.
+def get_full_data_set(filename):
 
+    data_sampler = InputFromData(filename)
 
-@pytest.fixture
-def spring_data_sampler(spring_data_filename):
-    return InputFromData(spring_data_filename)
+    full_data_set = data_sampler.draw_samples(500)
+    sampler_sample = data_sampler.draw_samples(500)
 
+    # Number of dimensions will determine whether we should use hstack
+    # or vstack to build the data set.
+    is_one_dimensional_data = len(full_data_set.shape) == 1
 
-@pytest.fixture
-def all_sampled_data(spring_data_sampler):
-
-    all_sampler_samples = spring_data_sampler.draw_samples(5)
-    sampler_sample = spring_data_sampler.draw_samples(5)
-
-    # stack all samples into one ndarray.
+    # stack all samples into one ndarray (full_sample).
     while sampler_sample is not None:
 
-        all_sampler_samples = np.hstack((all_sampler_samples, sampler_sample))
-        sampler_sample = spring_data_sampler.draw_samples(5)
+        if is_one_dimensional_data:
+            full_data_set = np.hstack((full_data_set, sampler_sample))
+        else:
+            full_data_set = np.vstack((full_data_set, sampler_sample))
 
-    return all_sampler_samples
+        sampler_sample = data_sampler.draw_samples(500)
+
+    return full_data_set
 
 
 def test_init_fails_on_invalid_input_file():
@@ -41,39 +47,63 @@ def test_init_fails_on_invalid_input_file():
         InputFromData("not_a_real_file.txt")
 
 
-def test_init_does_not_fail_on_valid_file(spring_data_filename):
+@pytest.mark.parametrize("data_filename", data_file_paths, ids=data_file_names)
+def test_init_does_not_fail_on_valid_input_file(data_filename):
 
-    InputFromData(spring_data_filename)
+    InputFromData(data_filename)
 
 
-def test_draw_samples_returns_expected_output(spring_data_sampler):
+@pytest.mark.parametrize("delimiter, filename",
+                         [(",", "2D_test_data_comma_delimited.csv"),
+                          (";", "2D_test_data_semicolon_delimited.csv"),
+                          (1, "2D_test_data_length_delimited.csv")],
+                         ids=["comma", "semicolon", "length"])
+def test_can_load_alternatively_delimited_files(delimiter, filename):
 
-    sample = spring_data_sampler.draw_samples(5)
+    file_path = os.path.join(data_path, filename)
+    sampler = InputFromData(file_path, delimiter=delimiter)
+    sample = sampler.draw_samples(5)
+
+    assert int(np.sum(sample)) == 125
+
+
+@pytest.mark.parametrize("data_filename", data_file_paths, ids=data_file_names)
+def test_draw_samples_returns_expected_output(data_filename):
+
+    data_sampler = InputFromData(data_filename)
+    sample = data_sampler.draw_samples(5)
 
     assert isinstance(sample, np.ndarray)
     assert sample.shape[0] == 5
 
 
-def test_draw_samples_pulls_all_input_data(all_sampled_data,
-                                           spring_data_filename):
+@pytest.mark.parametrize("data_filename", data_file_paths, ids=data_file_names)
+def test_draw_samples_pulls_all_input_data(data_filename):
 
-    spring_data = np.genfromtxt(spring_data_filename)
+    all_sampled_data = get_full_data_set(data_filename)
 
-    assert all_sampled_data.shape == spring_data.shape
+    file_data = np.genfromtxt(data_filename)
 
-
-def test_sample_data_is_scrambled(all_sampled_data, spring_data_filename):
-
-    spring_data = np.genfromtxt(spring_data_filename)
-
-    assert not np.array_equal(all_sampled_data, spring_data)
-    assert np.isclose(np.sum(all_sampled_data), np.sum(spring_data))
+    assert all_sampled_data.shape == file_data.shape
 
 
-def test_draw_samples_invalid_parameters_fails(spring_data_sampler):
+@pytest.mark.parametrize("data_filename", data_file_paths, ids=data_file_names)
+def test_sample_data_is_scrambled(data_filename):
+
+    all_sampled_data = get_full_data_set(data_filename)
+    file_data = np.genfromtxt(data_filename)
+
+    assert not np.array_equal(all_sampled_data, file_data)
+    assert np.isclose(np.sum(all_sampled_data), np.sum(file_data))
+
+
+@pytest.mark.parametrize("data_filename", data_file_paths, ids=data_file_names)
+def test_draw_samples_invalid_parameters_fails(data_filename):
+
+    data_sampler = InputFromData(data_filename)
 
     with pytest.raises(TypeError):
-        spring_data_sampler.draw_samples("five")
+        data_sampler.draw_samples("five")
 
     with pytest.raises(ValueError):
-        spring_data_sampler.draw_samples(0)
+        data_sampler.draw_samples(0)

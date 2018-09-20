@@ -4,7 +4,7 @@ import os
 
 class InputFromData:
 
-    def __init__(self, input_filename):
+    def __init__(self, input_filename, delimiter=" "):
         """
         Used to draw random samples from a data file.
 
@@ -14,8 +14,8 @@ class InputFromData:
         if not os.path.isfile(input_filename):
             raise IOError("input_filename must refer to a file.")
 
-        self.data = np.genfromtxt(input_filename)
-        np.random.shuffle(self.data )
+        self.data = np.genfromtxt(input_filename, delimiter=delimiter)
+        np.random.shuffle(self.data)
         self.index = 0
 
     def draw_samples(self, num_samples):
