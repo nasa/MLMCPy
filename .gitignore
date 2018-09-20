@@ -1,0 +1,6 @@
+*.pyc
+MLMCPy/*.pyc
+MLMCPy/input/*.pyc
+MLMCPy/model/*.pyc
+MLMCPy/mlmc/*.pyc
+
