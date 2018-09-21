@@ -41,4 +41,3 @@ class InputFromData:
         self.index += num_samples
 
         return sample
-
