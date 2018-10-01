@@ -36,7 +36,7 @@ class ModelFromData(Model):
         """
         # Get matching members or rows, depending on dimensionality.
         if len(self.inputs.shape) == 1:
-            matches = self.inputs == input_data
+            matches = np.in1d(self.inputs, input_data)
         else:
             matches = np.all(self.inputs == input_data, axis=1)
 
@@ -47,6 +47,14 @@ class ModelFromData(Model):
             raise ValueError("Input data not found in model.")
 
         return np.squeeze(output_data)
+
+    def get_input_shape(self):
+
+        return self.inputs.shape
+
+    def get_output_shape(self):
+
+        return self.outputs.shape
 
     def __check_parameters(self, output_filename, input_filename):
 

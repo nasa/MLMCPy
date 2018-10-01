@@ -2,6 +2,7 @@ import numpy as np
 
 from spring_mass import SpringMassModel
 from MLMCPy.input import RandomInput
+from MLMCPy.mlmc import MLMCSimulator
 
 '''
 This script demonstrates MLMCPy for simulating a spring-mass system with a 
@@ -31,4 +32,4 @@ models = [model_level1, model_level2, model_level3]
 
 #Step 3 - initialize MLMC & predict max displacement to specified error 
 mlmc_simulator = MLMCSimulator(stiffness_distribution, models)
-[max_disp, num_evals, final_error] = mlmc_simulator.simulate(error_tol=1e-3)
+[max_disp, num_evals, final_error] = mlmc_simulator.simulate(epsilon=1e-3)

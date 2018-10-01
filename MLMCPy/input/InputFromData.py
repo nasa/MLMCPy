@@ -1,8 +1,10 @@
 import numpy as np
 import os
 
+from Input import Input
 
-class InputFromData:
+
+class InputFromData(Input):
 
     def __init__(self, input_filename, delimiter=" "):
         """
@@ -41,3 +43,10 @@ class InputFromData:
         self.index += num_samples
 
         return sample
+
+    def reset_sampling(self):
+        """
+        Used to shuffle and restart sampling from beginning of data set.
+        """
+        np.random.shuffle(self.data)
+        self.index = 0

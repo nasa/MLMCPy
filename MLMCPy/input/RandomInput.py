@@ -1,7 +1,9 @@
 import numpy as np
 
+from Input import Input
 
-class RandomInput:
+
+class RandomInput(Input):
     """
     Used to draw samples from a specified distribution, with a uniform
     distribution as the default. Any distribution function provided
@@ -41,3 +43,6 @@ class RandomInput:
         # Pass in num_samples as size argument to distribution function.
         self.args['size'] = num_samples
         return self.distribution(**self.args)
+
+    def reset_sampling(self):
+        pass
