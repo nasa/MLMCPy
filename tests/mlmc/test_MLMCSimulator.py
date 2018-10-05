@@ -30,6 +30,7 @@ def data_input():
 @pytest.fixture
 def beta_distribution_input():
 
+    np.random.seed(1)
     def beta_distribution(shift, scale, alpha, beta, size):
         return shift + scale * np.random.beta(alpha, beta, size)
 
@@ -107,4 +108,21 @@ def test_simulate_expected_outputs(data_input, models_from_data):
     assert isinstance(result, float)
     assert isinstance(sample_counts, np.ndarray)
     assert isinstance(error, float)
+
+
+
+def test_calculate_initial_variances(beta_distribution_input, spring_models):
+
+    sim = MLMCSimulator(models=spring_models, data=beta_distribution_input)
+
+    initial_sample_size = 100
+
+    [costs, variances] = sim._compute_costs_and_variances(initial_sample_size,
+                                                          costs)
+
+    true_variances = np.array([8.245224951411819, 
+                               0.0857219498864355,
+                               7.916295509470576e-06])
+
+    assert np.isclose(true_variances, variances)
 
