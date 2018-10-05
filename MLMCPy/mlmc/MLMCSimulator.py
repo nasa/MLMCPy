@@ -33,7 +33,7 @@ class MLMCSimulator:
         self._epsilons = np.zeros(1)
 
         # Number of quantities of interest.
-        self._data_width = 1
+        self._output_width = 1
 
         # Enabled diagnostic text output.
         self._verbose = False
@@ -94,8 +94,8 @@ class MLMCSimulator:
         :return:
         """
         # Compute sample outputs.
-        output_means = np.zeros((self._num_levels, self._data_width))
-        output_variances = np.zeros((self._num_levels, self._data_width))
+        output_means = np.zeros((self._num_levels, self._output_width))
+        output_variances = np.zeros((self._num_levels, self._output_width))
         for level in range(self._num_levels):
 
             if self._verbose:
@@ -105,7 +105,6 @@ class MLMCSimulator:
             # Sample input data.
             sample_size = self._sample_sizes[level]
             samples = self._data.draw_samples(sample_size)
-            self._data.reset_sampling()
 
             # Produce the model output.
             output = np.zeros(sample_size)
@@ -125,7 +124,7 @@ class MLMCSimulator:
         # and compare results to corresponding epsilon values.
         if self._verbose:
 
-            for i in range(self._data_width):
+            for i in range(self._output_width):
 
                 variance_sum = np.sum(output_variances[:, i])
                 epsilon_squared = self._epsilons[i]
@@ -179,20 +178,28 @@ class MLMCSimulator:
                 costs[i] = self._models[i].cost + self._models[i-1].cost
 
         # Compute cost between each level.
-        samples = self._data.draw_samples(initial_sample_size)
-        self._data.reset_sampling()
 
-        self._data_width = samples[0].shape[0]
+        # Run model on a small test sample so we can see shape of output.
+        test_sample = self._data.draw_samples(1)[0]
+        self._data.reset_sampling()
+        test_output = self._models[0].evaluate(test_sample)
+        self._output_width = test_output.shape[0]
+
         outputs = np.zeros((self._num_levels,
                             initial_sample_size,
-                            self._data_width))
+                            self._output_width))
+
+        # STORE THESE OUTPUTS SO THEY DON'T NEED TO BE RECALCULATED
+        # IN THE MAIN SIMULATION.
 
         # Process samples at each level.
         compute_times = []
         for level in range(self._num_levels):
 
+            input_samples = self._data.draw_samples(initial_sample_size)
+
             start_time = timeit.default_timer()
-            for i, sample in enumerate(samples):
+            for i, sample in enumerate(input_samples):
                 outputs[level, i] = self._models[level].evaluate(sample)
 
             compute_times.append(timeit.default_timer() - start_time)
@@ -212,11 +219,11 @@ class MLMCSimulator:
         if self._verbose:
             print "Determining variances: "
 
-        variances = np.zeros((self._num_levels, self._data_width))
+        variances = np.zeros((self._num_levels, self._output_width))
 
         variances[0] = np.var(outputs[0])
         for level in range(1, self._num_levels):
-            for i in range(self._data_width):
+            for i in range(self._output_width):
                 variances[level, i] = np.var(outputs[level, :, i] -
                                              outputs[level - 1, :, i])
 
@@ -251,7 +258,7 @@ class MLMCSimulator:
             epsilon = np.array(epsilon)
 
         if isinstance(epsilon, float):
-            epsilon = np.ones(self._data_width) * epsilon
+            epsilon = np.ones(self._output_width) * epsilon
 
         if not isinstance(epsilon, np.ndarray):
             raise TypeError("Epsilon must be a float, list of floats, " +
@@ -260,7 +267,7 @@ class MLMCSimulator:
         if np.any(epsilon <= 0.):
             raise ValueError("Epsilon values must be greater than 0.")
 
-        if len(epsilon) != self._data_width:
+        if len(epsilon) != self._output_width:
             raise ValueError("Number of epsilons must match number of levels.")
 
         return epsilon
