@@ -168,12 +168,12 @@ def test_calculate_initial_variances(beta_distribution_input, spring_models):
 
     initial_sample_size = 100
 
-    [costs, variances] = sim._compute_costs_and_variances(initial_sample_size,
-                                                          costs)
+    costs, outputs = sim._compute_costs_and_outputs(initial_sample_size)
+    variances = sim._compute_variances(outputs)
 
-    true_variances = np.array([8.245224951411819,
-                               0.0857219498864355,
-                               7.916295509470576e-06])
+    true_variances = np.array([[8.245224951411819],
+                               [0.0857219498864355],
+                               [7.916295509470576e-06]])
 
     assert np.isclose(true_variances, variances)
 
