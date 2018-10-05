@@ -6,18 +6,22 @@ from Input import Input
 
 class InputFromData(Input):
 
-    def __init__(self, input_filename, delimiter=" "):
+    def __init__(self, input_filename, delimiter=" ", shuffle_data=True):
         """
         Used to draw random samples from a data file.
 
         :param input_filename path of file containing data to be sampled.
         :type string
+        :param shuffle_data: whether or not to randomly shuffle data during
+                             initialization
+        :type shuffle_data: Bool
         """
         if not os.path.isfile(input_filename):
             raise IOError("input_filename must refer to a file.")
 
         self._data = np.genfromtxt(input_filename, delimiter=delimiter)
-        np.random.shuffle(self._data)
+        if shuffle_data:
+            np.random.shuffle(self._data)
         self._index = 0
 
     def draw_samples(self, num_samples):

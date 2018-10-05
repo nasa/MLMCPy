@@ -24,7 +24,8 @@ def random_input():
 @pytest.fixture
 def data_input():
 
-    return InputFromData(os.path.join(data_path, "spring_mass_1D_inputs.txt"))
+    return InputFromData(os.path.join(data_path, "spring_mass_1D_inputs.txt"),
+                         shuffle_data=False)
 
 
 @pytest.fixture
@@ -175,5 +176,24 @@ def test_calculate_initial_variances(beta_distribution_input, spring_models):
                                [0.0857219498864355],
                                [7.916295509470576e-06]])
 
-    assert np.isclose(true_variances, variances)
+    assert np.isclose(true_variances, variances).all()
+
+def test_calculate_costs_and_variances_for_springmass_from_data(data_input,
+                                                              models_from_data):
+
+    sim = MLMCSimulator(models=models_from_data, data=data_input)
+    
+    initial_sample_size = 100
+
+    costs, outputs = sim._compute_costs_and_outputs(initial_sample_size)
+    variances = sim._compute_variances(outputs)
+
+    true_variances = np.array([[9.262628271266264],
+                               [0.07939834631411287],
+                               [5.437083709623372e-06]])
+
+    true_costs = np.array([1.0, 11.0, 110.0])
+
+    assert np.isclose(true_variances, variances).all()
+    assert np.isclose(true_costs, costs).all()
 
