@@ -1,15 +1,18 @@
 import numpy as np
 import timeit
+import sys
 
 from MLMCPy.input import Input
 from MLMCPy.model import Model
 
 
 class MLMCSimulator:
-
+    """
+    Description
+    """
     def __init__(self, data, models):
         """
-        Take a data object that provides input samples and a list of models
+        Requires a data object that provides input samples and a list of models
         of increasing fidelity.
 
         :param data: Provides a data sampling function.
@@ -19,17 +22,23 @@ class MLMCSimulator:
         """
         self.__check_init_parameters(data, models)
 
-        self.data = data
-        self.models = models
+        self._data = data
+        self._models = models
+        self._num_levels = len(self._models)
 
-        self.num_levels = len(self.models)
-        self.sample_sizes = np.zeros(self.num_levels, dtype=np.int)
+        # Sample size to be taken at each level.
+        self._sample_sizes = np.zeros(self._num_levels, dtype=np.int)
 
-        self.verbose = False
+        # Desired level of precision.
+        self._epsilons = np.zeros(1)
 
-    def simulate(self, epsilon, initial_sample_size=1000, costs=None,
-                 verbose=False):
+        # Number of quantities of interest.
+        self._data_width = 1
 
+        # Enabled diagnostic text output.
+        self._verbose = False
+
+    def simulate(self, epsilon, initial_sample_size=1000, verbose=False):
         """
         Perform MLMC simulation.
         Computes number of samples per level before running simulations
@@ -40,78 +49,21 @@ class MLMCSimulator:
         :param initial_sample_size: number of samples to use during
                configuration phase.
         :type: int
-        :param costs:
-        :type:
         :returns (value, list of sample count at each level, error)
         :param verbose: Whether to print useful diagnostic information.
         :type: bool
         """
-        self.verbose = verbose
+        self._verbose = verbose
 
-        self.__check_simulate_parameters(epsilon,
-                                         initial_sample_size,
-                                         costs)
+        self.__check_simulate_parameters(initial_sample_size)
 
         # Compute optimal sample sizes for each level, as well as alpha value.
-        self.__setup_simulation(epsilon, initial_sample_size)
+        self._setup_simulation(epsilon, initial_sample_size)
 
         # Run models and return estimate.
-        return self.__run_simulation()
+        return self._run_simulation()
 
-    def __run_simulation(self):
-        """
-        Compute estimate by extracting number of samples from each level
-        determined in the setup phase.
-        :return:
-        """
-        output_sums = np.zeros(self.num_levels)
-        num_samples_taken = np.zeros(self.num_levels)
-
-        # Update sample outputs.
-        for level in range(0, self.num_levels):
-
-            # Sample input data.
-            sample = self.data.draw_samples(self.sample_sizes[level])
-            self.data.reset_sampling()
-            num_samples_taken[level] = len(sample)
-
-            # If the requested number of samples is not reached, report to the
-            # user if verbose is enabled.
-            if self.verbose and len(sample) < self.sample_sizes[level]:
-                print "WARNING: Only %s samples were provided at level %s " + \
-                      "instead of the requested %s." % \
-                      (len(sample), self.sample_sizes[level], level)
-
-            # Compute the model output.
-            output = self.models[level].evaluate(sample)
-
-            # Compute sum of outputs.
-            output_sums[level] = np.sum(output)
-
-        # Compute error.
-        alpha = max(0, self.precomputed_alpha)
-        means = np.abs(output_sums / num_samples_taken)
-
-        # TODO: Verify this with Dr Warner (Page 25).
-        # Recompute alpha if original value below zero.
-        # Use linear regression to determine new value.
-        if self.precomputed_alpha <= 0:
-
-            A = np.ones((2, 2))
-            A[:, 0] = range(1, 3)
-
-            x = np.linalg.solve(A, np.log2(means[1:]))
-
-            alpha = max(0.5, -x[0])
-
-        error = means[-1] / (2.0 ** alpha - 1.0)
-
-        # Evaluate the multilevel estimator.
-        p = sum(output_sums / self.num_levels)
-
-        return p, num_samples_taken, error
-
-    def __setup_simulation(self, epsilon, initial_sample_size, costs=None):
+    def _setup_simulation(self, epsilon, initial_sample_size):
         """
         Computes variance and cost at each level in order to estimate optimal
         number of samples at each level.
@@ -119,82 +71,199 @@ class MLMCSimulator:
         :param initial_sample_size:
         :return:
         """
-        if costs is None:  # TODO: user provided costs
-            costs = np.zeros(self.num_levels)
+        # Run models with initial sample sizes to compute costs, outputs.
+        costs, outputs = self._compute_costs_and_outputs(initial_sample_size)
 
-        variances = np.zeros(self.num_levels)
-        outputs = np.zeros((self.num_levels, initial_sample_size))
-        sums = np.zeros(self.num_levels)
+        # Compute variances.
+        variances = self._compute_variances(outputs)
 
-        # Compute cost and variance at each level by evaluating model once
-        # for each level.
-        for level in range(self.num_levels):
+        # Present kurtosis analysis if verbose enabled.
+        if self._verbose:
+            self._compute_kurtosis(outputs)
 
-            sample = self.data.draw_samples(initial_sample_size)
-            self.data.reset_sampling()
+        # Epsilon should be array that matches output width.
+        self._epsilons = self._process_epsilon(epsilon)
 
-            if sample is None:
-                raise ValueError("There were not enough samples to " +
-                                 "complete the setup phase! Reduce " +
-                                 "initial_sample_size or provide a larger " +
-                                 "data set!")
+        # Compute optimal sample size at each level.
+        self._compute_optimal_sample_sizes(variances, costs)
 
-            # Get cost by timing model evaluation of sample at this level.
+    def _run_simulation(self):
+        """
+        Compute estimate by extracting number of samples from each level
+        determined in the setup phase.
+        :return:
+        """
+        # Compute sample outputs.
+        output_means = np.zeros((self._num_levels, self._data_width))
+        output_variances = np.zeros((self._num_levels, self._data_width))
+        for level in range(self._num_levels):
+
+            if self._verbose:
+                step = str(level+1) + " of " + str(self._num_levels)
+                print "\nRunning simulation level " + step
+
+            # Sample input data.
+            sample_size = self._sample_sizes[level]
+            samples = self._data.draw_samples(sample_size)
+            self._data.reset_sampling()
+
+            # Produce the model output.
+            output = np.zeros(sample_size)
+            for i, sample in enumerate(samples):
+
+                if self._verbose:
+                    progress = str((float(i) / sample_size) * 100)[:5]
+                    sys.stdout.write("\r" + progress + "%")
+
+                output[i] = self._models[level].evaluate(sample)
+
+            # Compute mean of outputs.
+            output_means[level] = np.mean(output)
+            output_variances[level] = np.var(output)
+
+        # Compute sum of variances across levels for each quantity of interest
+        # and compare results to corresponding epsilon values.
+        if self._verbose:
+
+            for i in range(self._data_width):
+
+                variance_sum = np.sum(output_variances[:, i])
+                epsilon_squared = self._epsilons[i]
+                passed = variance_sum < epsilon_squared
+
+                print 'QOI #%s: var: %s, eps^2: %s, success: %s' % \
+                      (i, variance_sum, epsilon_squared, passed)
+
+        # Evaluate the multilevel estimator.
+        p = np.sum(output_means / self._sample_sizes)
+
+        return p, self._sample_sizes, output_variances
+
+    def _compute_optimal_sample_sizes(self, variances, costs):
+
+        if self._verbose:
+            sys.stdout.write("Computing optimal sample sizes: ")
+
+        # Compute mu.
+        mu = np.zeros(self._epsilons.shape)
+        eps_n2 = np.power(self._epsilons, -2)
+
+        for i in range(len(self._epsilons)):
+            mu[i] = eps_n2[i] * np.sum(np.sqrt(variances[:, i] * costs))
+
+        # Compute sample sizes.
+        for level in range(self._num_levels):
+
+            nl = mu * np.sqrt(variances[level] / costs[level])
+            self._sample_sizes[level] = np.max(np.ceil(nl))
+
+        if self._verbose:
+            print np.array2string(self._sample_sizes)
+
+    def _compute_costs_and_outputs(self, initial_sample_size):
+
+        if self._verbose:
+            sys.stdout.write("Determining costs: ")
+
+        costs = np.ones(self._num_levels)
+
+        # If the models have cost precomputed, use them to compute interlayer
+        # costs.
+        costs_precomputed = False
+        if hasattr(self._models[0], 'cost'):
+
+            costs_precomputed = True
+            costs[0] = self._models[0].cost
+            for i in range(1, len(self._models)):
+
+                costs[i] = self._models[i].cost + self._models[i-1].cost
+
+        # Compute cost between each level.
+        samples = self._data.draw_samples(initial_sample_size)
+        self._data.reset_sampling()
+
+        self._data_width = samples[0].shape[0]
+        outputs = np.zeros((self._num_levels,
+                            initial_sample_size,
+                            self._data_width))
+
+        # Process samples at each level.
+        compute_times = []
+        for level in range(self._num_levels):
+
             start_time = timeit.default_timer()
-            outputs[level] = self.models[level].evaluate(sample)
-            costs[level] = timeit.default_timer() - start_time
+            for i, sample in enumerate(samples):
+                outputs[level, i] = self._models[level].evaluate(sample)
 
-            sums[level] = np.sum(outputs[level]) / len(sample)
+            compute_times.append(timeit.default_timer() - start_time)
 
-            # Present kurtosis analysis if verbose enabled.
-            if self.verbose and level > 0:
-                self.__compute_kurtosis(outputs[level], len(sample))
+        # Compute costs based on compute time differences between levels.
+        if not costs_precomputed:
+            for i in range(1, len(compute_times)):
+                costs[i] = compute_times[i] - compute_times[i - 1]
 
-            # Compute variance.
-            if level == 0:
-                variances[level] = np.var(outputs[level])
-            else:
-                variances[level] = np.var(outputs[level] - outputs[level - 1])
+        if self._verbose:
+            print np.array2string(costs)
+
+        return costs, outputs
+
+    def _compute_variances(self, outputs):
+
+        if self._verbose:
+            print "Determining variances: "
+
+        variances = np.zeros((self._num_levels, self._data_width))
+
+        variances[0] = np.var(outputs[0])
+        for level in range(1, self._num_levels):
+            for i in range(self._data_width):
+                variances[level, i] = np.var(outputs[level, :, i] -
+                                             outputs[level - 1, :, i])
 
         # Fix zero variances.
         variances[np.where(variances == 0)] = 1.e-30
 
-        # Compute optimal sample size at each level.
-        self.__compute_optimal_sample_sizes(epsilon, variances, costs)
+        if self._verbose:
+            print np.array2string(variances)
 
-        self.__compute_alpha(outputs)
-
-    def __compute_optimal_sample_sizes(self, epsilon, variances, costs):
-
-        sum_sqrt_var_times_costs = np.sum(np.sqrt(variances * costs))
-        for level in range(self.num_levels):
-            self.sample_sizes[level] = 2. * epsilon ** -2 * \
-                                    np.sqrt(variances[level] / costs[level]) /\
-                                    sum_sqrt_var_times_costs
-
-    def __compute_alpha(self, results):
-
-        L1 = int(np.ceil(0.4 * self.num_levels))
-        L2 = self.num_levels + 1
-
-        polyfit_x = range(L1 + 1, L2 + 1)
-        polyfit_y = np.log2(np.abs(results[0, L1: L2]))
-
-        poly_a = np.polyfit(polyfit_x, polyfit_y, 1)
-
-        self.precomputed_alpha = -poly_a[0]
+        return variances
 
     @staticmethod
-    def __compute_kurtosis(output, sample_size):
+    def _compute_kurtosis(output):
 
         # TODO: Finish this.
-        sum_squares = np.sum(np.square(output)) / sample_size
-        sum_cubes = np.sum(np.power(output, 3)) / sample_size
-        sum_quads = np.sum(np.power(output, 4)) / sample_size
+        # sum_squares = np.sum(np.square(output)) / sample_size
+        # sum_cubes = np.sum(np.power(output, 3)) / sample_size
+        # sum_quads = np.sum(np.power(output, 4)) / sample_size
 
         # kurt = (sum_quads - 4 * sum_cubes * sums[level] + \
         #         6 * sum_cubes * sums[level] - \
         #         3 * sums[level] * sums[level] ** 3) /
+        pass
+
+    def _process_epsilon(self, epsilon):
+        """
+        Produce an ndarray of epsilon values from float or list of epsilons.
+        :param epsilon: float, list of floats, or ndarray.
+        :return: ndarray of epsilons of size (self.num_levels).
+        """
+        if isinstance(epsilon, list):
+            epsilon = np.array(epsilon)
+
+        if isinstance(epsilon, float):
+            epsilon = np.ones(self._data_width) * epsilon
+
+        if not isinstance(epsilon, np.ndarray):
+            raise TypeError("Epsilon must be a float, list of floats, " +
+                            "or an ndarray.")
+
+        if np.any(epsilon <= 0.):
+            raise ValueError("Epsilon values must be greater than 0.")
+
+        if len(epsilon) != self._data_width:
+            raise ValueError("Number of epsilons must match number of levels.")
+
+        return epsilon
 
     @staticmethod
     def __check_init_parameters(data, models):
@@ -210,24 +279,10 @@ class MLMCSimulator:
                 TypeError("models must be a list of models.")
 
     @staticmethod
-    def __check_simulate_parameters(epsilon, starting_sample_size, costs):
-
-        if not (isinstance(epsilon, float) or isinstance(epsilon, np.float)):
-            raise TypeError("epsilon must be a float.")
-
-        if epsilon < 0.:
-            raise ValueError("epsilon must be greater than zero.")
+    def __check_simulate_parameters(starting_sample_size):
 
         if not isinstance(starting_sample_size, int):
             raise TypeError("starting_sample_size must be an integer.")
 
         if starting_sample_size < 1:
             raise ValueError("starting_sample_size must be greater than zero.")
-
-        if costs is not None:
-
-            if not (isinstance(costs, list) or isinstance(costs, np.ndarray)):
-                raise TypeError("costs must be a list or ndarray.")
-
-            if not np.all(np.array(costs) > 0):
-                raise ValueError("costs must all be greater than zero.")

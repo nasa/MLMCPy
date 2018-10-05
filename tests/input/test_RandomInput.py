@@ -27,9 +27,11 @@ def test_init_invalid_input():
 
 def test_draw_samples_expected_output(uniform_distribution_input):
 
-    sample = uniform_distribution_input.draw_samples(5)
-    assert isinstance(sample, np.ndarray)
-    assert sample.shape == (5,)
+    for num_samples in range(1, 10):
+
+        sample = uniform_distribution_input.draw_samples(num_samples)
+        assert isinstance(sample, np.ndarray)
+        assert sample.shape == (num_samples, 1)
 
 
 def test_exception_invalid_distribution_function(invalid_distribution_function):
@@ -45,7 +47,7 @@ def test_extra_distribution_function_parameters():
     sample = normal_sampler.draw_samples(5)
 
     assert isinstance(sample, np.ndarray)
-    assert sample.shape == (5,)
+    assert sample.shape == (5, 1)
 
 
 def test_draw_samples_invalid_arguments(uniform_distribution_input):
@@ -56,3 +58,14 @@ def test_draw_samples_invalid_arguments(uniform_distribution_input):
     with pytest.raises(ValueError):
         uniform_distribution_input.draw_samples(0)
 
+
+def test_distribution_exception_if_size_parameter_not_accepted():
+
+    def invalid_distribution_function():
+        return np.zeros(5)
+
+    invalid_input = \
+        RandomInput(distribution_function=invalid_distribution_function)
+
+    with pytest.raises(TypeError):
+        invalid_input.draw_samples(10)

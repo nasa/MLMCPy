@@ -24,12 +24,13 @@ stiffness_distribution = RandomInput(distribution_function=beta_distribution,
 
 #Step 2 - initialize spring-mass models. Here using three levels with MLMC 
 #defined by different time steps
-model_level1 = SpringMassModel(mass=1.5, time_step=1.0, cost=1.0)
-model_level2 = SpringMassModel(mass=1.5, time_step=0.1, cost=10.0)
-model_level3 = SpringMassModel(mass=1.5, time_step=0.01, cost=100.0)
+model_level1 = SpringMassModel(mass=1.5, time_step=1.0, cost=.1)
+model_level2 = SpringMassModel(mass=1.5, time_step=0.1, cost=1.0)
+model_level3 = SpringMassModel(mass=1.5, time_step=0.01, cost=10.0)
 
 models = [model_level1, model_level2, model_level3]
 
 #Step 3 - initialize MLMC & predict max displacement to specified error 
 mlmc_simulator = MLMCSimulator(stiffness_distribution, models)
-[max_disp, num_evals, final_error] = mlmc_simulator.simulate(epsilon=1e-3)
+[max_disp, num_evals, final_error] = mlmc_simulator.simulate(epsilon=1e-3,
+                                                             verbose=True)

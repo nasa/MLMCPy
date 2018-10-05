@@ -11,32 +11,23 @@ data_path = my_path + "/../testing_data"
 
 data_file_names = ["spring_mass_1D_inputs.txt", "2D_test_data.csv"]
 
+# Number of lines in each data file.
+data_file_lengths = {'spring_mass_1D_inputs.txt': 10000,
+                     '2D_test_data.csv': 5}
+
 data_file_paths = []
 for data_file in data_file_names:
     data_file_paths.append(os.path.join(data_path, data_file))
 
 
 # Pull all scrambled sample data from a file as one ndarray.
-def get_full_data_set(filename):
+def get_full_data_set(file_path):
 
-    data_sampler = InputFromData(filename)
+    filename = os.path.basename(file_path)
+    file_length = data_file_lengths[filename]
 
-    full_data_set = data_sampler.draw_samples(500)
-    sampler_sample = data_sampler.draw_samples(500)
-
-    # Number of dimensions will determine whether we should use hstack
-    # or vstack to build the data set.
-    is_one_dimensional_data = len(full_data_set.shape) == 1
-
-    # stack all samples into one ndarray (full_sample).
-    while sampler_sample is not None:
-
-        if is_one_dimensional_data:
-            full_data_set = np.hstack((full_data_set, sampler_sample))
-        else:
-            full_data_set = np.vstack((full_data_set, sampler_sample))
-
-        sampler_sample = data_sampler.draw_samples(500)
+    data_sampler = InputFromData(file_path)
+    full_data_set = data_sampler.draw_samples(file_length)
 
     return full_data_set
 
@@ -71,10 +62,20 @@ def test_can_load_alternatively_delimited_files(delimiter, filename):
 def test_draw_samples_returns_expected_output(data_filename):
 
     data_sampler = InputFromData(data_filename)
-    sample = data_sampler.draw_samples(5)
 
-    assert isinstance(sample, np.ndarray)
-    assert sample.shape[0] == 5
+    for num_samples in range(1, 4):
+
+        sample = data_sampler.draw_samples(num_samples)
+        data_sampler.reset_sampling()
+
+        # Returns correct data type.
+        assert isinstance(sample, np.ndarray)
+
+        # Returns correct shape of data.
+        assert len(sample.shape) == 2
+
+        # Returns requested number of samples.
+        assert sample.shape[0] == num_samples
 
 
 @pytest.mark.parametrize("data_filename", data_file_paths, ids=data_file_names)
@@ -83,6 +84,7 @@ def test_draw_samples_pulls_all_input_data(data_filename):
     all_sampled_data = get_full_data_set(data_filename)
 
     file_data = np.genfromtxt(data_filename)
+    file_data = file_data.reshape(file_data.shape[0], -1)
 
     assert all_sampled_data.shape == file_data.shape
 
@@ -91,7 +93,9 @@ def test_draw_samples_pulls_all_input_data(data_filename):
 def test_sample_data_is_scrambled(data_filename):
 
     all_sampled_data = get_full_data_set(data_filename)
+
     file_data = np.genfromtxt(data_filename)
+    file_data = file_data.reshape(file_data.shape[0], -1)
 
     assert not np.array_equal(all_sampled_data, file_data)
     assert np.isclose(np.sum(all_sampled_data), np.sum(file_data))

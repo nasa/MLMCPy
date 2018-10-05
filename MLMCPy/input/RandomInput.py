@@ -22,8 +22,8 @@ class RandomInput(Input):
         if not callable(distribution_function):
             raise TypeError('distribution_function must be a function.')
 
-        self.distribution = distribution_function
-        self.args = distribution_function_args
+        self._distribution = distribution_function
+        self._args = distribution_function_args
 
     def draw_samples(self, num_samples):
         """
@@ -33,16 +33,20 @@ class RandomInput(Input):
         :type int
         :return: ndarray of distribution sample.
         """
-
         if not isinstance(num_samples, int):
             raise TypeError("num_samples must be an integer.")
 
         if num_samples <= 0:
             raise ValueError("num_samples must be a positive integer.")
 
-        # Pass in num_samples as size argument to distribution function.
-        self.args['size'] = num_samples
-        return self.distribution(**self.args)
+        self._args['size'] = num_samples
+        sample = self._distribution(**self._args)
+
+        # Output should be shape (num_samples, sample_size), so reshape
+        # one dimensional data to a 2d array with one column.
+        samples = sample.reshape(sample.shape[0], -1)
+
+        return samples
 
     def reset_sampling(self):
         pass

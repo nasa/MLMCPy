@@ -16,16 +16,18 @@ class InputFromData(Input):
         if not os.path.isfile(input_filename):
             raise IOError("input_filename must refer to a file.")
 
-        self.data = np.genfromtxt(input_filename, delimiter=delimiter)
-        np.random.shuffle(self.data)
-        self.index = 0
+        self._data = np.genfromtxt(input_filename, delimiter=delimiter)
+        np.random.shuffle(self._data)
+        self._index = 0
 
     def draw_samples(self, num_samples):
         """
         Returns an array of samples from the previously loaded file data.
         :param num_samples: Number of samples to be returned.
         :type int
-        :return: ndarray of samples
+        :return: 2d ndarray of samples, each row being one sample.
+                 For one dimensional input data, this will have
+                 shape (num_samples, 1)
         """
 
         if not isinstance(num_samples, int):
@@ -34,13 +36,20 @@ class InputFromData(Input):
         if num_samples <= 0:
             raise ValueError("num_samples must be a positive integer.")
 
-        # If we have already returned all samples, return None.
-        if self.index > self.data.shape[0]:
-            return None
-
         # Otherwise return the requested sample and increment the index.
-        sample = self.data[self.index: self.index+num_samples]
-        self.index += num_samples
+        sample = self._data[self._index: self._index + num_samples]
+        self._index += num_samples
+
+        # Output should be shape (num_samples, sample_size), so reshape
+        # one dimensional data to a 2d array with one column.
+        sample = sample.reshape(sample.shape[0], -1)
+
+        sample_size = sample.shape[0]
+        if num_samples > sample_size:
+
+            error_message = "Only %s of the %s requested samples are " + \
+                            "available.\nMore sample data is required."
+            raise ValueError(error_message % (sample_size, num_samples))
 
         return sample
 
@@ -48,5 +57,5 @@ class InputFromData(Input):
         """
         Used to shuffle and restart sampling from beginning of data set.
         """
-        np.random.shuffle(self.data)
-        self.index = 0
+        np.random.shuffle(self._data)
+        self._index = 0

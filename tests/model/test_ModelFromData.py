@@ -9,6 +9,7 @@ my_path = os.path.dirname(os.path.abspath(__file__))
 data_path = my_path + "/../testing_data"
 
 
+
 @pytest.fixture
 def input_data_file():
     input_data_file = os.path.join(data_path, "spring_mass_1D_inputs.txt")
@@ -33,52 +34,67 @@ def output_data_file_2d():
     return output_data_file
 
 
-@pytest.mark.parametrize("index", [6, 368, 599, 612, 987])
-def test_model_from_data_evaluate(input_data_file, output_data_file, index):
+@pytest.fixture
+def input_data_file_with_duplicates():
+    output_data_file = os.path.join(data_path, "2D_test_data_duplication.csv")
+    return output_data_file
+
+
+@pytest.mark.parametrize("index", [2, 4, 7, 13, 17])
+def test_evaluate_1d_data(input_data_file, output_data_file, index):
 
     # Initialize model from spring-mass example data files:
-    data_model = ModelFromData(input_data_file, output_data_file)
+    data_model = ModelFromData(input_data_file, output_data_file, 1.)
 
     input_data = np.genfromtxt(input_data_file)
     output_data = np.genfromtxt(output_data_file)
 
-    # Model expects arrays as inputs/outputs
-    model_output = data_model.evaluate([input_data[index]])
+    # Model expects arrays as inputs/outputs.
+    model_output = data_model.evaluate(input_data[index])
 
     true_output = output_data[index]
     assert np.all(np.isclose(model_output, true_output))
 
 
 @pytest.mark.parametrize("index", [0, 2, 3])
-def test_model_from_data_evaluate_2d(input_data_file_2d, output_data_file_2d,
-                                     index):
+def test_evaluate_2d_data(input_data_file_2d, output_data_file_2d, index):
 
     # Initialize model from spring-mass example data files:
-    data_model = ModelFromData(input_data_file_2d, output_data_file_2d)
+    data_model = ModelFromData(input_data_file_2d, output_data_file_2d, 1.)
 
     input_data = np.genfromtxt(input_data_file_2d)
     output_data = np.genfromtxt(output_data_file_2d)
 
     # Model expects arrays as inputs/outputs
-    model_output = data_model.evaluate([input_data[index]])
+    model_output = data_model.evaluate(input_data[index])
 
     true_output = output_data[index]
     assert np.all(np.isclose(model_output, true_output))
 
 
-def test_model_from_data_invalid_input(input_data_file, output_data_file):
+def test_evaluate_fails_on_invalid_input(input_data_file, output_data_file):
 
     data_model = ModelFromData(input_data_file, output_data_file, 1.)
 
-    bogus_input = -999.0
+    bogus_input = "five"
 
-    with pytest.raises(ValueError):
-        data_model.evaluate([bogus_input])
+    with pytest.raises(TypeError):
+        data_model.evaluate(bogus_input)
 
     bogus_input = [[1, 2], [3, 4]]
 
     with pytest.raises(ValueError):
-        data_model.evaluate([bogus_input])
+        data_model.evaluate(bogus_input)
+
+
+def test_fails_on_duplicate_input_data(input_data_file_with_duplicates,
+                                       output_data_file):
+
+    with pytest.raises(ValueError):
+
+        data_model = ModelFromData(input_data_file_with_duplicates,
+                                   output_data_file, 1.)
+        data_model.evaluate([1, 2, 3, 4, 5])
 
 
 def test_init_fails_on_incompatible_data(input_data_file, output_data_file_2d):
