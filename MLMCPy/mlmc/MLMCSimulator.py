@@ -29,11 +29,14 @@ class MLMCSimulator:
         # Sample size to be taken at each level.
         self._sample_sizes = np.zeros(self._num_levels, dtype=np.int)
 
+        # Sample size used in setup.
+        self._initial_sample_size = 0
+
         # Desired level of precision.
         self._epsilons = np.zeros(1)
 
-        # Number of quantities of interest.
-        self._output_width = 1
+        # Number of elements in model output.
+        self._output_size = 1
 
         # Enabled diagnostic text output.
         self._verbose = False
@@ -71,15 +74,17 @@ class MLMCSimulator:
         :param initial_sample_size:
         :return:
         """
+        self._initial_sample_size = initial_sample_size
+
         # Run models with initial sample sizes to compute costs, outputs.
-        costs, outputs = self._compute_costs_and_outputs(initial_sample_size)
+        costs = self._compute_costs()
 
         # Compute variances.
-        variances = self._compute_variances(outputs)
+        variances = self._compute_variances()
 
         # Present kurtosis analysis if verbose enabled.
         if self._verbose:
-            self._compute_kurtosis(outputs)
+            self._compute_kurtosis()
 
         # Epsilon should be array that matches output width.
         self._epsilons = self._process_epsilon(epsilon)
@@ -93,9 +98,13 @@ class MLMCSimulator:
         determined in the setup phase.
         :return:
         """
+        # Restart sampling from beginning.
+        self._data.reset_sampling()
+
+        output_means = np.zeros((self._num_levels, self._output_size))
+        output_variances = np.zeros((self._num_levels, self._output_size))
+
         # Compute sample outputs.
-        output_means = np.zeros((self._num_levels, self._output_width))
-        output_variances = np.zeros((self._num_levels, self._output_width))
         for level in range(self._num_levels):
 
             if self._verbose:
@@ -107,24 +116,45 @@ class MLMCSimulator:
             samples = self._data.draw_samples(sample_size)
 
             # Produce the model output.
-            output = np.zeros(sample_size)
+            output = np.zeros((sample_size, self._output_size))
             for i, sample in enumerate(samples):
 
                 if self._verbose:
                     progress = str((float(i) / sample_size) * 100)[:5]
                     sys.stdout.write("\r" + progress + "%")
 
-                output[i] = self._models[level].evaluate(sample)
+                # If we have the output for this sample cached, use it.
+                # Otherwise, compute the output via the model.
+
+                # Absolute index of current sample.
+                sample_index = np.sum(self._sample_sizes[:level]) + i
+
+                # Level in cache that a sample with above index would be at.
+                # This must match the current level.
+                cached_level = sample_index // self._initial_sample_size
+
+                # Index within cached level for sample output.
+                cached_index = sample_index - level * self._initial_sample_size
+
+                # Level and index within cache must be correct for the
+                # appropriate cached value to be found.
+                can_use_cache = cached_index < self._initial_sample_size and \
+                    cached_level == level
+
+                if can_use_cache:
+                    output[i] = self._cached_output[level][cached_index]
+                else:
+                    output[i] = self._models[level].evaluate(sample)
 
             # Compute mean of outputs.
-            output_means[level] = np.mean(output)
-            output_variances[level] = np.var(output)
+            output_means[level] = np.mean(output, axis=0)
+            output_variances[level] = np.var(output, axis=0)
 
         # Compute sum of variances across levels for each quantity of interest
         # and compare results to corresponding epsilon values.
         if self._verbose:
 
-            for i in range(self._output_width):
+            for i in range(self._output_size):
 
                 variance_sum = np.sum(output_variances[:, i])
                 epsilon_squared = self._epsilons[i]
@@ -159,94 +189,89 @@ class MLMCSimulator:
         if self._verbose:
             print np.array2string(self._sample_sizes)
 
-    def _compute_costs_and_outputs(self, initial_sample_size):
-
+    def _compute_costs(self):
+        """
+        Compute costs across levels.
+        :return: 1 dimensional ndarray of costs, length determined by number
+                 of levels.
+        """
         if self._verbose:
             sys.stdout.write("Determining costs: ")
 
         costs = np.ones(self._num_levels)
 
-        # If the models have cost precomputed, use them to compute interlayer
-        # costs.
+        # If the models have costs precomputed, use them to compute costs
+        # between each level.
         costs_precomputed = False
         if hasattr(self._models[0], 'cost'):
 
             costs_precomputed = True
-            costs[0] = self._models[0].cost
-            for i in range(1, len(self._models)):
+            for i in range(len(self._models)):
+                costs[i] = self._models[i].cost
 
-                costs[i] = self._models[i].cost + self._models[i-1].cost
+            # Costs at level > 0 should be summed with previous level.
+            costs[1:] = costs[1:] + costs[:-1]
 
-        # Compute cost between each level.
-
-        # Run model on a small test sample so we can see shape of output.
+        # Run model on a small test sample so we can find shape of output.
         test_sample = self._data.draw_samples(1)[0]
         self._data.reset_sampling()
+
         test_output = self._models[0].evaluate(test_sample)
-        self._output_width = test_output.shape[0]
+        self._output_size = test_output.shape[0]
 
-        outputs = np.zeros((self._num_levels,
-                            initial_sample_size,
-                            self._output_width))
+        # Cache model outputs computed here so that they can be reused
+        # in the simulation.
+        self._cached_output = np.zeros((self._num_levels,
+                                        self._initial_sample_size,
+                                        self._output_size))
 
-        # STORE THESE OUTPUTS SO THEY DON'T NEED TO BE RECALCULATED
-        # IN THE MAIN SIMULATION.
-
-        # Process samples at each level.
-        compute_times = []
+        # Process samples in model. Gather compute times for each level.
+        compute_times = np.zeros(self._num_levels)
         for level in range(self._num_levels):
 
-            input_samples = self._data.draw_samples(initial_sample_size)
+            input_samples = self._data.draw_samples(self._initial_sample_size)
 
             start_time = timeit.default_timer()
             for i, sample in enumerate(input_samples):
-                outputs[level, i] = self._models[level].evaluate(sample)
 
-            compute_times.append(timeit.default_timer() - start_time)
+                output = self._models[level].evaluate(sample)
+                self._cached_output[level, i] = output
+
+            compute_times[level] = timeit.default_timer() - start_time
 
         # Compute costs based on compute time differences between levels.
         if not costs_precomputed:
-            for i in range(1, len(compute_times)):
-                costs[i] = compute_times[i] - compute_times[i - 1]
+            costs[0] = compute_times[0]
+            costs[1:] = compute_times[1:] + compute_times[0:-1]
 
         if self._verbose:
             print np.array2string(costs)
 
-        return costs, outputs
+        return costs
 
-    def _compute_variances(self, outputs):
+    def _compute_variances(self):
 
         if self._verbose:
             print "Determining variances: "
 
-        variances = np.zeros((self._num_levels, self._output_width))
+        variances = np.zeros((self._num_levels, self._output_size))
 
-        variances[0] = np.var(outputs[0])
-        for level in range(1, self._num_levels):
-            for i in range(self._output_width):
-                variances[level, i] = np.var(outputs[level, :, i] -
-                                             outputs[level - 1, :, i])
+        # Get differences between outputs of each layer.
+        output_diffs = self._cached_output[1:] - self._cached_output[:-1]
 
-        # Fix zero variances.
+        # First row is variance of first level, subsequent rows are
+        # variances of differences between levels.
+        variances[0, :] = np.var(self._cached_output[0], axis=0)
+        variances[1:] = np.var(output_diffs, axis=1)
+
+        # Fix zero variances by setting them to a very small value.
+        # This will avoid division by zero errors later.
         variances[np.where(variances == 0)] = 1.e-30
 
         if self._verbose:
             print np.array2string(variances)
 
         return variances
-
-    @staticmethod
-    def _compute_kurtosis(output):
-
-        # TODO: Finish this.
-        # sum_squares = np.sum(np.square(output)) / sample_size
-        # sum_cubes = np.sum(np.power(output, 3)) / sample_size
-        # sum_quads = np.sum(np.power(output, 4)) / sample_size
-
-        # kurt = (sum_quads - 4 * sum_cubes * sums[level] + \
-        #         6 * sum_cubes * sums[level] - \
-        #         3 * sums[level] * sums[level] ** 3) /
-        pass
 
     def _process_epsilon(self, epsilon):
         """
@@ -258,7 +283,7 @@ class MLMCSimulator:
             epsilon = np.array(epsilon)
 
         if isinstance(epsilon, float):
-            epsilon = np.ones(self._output_width) * epsilon
+            epsilon = np.ones(self._output_size) * epsilon
 
         if not isinstance(epsilon, np.ndarray):
             raise TypeError("Epsilon must be a float, list of floats, " +
@@ -267,7 +292,7 @@ class MLMCSimulator:
         if np.any(epsilon <= 0.):
             raise ValueError("Epsilon values must be greater than 0.")
 
-        if len(epsilon) != self._output_width:
+        if len(epsilon) != self._output_size:
             raise ValueError("Number of epsilons must match number of levels.")
 
         return epsilon

@@ -67,13 +67,13 @@ def models_from_data():
 def test_model_from_data(data_input, models_from_data):
 
     sim = MLMCSimulator(models=models_from_data, data=data_input)
-    sim.simulate(.1, initial_sample_size=1000)
+    sim.simulate(1., initial_sample_size=20)
 
 
 def test_spring_model(beta_distribution_input, spring_models):
 
     sim = MLMCSimulator(models=spring_models, data=beta_distribution_input)
-    sim.simulate(.1, initial_sample_size=1000)
+    sim.simulate(1., initial_sample_size=20)
 
 
 def test_simulate_exception_for_invalid_parameters(data_input,
@@ -95,7 +95,7 @@ def test_simulate_expected_output_types(data_input, models_from_data):
 
     test_mlmc = MLMCSimulator(models=models_from_data, data=data_input)
 
-    result, sample_counts, variances = test_mlmc.simulate(epsilon=.1,
+    result, sample_counts, variances = test_mlmc.simulate(epsilon=1.,
                                                           initial_sample_size=20)
 
     assert isinstance(result, float)
@@ -167,10 +167,10 @@ def test_calculate_initial_variances(beta_distribution_input, spring_models):
 
     sim = MLMCSimulator(models=spring_models, data=beta_distribution_input)
 
-    initial_sample_size = 100
+    sim._initial_sample_size = 100
 
-    costs, outputs = sim._compute_costs_and_outputs(initial_sample_size)
-    variances = sim._compute_variances(outputs)
+    sim._compute_costs()
+    variances = sim._compute_variances()
 
     true_variances = np.array([[8.245224951411819],
                                [0.0857219498864355],
@@ -178,22 +178,71 @@ def test_calculate_initial_variances(beta_distribution_input, spring_models):
 
     assert np.isclose(true_variances, variances).all()
 
+
 def test_calculate_costs_and_variances_for_springmass_from_data(data_input,
                                                               models_from_data):
 
     sim = MLMCSimulator(models=models_from_data, data=data_input)
     
-    initial_sample_size = 100
-
-    costs, outputs = sim._compute_costs_and_outputs(initial_sample_size)
-    variances = sim._compute_variances(outputs)
+    sim._initial_sample_size = 100
+    costs = sim._compute_costs()
+    variances = sim._compute_variances()
 
     true_variances = np.array([[9.262628271266264],
                                [0.07939834631411287],
                                [5.437083709623372e-06]])
 
-    true_costs = np.array([1.0, 11.0, 110.0])
+    # TODO: Verify with Jom that this is correct.
+    true_costs = np.array([1.0, 5.0, 20.0])
 
     assert np.isclose(true_variances, variances).all()
     assert np.isclose(true_costs, costs).all()
 
+
+def test_setup_output_caching_small_init_sample(data_input, models_from_data):
+
+    sim = MLMCSimulator(models=models_from_data, data=data_input)
+
+    # Compute outputs for initial sample size.
+    sim._setup_simulation(1., 50)
+
+    # Run simulation with cached values.
+    p1, ss, variances1 = sim._run_simulation()
+
+    # Set initial_sample_size to 0 and run simulation again so that it will
+    # not use cached values.
+    sim._initial_sample_size = 0
+    p2, ss, variances2 = sim._run_simulation()
+
+    # Now compare final estimator and output variances.
+    # If caching is working properly, they should match.
+    assert p1 == p2
+    assert np.array_equal(variances1, variances2)
+
+
+def test_setup_output_caching_large_init_sample(data_input, models_from_data):
+
+    sim = MLMCSimulator(models=models_from_data, data=data_input)
+
+    # Compute outputs for initial sample size.
+    sim._setup_simulation(1., 1000)
+
+    # Run simulation with cached values.
+    p1, ss, variances1 = sim._run_simulation()
+
+    # Set initial_sample_size to 0 and run simulation again so that it will
+    # not use cached values.
+    sim._initial_sample_size = 0
+    p2, ss, variances2 = sim._run_simulation()
+
+    # Now compare final estimator and output variances.
+    # If caching is working properly, they should match.
+    assert p1 == p2
+    assert np.array_equal(variances1, variances2)
+
+def test_geoff_test():
+
+    input = RandomInput(distribution_function=np.random.uniform,
+                        mean=1.0, std=1., size=1000)
+
+    pass

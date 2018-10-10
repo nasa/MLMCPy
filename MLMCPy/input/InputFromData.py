@@ -46,20 +46,21 @@ class InputFromData(Input):
 
         # Output should be shape (num_samples, sample_size), so reshape
         # one dimensional data to a 2d array with one column.
-        sample = sample.reshape(sample.shape[0], -1)
+        if len(sample.shape) == 1:
+            sample = sample.reshape(sample.shape[0], -1)
 
         sample_size = sample.shape[0]
         if num_samples > sample_size:
 
             error_message = "Only %s of the %s requested samples are " + \
-                            "available.\nMore sample data is required."
+                            "available.\nEither provide more sample data or" + \
+                            "increase epsilon to reduce sample size needed."
             raise ValueError(error_message % (sample_size, num_samples))
 
         return sample
 
     def reset_sampling(self):
         """
-        Used to shuffle and restart sampling from beginning of data set.
+        Used to restart sampling from beginning of data set.
         """
-        np.random.shuffle(self._data)
         self._index = 0
