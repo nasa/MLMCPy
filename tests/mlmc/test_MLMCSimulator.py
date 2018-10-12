@@ -235,6 +235,23 @@ def test_output_caching(data_input, models_from_data, cache_size):
     assert np.array_equal(variances1, variances2)
 
 
+def test_monte_carlo(data_input, models_from_data):
+
+    np.random.seed(1)
+
+    # Result from 20,000 sample monte carlo spring mass simulation.
+    mc_20000_output_sample_mean = 12.3186216602
+
+    # Passing in one model into MLMCSimulator should make it run in monte
+    # carlo simulation mode.
+    models = [models_from_data[0]]
+
+    sim = MLMCSimulator(models=models, data=data_input)
+    estimate, sample_sizes, variances = sim.simulate(1., 50)
+
+    assert np.isclose(estimate, mc_20000_output_sample_mean, .25)
+
+
 def test_geoff_test_2_level(data_input, models_from_data):
 
     np.random.seed(1)

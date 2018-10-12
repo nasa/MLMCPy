@@ -61,6 +61,10 @@ class MLMCSimulator:
 
         self.__check_simulate_parameters(initial_sample_size)
 
+        # If only one model was provided, run standard monte carlo.
+        if self._num_levels == 1:
+            return self._run_monte_carlo(initial_sample_size)
+
         # Compute optimal sample sizes for each level, as well as alpha value.
         self._setup_simulation(epsilon, initial_sample_size)
 
@@ -95,13 +99,10 @@ class MLMCSimulator:
         Compute estimate by extracting number of samples from each level
         determined in the setup phase.
 
-        :return: tuple containing three objects:
-            estimate: Estimates for each quantity of interest
-            type: ndarray
+        :return: tuple containing three ndarrays:
+            estimates: Estimates for each quantity of interest
             sample_sizes: The sample sizes used at each level.
-            type: ndarray
             variances: Variance of model outputs at each level.
-            type: ndarray
         """
         # Restart sampling from beginning.
         self._data.reset_sampling()
@@ -285,6 +286,32 @@ class MLMCSimulator:
 
         if self._verbose:
             print np.array2string(self._sample_sizes)
+
+    def _run_monte_carlo(self, num_samples):
+        """
+        Runs a standard monte carlo simulation. Used when only one model
+        is provided.
+        :param num_samples: Number of samples to take.
+        :return: tuple containing three ndarrays with one element each:
+            estimates: Estimates for each quantity of interest
+            sample_sizes: The sample sizes used at each level.
+            variances: Variance of model outputs at each level.
+        """
+        if self._verbose:
+            print 'Only one model provided; running standard monte carlo.'
+
+        samples = self._data.draw_samples(num_samples)
+        outputs = np.zeros(num_samples)
+
+        for i, sample in enumerate(samples):
+            outputs[i] = self._models[0].evaluate(sample)
+
+        # Return values should have same signature as regular MLMC simulation.
+        estimates = np.array([np.mean(outputs)])
+        sample_sizes = np.array([num_samples])
+        variances = np.array([np.var(outputs)])
+
+        return estimates, sample_sizes, variances
 
     def _process_epsilon(self, epsilon):
         """
