@@ -29,6 +29,7 @@ class RandomInput(Input):
         """
         Returns num_samples samples from a distribution in the form of a
         numpy array.
+
         :param num_samples: Size of array to return.
         :type int
         :return: ndarray of distribution sample.

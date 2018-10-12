@@ -6,11 +6,12 @@ from Model import Model
 
 
 class ModelFromData(Model):
-
+    """
+    Used to acquire output data corresponding to given input data, all
+    of which is acquired via data stored in files.
+    """
     def __init__(self, input_filename, output_filename, cost, delimiter=None):
         """
-        Used to acquire output data corresponding to given input data.
-
         :param input_filename: path to file containing input data.
         :type string
         :param output_filename: path to file containing output data.
@@ -63,7 +64,8 @@ class ModelFromData(Model):
 
         return output_data
 
-    def __check_parameters(self, output_filename, input_filename, cost):
+    @staticmethod
+    def __check_parameters(output_filename, input_filename, cost):
 
         if not isinstance(output_filename, str):
             raise TypeError("output_filename must be a string.")

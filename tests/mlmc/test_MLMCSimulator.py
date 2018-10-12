@@ -32,6 +32,7 @@ def data_input():
 def beta_distribution_input():
 
     np.random.seed(1)
+
     def beta_distribution(shift, scale, alpha, beta, size):
         return shift + scale * np.random.beta(alpha, beta, size)
 
@@ -98,7 +99,7 @@ def test_simulate_expected_output_types(data_input, models_from_data):
     result, sample_counts, variances = test_mlmc.simulate(epsilon=1.,
                                                           initial_sample_size=20)
 
-    assert isinstance(result, float)
+    assert isinstance(result, np.ndarray)
     assert isinstance(sample_counts, np.ndarray)
     assert isinstance(variances, np.ndarray)
 
@@ -192,57 +193,114 @@ def test_calculate_costs_and_variances_for_springmass_from_data(data_input,
                                [0.07939834631411287],
                                [5.437083709623372e-06]])
 
-    # TODO: Verify with Jom that this is correct.
     true_costs = np.array([1.0, 5.0, 20.0])
 
-    assert np.isclose(true_variances, variances).all()
     assert np.isclose(true_costs, costs).all()
+    assert np.isclose(true_variances, variances).all()
 
 
-def test_setup_output_caching_small_init_sample(data_input, models_from_data):
+@pytest.mark.parametrize("num_levels", [2, 3])
+def test_calculate_estimate_for_springmass_random_input(beta_distribution_input,
+                                                        spring_models,
+                                                        num_levels):
+
+    np.random.seed(1)
+    # Result from 20,000 sample monte carlo spring mass simulation.
+    mc_20000_output_sample_mean = 12.3186216602
+
+    sim = MLMCSimulator(models=spring_models[:num_levels],
+                        data=beta_distribution_input)
+
+    estimate, sample_sizes, variances = sim.simulate(1., 100)
+
+    assert np.isclose(estimate, mc_20000_output_sample_mean, .5)
+
+
+@pytest.mark.parametrize("cache_size", [20, 200, 2000])
+def test_output_caching(data_input, models_from_data, cache_size):
 
     sim = MLMCSimulator(models=models_from_data, data=data_input)
 
-    # Compute outputs for initial sample size.
-    sim._setup_simulation(1., 50)
-
-    # Run simulation with cached values.
-    p1, ss, variances1 = sim._run_simulation()
+    # Run simulation with caching.
+    estimate1, sample_sizes, variances1 = sim.simulate(1., cache_size)
 
     # Set initial_sample_size to 0 and run simulation again so that it will
     # not use cached values.
     sim._initial_sample_size = 0
-    p2, ss, variances2 = sim._run_simulation()
+    estimate2, sample_sizes, variances2 = sim._run_simulation()
 
     # Now compare final estimator and output variances.
     # If caching is working properly, they should match.
-    assert p1 == p2
+    assert np.array_equal(estimate1, estimate2)
     assert np.array_equal(variances1, variances2)
 
 
-def test_setup_output_caching_large_init_sample(data_input, models_from_data):
+def test_geoff_test_2_level(data_input, models_from_data):
 
-    sim = MLMCSimulator(models=models_from_data, data=data_input)
+    np.random.seed(1)
+    initial_sample_size = 200
+    epsilon = 1.
 
-    # Compute outputs for initial sample size.
-    sim._setup_simulation(1., 1000)
+    # Get output data for each layer.
+    level_0_data = np.zeros(initial_sample_size)
+    input_samples = data_input.draw_samples(initial_sample_size)
 
-    # Run simulation with cached values.
-    p1, ss, variances1 = sim._run_simulation()
+    for i, sample in enumerate(input_samples):
+        level_0_data[i] = models_from_data[0].evaluate(sample)[0]
 
-    # Set initial_sample_size to 0 and run simulation again so that it will
-    # not use cached values.
-    sim._initial_sample_size = 0
-    p2, ss, variances2 = sim._run_simulation()
+    level_1_data = np.zeros(initial_sample_size)
+    input_samples = data_input.draw_samples(initial_sample_size)
 
-    # Now compare final estimator and output variances.
-    # If caching is working properly, they should match.
-    assert p1 == p2
-    assert np.array_equal(variances1, variances2)
+    for i, sample in enumerate(input_samples):
+        level_1_data[i] = models_from_data[1].evaluate(sample)[0]
 
-def test_geoff_test():
+    data_input.reset_sampling()
 
-    input = RandomInput(distribution_function=np.random.uniform,
-                        mean=1.0, std=1., size=1000)
+    target_variance = epsilon ** 2
 
-    pass
+    # Define discrepancy model.
+    level_discrepancy = level_1_data - level_0_data
+
+    # These assume we have a pretty good estimate of var.
+    level_0_variance = np.var(level_0_data)
+    discrepancy_variance = np.var(level_discrepancy)
+
+    layer_0_cost = 1
+    layer_1_cost = 1 + 10
+
+    r = np.sqrt(discrepancy_variance / layer_1_cost *
+                layer_0_cost / level_0_variance)
+
+    # Calculate sample sizes for each level.
+    s = (r * level_0_variance + discrepancy_variance) / (r * target_variance)
+    layer_0_sample_size = int(np.ceil(s))
+    layer_1_sample_size = int(np.ceil(r * s))
+
+    subset_size = min(len(level_0_data),
+                      layer_0_sample_size + layer_1_sample_size)
+
+    subset = np.random.choice(np.arange(len(level_0_data)),
+                              subset_size,
+                              replace=False)
+
+    sample_x0 = level_0_data[subset[:layer_0_sample_size]]
+    sample_x10 = level_discrepancy[subset[:layer_1_sample_size]]
+
+    # Package results for easy comparison with simulator results.
+    geoff_variances = np.array([level_0_variance, discrepancy_variance])
+    geoff_sample_sizes = np.array([layer_0_sample_size, layer_1_sample_size])
+    geoff_estimate = np.mean(sample_x0) + np.mean(sample_x10)
+
+    # Run Simulation for comparison to Geoff's results.
+    models = models_from_data[:2]
+    models[0].cost = 1
+    models[1].cost = 10
+
+    sim = MLMCSimulator(models=models, data=data_input)
+    sim_estimate, sim_sample_sizes, output_variances = \
+        sim.simulate(epsilon=epsilon, initial_sample_size=initial_sample_size)
+    sim_variances = np.squeeze(sim._compute_variances())
+
+    assert np.array_equal(sim_variances, geoff_variances)
+    assert np.array_equal(sim._sample_sizes, geoff_sample_sizes)
+    assert np.isclose(sim_estimate[0], geoff_estimate, atol=.5)

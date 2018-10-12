@@ -8,7 +8,7 @@ from MLMCPy.model import Model
 
 class MLMCSimulator:
     """
-    Description
+    Computes an estimate based on the MultiLevel Monte Carlo algorithm.
     """
     def __init__(self, data, models):
         """
@@ -47,10 +47,11 @@ class MLMCSimulator:
         Computes number of samples per level before running simulations
         to determine estimate.
 
-        :param epsilon: Desired accuracy to be achieved.
+        :param epsilon: Desired accuracy to be achieved for each quantity of
+            interest.
         :type: float, list of floats, or ndarray.
-        :param initial_sample_size: number of samples to use during
-               configuration phase.
+        :param initial_sample_size: Sample size used when computing sample sizes
+            for each level in simulation.
         :type: int
         :returns (value, list of sample count at each level, error)
         :param verbose: Whether to print useful diagnostic information.
@@ -70,9 +71,10 @@ class MLMCSimulator:
         """
         Computes variance and cost at each level in order to estimate optimal
         number of samples at each level.
-        :param epsilon:
-        :param initial_sample_size:
-        :return:
+
+        :param epsilon: Epsilon values for each quantity of interest.
+        :param initial_sample_size: Sample size used when computing sample sizes
+            for each level in simulation.
         """
         self._initial_sample_size = initial_sample_size
 
@@ -81,10 +83,6 @@ class MLMCSimulator:
 
         # Compute variances.
         variances = self._compute_variances()
-
-        # Present kurtosis analysis if verbose enabled.
-        if self._verbose:
-            self._compute_kurtosis()
 
         # Epsilon should be array that matches output width.
         self._epsilons = self._process_epsilon(epsilon)
@@ -96,7 +94,14 @@ class MLMCSimulator:
         """
         Compute estimate by extracting number of samples from each level
         determined in the setup phase.
-        :return:
+
+        :return: tuple containing three objects:
+            estimate: Estimates for each quantity of interest
+            type: ndarray
+            sample_sizes: The sample sizes used at each level.
+            type: ndarray
+            variances: Variance of model outputs at each level.
+            type: ndarray
         """
         # Restart sampling from beginning.
         self._data.reset_sampling()
@@ -164,36 +169,15 @@ class MLMCSimulator:
                       (i, variance_sum, epsilon_squared, passed)
 
         # Evaluate the multilevel estimator.
-        p = np.sum(output_means / self._sample_sizes)
+        estimates = np.mean(output_means, axis=0)
 
-        return p, self._sample_sizes, output_variances
-
-    def _compute_optimal_sample_sizes(self, variances, costs):
-
-        if self._verbose:
-            sys.stdout.write("Computing optimal sample sizes: ")
-
-        # Compute mu.
-        mu = np.zeros(self._epsilons.shape)
-        eps_n2 = np.power(self._epsilons, -2)
-
-        for i in range(len(self._epsilons)):
-            mu[i] = eps_n2[i] * np.sum(np.sqrt(variances[:, i] * costs))
-
-        # Compute sample sizes.
-        for level in range(self._num_levels):
-
-            nl = mu * np.sqrt(variances[level] / costs[level])
-            self._sample_sizes[level] = np.max(np.ceil(nl))
-
-        if self._verbose:
-            print np.array2string(self._sample_sizes)
+        return estimates, self._sample_sizes, output_variances
 
     def _compute_costs(self):
         """
         Compute costs across levels.
-        :return: 1 dimensional ndarray of costs, length determined by number
-                 of levels.
+
+        :return: 1 dimensional ndarray of costs.
         """
         if self._verbose:
             sys.stdout.write("Determining costs: ")
@@ -206,8 +190,8 @@ class MLMCSimulator:
         if hasattr(self._models[0], 'cost'):
 
             costs_precomputed = True
-            for i in range(len(self._models)):
-                costs[i] = self._models[i].cost
+            for i, model in enumerate(self._models):
+                costs[i] = model.cost
 
             # Costs at level > 0 should be summed with previous level.
             costs[1:] = costs[1:] + costs[:-1]
@@ -250,13 +234,18 @@ class MLMCSimulator:
         return costs
 
     def _compute_variances(self):
+        """
+        Compute variances of outputs across samples at each level and quantity
+        of interest.
 
+        :return: 2d ndarray of variances
+        """
         if self._verbose:
             print "Determining variances: "
 
         variances = np.zeros((self._num_levels, self._output_size))
 
-        # Get differences between outputs of each layer.
+        # Get differences between outputs of each level.
         output_diffs = self._cached_output[1:] - self._cached_output[:-1]
 
         # First row is variance of first level, subsequent rows are
@@ -273,9 +262,35 @@ class MLMCSimulator:
 
         return variances
 
+    def _compute_optimal_sample_sizes(self, variances, costs):
+        """
+        Compute the sample size for each level to be used in simulation.
+
+        :param variances: 2d ndarray of variances
+        :param costs: 1d ndarray of costs
+        """
+        if self._verbose:
+            sys.stdout.write("Computing optimal sample sizes: ")
+
+        # Need 2d version of costs in order to vectorize the operations.
+        costs_2d = costs[:, np.newaxis]
+
+        # Compute mu.
+        mu = np.power(self._epsilons, -2) * \
+             np.sum(np.sqrt(variances * costs_2d), axis=0)
+
+        self._sample_sizes = np.amax(np.ceil(mu *
+                                             np.sqrt(variances / costs_2d)),
+                                     axis=1).astype(int)
+
+        if self._verbose:
+            print np.array2string(self._sample_sizes)
+
     def _process_epsilon(self, epsilon):
         """
-        Produce an ndarray of epsilon values from float or list of epsilons.
+        Produce an ndarray of epsilon values from scalar or vector of epsilons.
+        If a vector, length should match the number of quantities of interest.
+
         :param epsilon: float, list of floats, or ndarray.
         :return: ndarray of epsilons of size (self.num_levels).
         """
