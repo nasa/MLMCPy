@@ -144,8 +144,6 @@ class MLMCSimulator:
                 can_use_cache = cached_index < self._initial_sample_size and \
                     cached_level == level
 
-                can_use_cache = False  # TODO: Remember to remove this!
-
                 if can_use_cache:
                     output[i] = self._cached_output[level][cached_index]
                 else:
