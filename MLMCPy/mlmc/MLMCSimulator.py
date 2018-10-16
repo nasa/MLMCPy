@@ -83,16 +83,13 @@ class MLMCSimulator:
         self._initial_sample_size = initial_sample_size
 
         # Run models with initial sample sizes to compute costs, outputs.
-        costs = self._compute_costs()
-
-        # Compute variances.
-        variances = self._compute_variances()
+        costs, variances = self._compute_costs_and_variances()
 
         # Epsilon should be array that matches output width.
         self._epsilons = self._process_epsilon(epsilon)
 
         # Compute optimal sample size at each level.
-        self._compute_optimal_sample_sizes(variances, costs)
+        self._compute_optimal_sample_sizes(costs, variances)
 
     def _run_simulation(self):
         """
@@ -147,6 +144,8 @@ class MLMCSimulator:
                 can_use_cache = cached_index < self._initial_sample_size and \
                     cached_level == level
 
+                can_use_cache = False  # TODO: Remember to remove this!
+
                 if can_use_cache:
                     output[i] = self._cached_output[level][cached_index]
                 else:
@@ -174,11 +173,13 @@ class MLMCSimulator:
 
         return estimates, self._sample_sizes, output_variances
 
-    def _compute_costs(self):
+    def _compute_costs_and_variances(self):
         """
-        Compute costs across levels.
+        Compute costs and variances across levels.
 
-        :return: 1 dimensional ndarray of costs.
+        :return: tuple of ndarrays:
+            1d ndarray of costs
+            2d ndarray of variances
         """
         if self._verbose:
             sys.stdout.write("Determining costs: ")
@@ -210,11 +211,17 @@ class MLMCSimulator:
                                         self._initial_sample_size,
                                         self._output_size))
 
+        variances = np.zeros((self._num_levels, self._output_size))
+
         # Process samples in model. Gather compute times for each level.
+        # Variance is computed from difference between outputs of adjacent
+        # layers evaluated from the sample samples.
         compute_times = np.zeros(self._num_levels)
         for level in range(self._num_levels):
 
             input_samples = self._data.draw_samples(self._initial_sample_size)
+            sublevel_outputs = np.zeros((self._initial_sample_size,
+                                        self._output_size))
 
             start_time = timeit.default_timer()
             for i, sample in enumerate(input_samples):
@@ -222,7 +229,16 @@ class MLMCSimulator:
                 output = self._models[level].evaluate(sample)
                 self._cached_output[level, i] = output
 
+                if level > 0:
+                    sublevel_outputs[i] = self._models[level-1].evaluate(sample)
+
             compute_times[level] = timeit.default_timer() - start_time
+
+            if level == 0:
+                variances[0] = np.var(self._cached_output[0])
+            else:
+                variances[level] = np.var(self._cached_output[level] -
+                                          sublevel_outputs)
 
         # Compute costs based on compute time differences between levels.
         if not costs_precomputed:
@@ -232,38 +248,9 @@ class MLMCSimulator:
         if self._verbose:
             print np.array2string(costs)
 
-        return costs
+        return costs, variances
 
-    def _compute_variances(self):
-        """
-        Compute variances of outputs across samples at each level and quantity
-        of interest.
-
-        :return: 2d ndarray of variances
-        """
-        if self._verbose:
-            print "Determining variances: "
-
-        variances = np.zeros((self._num_levels, self._output_size))
-
-        # Get differences between outputs of each level.
-        output_diffs = self._cached_output[1:] - self._cached_output[:-1]
-
-        # First row is variance of first level, subsequent rows are
-        # variances of differences between levels.
-        variances[0, :] = np.var(self._cached_output[0], axis=0)
-        variances[1:] = np.var(output_diffs, axis=1)
-
-        # Fix zero variances by setting them to a very small value.
-        # This will avoid division by zero errors later.
-        variances[np.where(variances == 0)] = 1.e-30
-
-        if self._verbose:
-            print np.array2string(variances)
-
-        return variances
-
-    def _compute_optimal_sample_sizes(self, variances, costs):
+    def _compute_optimal_sample_sizes(self, costs, variances):
         """
         Compute the sample size for each level to be used in simulation.
 

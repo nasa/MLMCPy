@@ -61,7 +61,7 @@ class InputFromData(Input):
                             " increase epsilon to reduce sample size needed."
             raise ValueError(error_message % (sample_size, num_samples))
 
-        return sample
+        return np.copy(sample)
 
     def reset_sampling(self):
         """
