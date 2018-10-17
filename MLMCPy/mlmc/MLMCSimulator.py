@@ -1,6 +1,7 @@
 import numpy as np
 import timeit
 import sys
+import imp
 
 from MLMCPy.input import Input
 from MLMCPy.model import Model
@@ -40,6 +41,8 @@ class MLMCSimulator:
 
         # Enabled diagnostic text output.
         self._verbose = False
+
+        self.__detect_parallelization()
 
     def simulate(self, epsilon, initial_sample_size=1000, verbose=False):
         """
@@ -105,7 +108,7 @@ class MLMCSimulator:
         self._data.reset_sampling()
 
         output_means = np.zeros((self._num_levels, self._output_size))
-        output_variances = np.zeros((self._num_levels, self._output_size))
+        output_variances = np.zeros(self._output_size)
 
         # Compute sample outputs.
         for level in range(self._num_levels):
@@ -116,7 +119,14 @@ class MLMCSimulator:
 
             # Sample input data.
             sample_size = self._sample_sizes[level]
-            samples = self._data.draw_samples(sample_size)
+
+            # Get indices of samples to be computed on this CPU.
+            cpu_sample_indices = np.arange(self._cpu_rank,
+                                           sample_size,
+                                           self._number_CPUs,
+                                           dtype=int)
+
+            samples = self._data.draw_samples(sample_size)[cpu_sample_indices]
 
             # Produce the model output.
             output = np.zeros((sample_size, self._output_size))
@@ -149,9 +159,12 @@ class MLMCSimulator:
                 else:
                     output[i] = self._models[level].evaluate(sample)
 
-            # Compute mean of outputs.
-            output_means[level] = np.mean(output, axis=0)
-            output_variances[level] = np.var(output, axis=0)
+            # Compute mean and variance of outputs across all CPUs.
+            all_outputs = self._collect_outputs(output)
+
+            output_means[level] = np.mean(all_outputs, axis=0)
+
+        output_variances = np.var(output_means, axis=0)
 
         # Compute sum of variances across levels for each quantity of interest
         # and compare results to corresponding epsilon values.
@@ -265,9 +278,10 @@ class MLMCSimulator:
         mu = np.power(self._epsilons, -2) * \
              np.sum(np.sqrt(variances * costs_2d), axis=0)
 
-        self._sample_sizes = np.amax(np.ceil(mu *
-                                             np.sqrt(variances / costs_2d)),
-                                     axis=1).astype(int)
+        sample_size_floats = mu * np.sqrt(variances / costs_2d)
+
+        self._sample_sizes = \
+            np.amax(np.ceil(sample_size_floats), axis=1).astype(int)
 
         if self._verbose:
             print np.array2string(self._sample_sizes)
@@ -324,6 +338,23 @@ class MLMCSimulator:
 
         return epsilon
 
+    def _collect_outputs(self, local_outputs):
+        """
+        Used to collect model outputs across all CPUs during simulation and
+        combine them into one ndarray.
+
+        :param local_outputs: model outputs produced on current CPU
+        :return: ndarray of all model outputs
+        """
+
+        if self._number_CPUs == 1:
+            return local_outputs
+
+        import mpi4py
+        comm = mpi4py.MPI.COMM_WORLD
+
+        return np.stack(comm.allgather(local_outputs), axis=0)
+
     @staticmethod
     def __check_init_parameters(data, models):
 
@@ -345,3 +376,22 @@ class MLMCSimulator:
 
         if starting_sample_size < 1:
             raise ValueError("starting_sample_size must be greater than zero.")
+
+    def __detect_parallelization(self):
+        '''
+        Detects whether multiple processors are available and sets
+        self.number_CPUs and self.cpu_rank accordingly.
+        '''
+        try:
+            imp.find_module('mpi4py')
+
+            from mpi4py import MPI
+            comm = MPI.COMM_WORLD
+
+            self._number_CPUs = comm.size
+            self._cpu_rank = comm.rank
+
+        except ImportError:
+
+            self._number_CPUs = 1
+            self._cpu_rank = 0

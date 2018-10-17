@@ -411,8 +411,8 @@ def test_hard_coded_test_3_level(data_input, models_from_data):
                                         level_2_sample_size])
 
     hard_coded_estimate = (np.mean(sample_0) +
-                        np.mean(sample_1) +
-                        np.mean(sample_2)) / 3.
+                           np.mean(sample_1) +
+                           np.mean(sample_2)) / 3.
 
     # Run Simulation for comparison to hard coded results.
     data_input.reset_sampling()
@@ -424,3 +424,64 @@ def test_hard_coded_test_3_level(data_input, models_from_data):
     assert np.array_equal(np.squeeze(sim_variances), hard_coded_variances)
     assert np.array_equal(sim._sample_sizes, hard_coded_sample_sizes)
     assert np.array_equal(sim_estimate[0], hard_coded_estimate)
+
+@pytest.mark.parametrize("num_cpus", [2, 3, 4, 5, 6, 8])
+def test_multiple_mock_CPUs(data_input, models_from_data, num_cpus,
+                            mocker):
+
+    epsilon = .5
+    initial_sample_size = 100
+
+    # Spy on _collect_outputs in order to get arguments passed into it.
+    spy_fun = mocker.spy(MLMCSimulator, '_collect_outputs')
+
+    reference_sim = MLMCSimulator(models=models_from_data, data=data_input)
+    reference_estimate, reference_sample_sizes, reference_variances = \
+        reference_sim.simulate(epsilon=epsilon,
+                               initial_sample_size=initial_sample_size)
+
+    # Collect parameters passed into _collect_outputs in reference run.
+    all_outputs = []
+    for output in spy_fun.func_dict['call_args_list']:
+
+        all_outputs.append(output[0][1])
+
+    mpi_sim_estimates = np.zeros(num_cpus)
+    mpi_sim_sample_sizes = np.zeros(num_cpus)
+    mpi_sim_variances = np.zeros(num_cpus)
+
+    # Function to replace MLMCSimulator._collect_outputs in order to simulate
+    # an MPI environment. Should return all outputs as if it collected them
+    # from other CPUs.
+    @classmethod
+    def mock_collect_outputs(self, local_outputs):
+
+        self.level_track += 1
+        return self.all_outputs[self.level_track]
+
+    with mocker.patch.object(MLMCSimulator,
+                             '_collect_outputs',
+                             mock_collect_outputs):
+
+        for i in range(num_cpus):
+            sim = MLMCSimulator(models=models_from_data, data=data_input)
+            sim._number_CPUs = num_cpus
+            sim._cpu_rank = i
+            sim.all_outputs = all_outputs
+            sim.level_track = -1
+
+            sim_estimate, sim_sample_sizes, sim_variances = \
+                sim.simulate(epsilon=epsilon,
+                             initial_sample_size=initial_sample_size)
+
+            mpi_sim_estimates.append(sim_estimate)
+            mpi_sim_sample_sizes.append(sim_sample_sizes)
+            mpi_sim_variances.append(sim_variances)
+
+    assert np.all_equal(mpi_sim_estimates)
+    assert np.all_equal(mpi_sim_sample_sizes)
+    assert np.all_equal(mpi_sim_variances)
+
+    assert mpi_sim_estimates[0] == reference_estimate[0]
+    assert mpi_sim_sample_sizes[0] == reference_sample_sizes
+    assert mpi_sim_variances[0] == reference_variances
