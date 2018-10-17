@@ -214,6 +214,17 @@ def test_calculate_estimate_for_springmass_random_input(beta_distribution_input,
     assert np.isclose(estimate[0], mc_20000_output_sample_mean, rtol=.5)
 
 
+@pytest.mark.parametrize("epsilon", [2., 1., .5, .1])
+def test_final_variances_less_than_epsilon_squared(beta_distribution_input,
+                                                   spring_models,
+                                                   epsilon):
+
+    sim = MLMCSimulator(models=spring_models, data=beta_distribution_input)
+    estimate, sample_sizes, variances = sim.simulate(1., 200)
+
+    assert variances[0] < epsilon ** 2
+
+
 @pytest.mark.parametrize("cache_size", [20, 200, 2000])
 def test_output_caching(data_input, models_from_data, cache_size):
 

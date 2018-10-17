@@ -163,10 +163,11 @@ class MLMCSimulator:
             print
             for i, variance in enumerate(variances):
 
-                passed = variance < self._epsilons[i]
+                epsilon_squared = self._epsilons[i] ** 2
+                passed = variance < epsilon_squared
 
-                print 'QOI #%s: variance: %s, epsilon: %s, success: %s' % \
-                      (i, variance, self._epsilons[i], passed)
+                print 'QOI #%s: variance: %s, epsilon^2: %s, success: %s' % \
+                      (i, variance, epsilon_squared, passed)
 
         # Evaluate the multilevel estimator.
         estimates = np.mean(output_means, axis=0)
