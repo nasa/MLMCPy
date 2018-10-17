@@ -153,23 +153,25 @@ class MLMCSimulator:
             output_means[level] = np.mean(output, axis=0)
             output_variances[level] = np.var(output, axis=0)
 
-        # Compute sum of variances across levels for each quantity of interest
-        # and compare results to corresponding epsilon values.
+        # Compute total variance for each quantity of interest.
+        sample_sizes_2d = self._sample_sizes[:, np.newaxis]
+        variances = np.sum(output_variances / sample_sizes_2d, axis=0)
+
+        # Compare variance for each quantity of interest to epsilon values.
         if self._verbose:
 
-            for i in range(self._output_size):
+            print
+            for i, variance in enumerate(variances):
 
-                variance_sum = np.sum(output_variances[:, i])
-                epsilon_squared = self._epsilons[i]
-                passed = variance_sum < epsilon_squared
+                passed = variance < self._epsilons[i]
 
-                print 'QOI #%s: var: %s, eps^2: %s, success: %s' % \
-                      (i, variance_sum, epsilon_squared, passed)
+                print 'QOI #%s: variance: %s, epsilon: %s, success: %s' % \
+                      (i, variance, self._epsilons[i], passed)
 
         # Evaluate the multilevel estimator.
         estimates = np.mean(output_means, axis=0)
 
-        return estimates, self._sample_sizes, output_variances
+        return estimates, self._sample_sizes, variances
 
     def _compute_costs_and_variances(self):
         """

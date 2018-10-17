@@ -35,5 +35,9 @@ models = [model_level1, model_level2, model_level3]
 
 # Step 3 - initialize MLMC & predict max displacement to specified error
 mlmc_simulator = MLMCSimulator(stiffness_distribution, models)
-[max_disp, num_evals, final_error] = mlmc_simulator.simulate(epsilon=1e-3,
-                                                             verbose=True)
+[estimates, sample_sizes, variances] = mlmc_simulator.simulate(epsilon=1e-2,
+                                                               verbose=True)
+
+print 'Estimate: %s' % estimates
+print 'Sample sizes used: %s' % sample_sizes
+print 'Variance: %s' % variances
