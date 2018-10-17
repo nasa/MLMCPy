@@ -93,21 +93,21 @@ def test_simulate_exception_for_invalid_parameters(data_input,
         test_mlmc.simulate(epsilon=.1, initial_sample_size='five')
 
     with pytest.raises(TypeError):
-        test_mlmc.simulate(epsilon=.1, initial_sample_size=5, maximum_cost='3')
+        test_mlmc.simulate(epsilon=.1, initial_sample_size=5, target_cost='3')
 
     with pytest.raises(ValueError):
-        test_mlmc.simulate(epsilon=.1, initial_sample_size=5, maximum_cost=-1)
+        test_mlmc.simulate(epsilon=.1, initial_sample_size=5, target_cost=-1)
 
 
 def test_simulate_expected_output_types(data_input, models_from_data):
 
     test_mlmc = MLMCSimulator(models=models_from_data, data=data_input)
 
-    result, sample_counts, variances = test_mlmc.simulate(epsilon=1.,
-                                                          initial_sample_size=20)
+    result, sample_count, variances = test_mlmc.simulate(epsilon=1.,
+                                                         initial_sample_size=20)
 
     assert isinstance(result, np.ndarray)
-    assert isinstance(sample_counts, np.ndarray)
+    assert isinstance(sample_count, np.ndarray)
     assert isinstance(variances, np.ndarray)
 
 

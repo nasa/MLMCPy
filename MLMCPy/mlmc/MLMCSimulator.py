@@ -117,49 +117,28 @@ class MLMCSimulator:
         # Compute sample outputs.
         for level in range(self._num_levels):
 
-            if self._verbose:
-                step = str(level+1) + " of " + str(self._num_levels)
-                print "\nRunning simulation level " + step
+            samples = self._data.draw_samples(self._sample_sizes[level])
+            output = np.zeros((self._sample_sizes[level], self._output_size))
 
-            # Sample input data.
-            sample_size = self._sample_sizes[level]
-            samples = self._data.draw_samples(sample_size)
-
-            # Produce the model output.
-            output = np.zeros((sample_size, self._output_size))
             for i, sample in enumerate(samples):
+                output[i] = self._evaluate_sample(i, sample, level)
 
-                if self._verbose:
-                    progress = str((float(i) / sample_size) * 100)[:5]
-                    sys.stdout.write("\r" + progress + "%")
-
-                # If we have the output for this sample cached, use it.
-                # Otherwise, compute the output via the model.
-
-                # Absolute index of current sample.
-                sample_index = np.sum(self._sample_sizes[:level]) + i
-
-                # Level in cache that a sample with above index would be at.
-                # This must match the current level.
-                cached_level = sample_index // self._initial_sample_size
-
-                # Index within cached level for sample output.
-                cached_index = sample_index - level * self._initial_sample_size
-
-                # Level and index within cache must be correct for the
-                # appropriate cached value to be found.
-                can_use_cache = cached_index < self._initial_sample_size and \
-                    cached_level == level
-
-                if can_use_cache:
-                    output[i] = self._cached_output[level][cached_index]
-                else:
-                    output[i] = self._models[level].evaluate(sample)
-
-            # Compute mean of outputs.
             output_means[level] = np.mean(output, axis=0)
             output_variances[level] = np.var(output, axis=0)
 
+        estimates, variances = self._compute_summary_data(output_means,
+                                                          output_variances)
+
+        return estimates, self._sample_sizes, variances
+
+    def _compute_summary_data(self, output_means, output_variances):
+        """
+        Compute means and variances of output data.
+
+        :param output_means: ndarray of model output means.
+        :param output_variances: ndarray of model output variances.
+        :return:
+        """
         # Compute total variance for each quantity of interest.
         sample_sizes_2d = self._sample_sizes[:, np.newaxis]
         variances = np.sum(output_variances / sample_sizes_2d, axis=0)
@@ -168,6 +147,7 @@ class MLMCSimulator:
         if self._verbose:
 
             print
+
             for i, variance in enumerate(variances):
 
                 epsilon_squared = self._epsilons[i] ** 2
@@ -177,9 +157,47 @@ class MLMCSimulator:
                       (i, variance, epsilon_squared, passed)
 
         # Evaluate the multilevel estimator.
-        estimates = np.mean(output_means, axis=0)
+        means = np.mean(output_means, axis=0)
 
-        return estimates, self._sample_sizes, variances
+        return means, variances
+
+    def _evaluate_sample(self, i, sample, level):
+        """
+        Evaluate output of an input sample, either by running the model or
+        retrieving the output from the cache.
+
+        :param i: sample index
+        :param sample: sample value
+        :param level: model level
+        :return: result of evaluation
+        """
+
+        if self._verbose:
+            progress = str((float(i) / self._sample_sizes[level]) * 100)[:5]
+            sys.stdout.write("\rLevel %s progress: %s%%" % level, progress)
+
+        # If we have the output for this sample cached, use it.
+        # Otherwise, compute the output via the model.
+
+        # Absolute index of current sample.
+        sample_index = np.sum(self._sample_sizes[:level]) + i
+
+        # Level in cache that a sample with above index would be at.
+        # This must match the current level.
+        cached_level = sample_index // self._initial_sample_size
+
+        # Index within cached level for sample output.
+        cached_index = sample_index - level * self._initial_sample_size
+
+        # Level and index within cache must be correct for the
+        # appropriate cached value to be found.
+        can_use_cache = cached_index < self._initial_sample_size and \
+                        cached_level == level
+
+        if can_use_cache:
+            return self._cache[level][cached_index]
+        else:
+            return self._models[level].evaluate(sample)
 
     def _compute_costs_and_variances(self):
         """
@@ -190,8 +208,50 @@ class MLMCSimulator:
             2d ndarray of variances
         """
         if self._verbose:
-            sys.stdout.write("Determining costs: ")
+            sys.stdout.write("Determining costs and variances: ")
 
+        self._determine_output_size()
+
+        # Cache model outputs computed here so that they can be reused
+        # in the simulation.
+        self._cache = np.zeros((self._num_levels,
+                                self._initial_sample_size,
+                                self._output_size))
+
+        # Process samples in model. Gather compute times for each level.
+        # Variance is computed from difference between outputs of adjacent
+        # layers evaluated from the same samples.
+        compute_times = np.zeros(self._num_levels)
+        variances = np.zeros((self._num_levels, self._output_size))
+
+        for level in range(self._num_levels):
+
+            input_samples = self._data.draw_samples(self._initial_sample_size)
+            sublevel_outputs = np.zeros((self._initial_sample_size,
+                                        self._output_size))
+
+            start_time = timeit.default_timer()
+            for i, sample in enumerate(input_samples):
+
+                self._cache[level, i] = self._models[level].evaluate(sample)
+
+                if level > 0:
+                    sublevel_outputs[i] = self._models[level-1].evaluate(sample)
+
+            compute_times[level] = timeit.default_timer() - start_time
+
+            variances[level] = np.var(self._cache[level] - sublevel_outputs)
+
+        return self._compute_costs(compute_times), variances
+
+    def _compute_costs(self, compute_times):
+        """
+        Set costs for each level, either from precomputed values from each
+        model or based on computation times provided by compute_times.
+
+        :param compute_times: ndarray of computation times for computing
+        model at each layer and preceding layer.
+        """
         costs = np.ones(self._num_levels)
 
         # If the models have costs precomputed, use them to compute costs
@@ -206,48 +266,6 @@ class MLMCSimulator:
             # Costs at level > 0 should be summed with previous level.
             costs[1:] = costs[1:] + costs[:-1]
 
-        # Run model on a small test sample so we can find shape of output.
-        test_sample = self._data.draw_samples(1)[0]
-        self._data.reset_sampling()
-
-        test_output = self._models[0].evaluate(test_sample)
-        self._output_size = test_output.shape[0]
-
-        # Cache model outputs computed here so that they can be reused
-        # in the simulation.
-        self._cached_output = np.zeros((self._num_levels,
-                                        self._initial_sample_size,
-                                        self._output_size))
-
-        variances = np.zeros((self._num_levels, self._output_size))
-
-        # Process samples in model. Gather compute times for each level.
-        # Variance is computed from difference between outputs of adjacent
-        # layers evaluated from the sample samples.
-        compute_times = np.zeros(self._num_levels)
-        for level in range(self._num_levels):
-
-            input_samples = self._data.draw_samples(self._initial_sample_size)
-            sublevel_outputs = np.zeros((self._initial_sample_size,
-                                        self._output_size))
-
-            start_time = timeit.default_timer()
-            for i, sample in enumerate(input_samples):
-
-                output = self._models[level].evaluate(sample)
-                self._cached_output[level, i] = output
-
-                if level > 0:
-                    sublevel_outputs[i] = self._models[level-1].evaluate(sample)
-
-            compute_times[level] = timeit.default_timer() - start_time
-
-            if level == 0:
-                variances[0] = np.var(self._cached_output[0])
-            else:
-                variances[level] = np.var(self._cached_output[level] -
-                                          sublevel_outputs)
-
         # Compute costs based on compute time differences between levels.
         if not costs_precomputed:
             costs[0] = compute_times[0]
@@ -256,7 +274,17 @@ class MLMCSimulator:
         if self._verbose:
             print np.array2string(costs)
 
-        return costs, variances
+        return costs
+
+    def _determine_output_size(self):
+        """
+        Runs model on a small test sample to determine shape of output.
+        """
+        test_sample = self._data.draw_samples(1)[0]
+        self._data.reset_sampling()
+
+        test_output = self._models[0].evaluate(test_sample)
+        self._output_size = test_output.shape[0]
 
     def _compute_optimal_sample_sizes(self, costs, variances):
         """
@@ -291,6 +319,7 @@ class MLMCSimulator:
         """
         Runs a standard monte carlo simulation. Used when only one model
         is provided.
+
         :param num_samples: Number of samples to take.
         :return: tuple containing three ndarrays with one element each:
             estimates: Estimates for each quantity of interest
