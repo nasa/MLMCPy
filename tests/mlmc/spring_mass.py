@@ -46,7 +46,7 @@ class SpringMassModel(Model):
 
         self._state0 = state0
         self._t = time_grid
-        self._cost = cost
+        self.cost = cost
 
     def simulate(self, stiffness):
         '''

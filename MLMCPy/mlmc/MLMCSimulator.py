@@ -29,6 +29,9 @@ class MLMCSimulator:
         # Sample size to be taken at each level.
         self._sample_sizes = np.zeros(self._num_levels, dtype=np.int)
 
+        # Used to compute sample sizes based on a fixed cost.
+        self._target_cost = None
+
         # Sample size used in setup.
         self._initial_sample_size = 0
 
@@ -41,7 +44,8 @@ class MLMCSimulator:
         # Enabled diagnostic text output.
         self._verbose = False
 
-    def simulate(self, epsilon, initial_sample_size=1000, verbose=False):
+    def simulate(self, epsilon, initial_sample_size=1000, target_cost=None,
+                 verbose=False):
         """
         Perform MLMC simulation.
         Computes number of samples per level before running simulations
@@ -53,13 +57,16 @@ class MLMCSimulator:
         :param initial_sample_size: Sample size used when computing sample sizes
             for each level in simulation.
         :type: int
-        :returns (value, list of sample count at each level, error)
+        :param target_cost: Target cost to run simulation.
+        :type: float or int
         :param verbose: Whether to print useful diagnostic information.
         :type: bool
+        :returns (value, list of sample count at each level, error)
         """
         self._verbose = verbose
 
-        self.__check_simulate_parameters(initial_sample_size)
+        self.__check_simulate_parameters(initial_sample_size, target_cost)
+        self._target_cost = target_cost
 
         # If only one model was provided, run standard monte carlo.
         if self._num_levels == 1:
@@ -265,12 +272,17 @@ class MLMCSimulator:
         costs_2d = costs[:, np.newaxis]
 
         # Compute mu.
-        mu = np.power(self._epsilons, -2) * \
-             np.sum(np.sqrt(variances * costs_2d), axis=0)
+        sum_sqrt_vc = np.sum(np.sqrt(variances * costs_2d), axis=0)
 
-        self._sample_sizes = np.amax(np.ceil(mu *
-                                             np.sqrt(variances / costs_2d)),
-                                     axis=1).astype(int)
+        if self._target_cost is None:
+            mu = np.power(self._epsilons, -2) * sum_sqrt_vc
+        else:
+            mu = self._target_cost / sum_sqrt_vc
+
+        # Compute sample sizes.
+        sqrt_v_over_c = np.sqrt(variances / costs_2d)
+        self._sample_sizes = np.amax(np.ceil(mu * sqrt_v_over_c), axis=1).\
+            astype(int)
 
         if self._verbose:
             print np.array2string(self._sample_sizes)
@@ -341,10 +353,20 @@ class MLMCSimulator:
                 TypeError("models must be a list of models.")
 
     @staticmethod
-    def __check_simulate_parameters(starting_sample_size):
+    def __check_simulate_parameters(starting_sample_size, maximum_cost):
 
         if not isinstance(starting_sample_size, int):
             raise TypeError("starting_sample_size must be an integer.")
 
         if starting_sample_size < 1:
             raise ValueError("starting_sample_size must be greater than zero.")
+
+        if maximum_cost is not None:
+
+            if not (isinstance(maximum_cost, float) or
+                    isinstance(maximum_cost, int)):
+
+                raise TypeError('maximum cost must be an int or float.')
+
+            if maximum_cost <= 0:
+                raise ValueError("maximum cost must be greater than zero.")

@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+import timeit
 import os
 
 from MLMCPy.mlmc import MLMCSimulator
@@ -90,6 +91,12 @@ def test_simulate_exception_for_invalid_parameters(data_input,
 
     with pytest.raises(TypeError):
         test_mlmc.simulate(epsilon=.1, initial_sample_size='five')
+
+    with pytest.raises(TypeError):
+        test_mlmc.simulate(epsilon=.1, initial_sample_size=5, maximum_cost='3')
+
+    with pytest.raises(ValueError):
+        test_mlmc.simulate(epsilon=.1, initial_sample_size=5, maximum_cost=-1)
 
 
 def test_simulate_expected_output_types(data_input, models_from_data):
@@ -223,6 +230,22 @@ def test_final_variances_less_than_epsilon_squared(beta_distribution_input,
     estimate, sample_sizes, variances = sim.simulate(1., 200)
 
     assert variances[0] < epsilon ** 2
+
+
+@pytest.mark.parametrize('cost', [100, 10, 1])
+def test_fixed_cost(beta_distribution_input, spring_models, cost):
+
+    # Ensure costs are evaluated by simulator via timeit.
+    for model in spring_models:
+        delattr(model, 'cost')
+
+    sim = MLMCSimulator(models=spring_models, data=beta_distribution_input)
+
+    start_time = timeit.default_timer()
+    sim.simulate(.1, 100, target_cost=cost)
+    compute_time = timeit.default_timer() - start_time
+
+    assert np.isclose(compute_time, cost, rtol=.1)
 
 
 @pytest.mark.parametrize("cache_size", [20, 200, 2000])
