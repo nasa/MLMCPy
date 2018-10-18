@@ -111,8 +111,8 @@ class MLMCSimulator:
         # Restart sampling from beginning.
         self._data.reset_sampling()
 
-        output_means = np.zeros((self._num_levels, self._output_size))
-        output_variances = np.zeros((self._num_levels, self._output_size))
+        sums_of_outputs = np.zeros(self._output_size)
+        sums_of_output_squares = np.zeros(self._output_size)
 
         # Compute sample outputs.
         for level in range(self._num_levels):
@@ -123,25 +123,32 @@ class MLMCSimulator:
             for i, sample in enumerate(samples):
                 output[i] = self._evaluate_sample(i, sample, level)
 
-            output_means[level] = np.mean(output, axis=0)
-            output_variances[level] = np.var(output, axis=0)
+            sums_of_outputs += np.sum(output, axis=0)
+            sums_of_output_squares += np.sum(np.square(output), axis=0)
 
-        estimates, variances = self._compute_summary_data(output_means,
-                                                          output_variances)
+        estimates, variances = self._compute_summary_data(sums_of_outputs,
+                                                          sums_of_output_squares)
 
         return estimates, self._sample_sizes, variances
 
-    def _compute_summary_data(self, output_means, output_variances):
+    def _compute_summary_data(self, sums_of_outputs, sums_of_output_squares):
         """
         Compute means and variances of output data.
 
-        :param output_means: ndarray of model output means.
-        :param output_variances: ndarray of model output variances.
-        :return:
+        :param sums_of_outputs: ndarray of model output sums for each QoI.
+        :param sums_of_output_squares: ndarray of model outputs squared for
+               each QoI.
+        :return: tuple of ndarrays of estimates and variances
         """
         # Compute total variance for each quantity of interest.
-        sample_sizes_2d = self._sample_sizes[:, np.newaxis]
-        variances = np.sum(output_variances / sample_sizes_2d, axis=0)
+        total_samples = np.sum(self._sample_sizes)
+
+        means = sums_of_outputs / total_samples
+
+        normalizer = 1. / (total_samples * (total_samples - 1.))
+
+        variances = (sums_of_output_squares / total_samples -
+                     np.square(means)) * normalizer
 
         # Compare variance for each quantity of interest to epsilon values.
         if self._verbose:
@@ -155,9 +162,6 @@ class MLMCSimulator:
 
                 print 'QOI #%s: variance: %s, epsilon^2: %s, success: %s' % \
                       (i, variance, epsilon_squared, passed)
-
-        # Evaluate the multilevel estimator.
-        means = np.mean(output_means, axis=0)
 
         return means, variances
 

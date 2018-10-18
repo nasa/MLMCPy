@@ -343,7 +343,8 @@ def test_hard_coded_test_2_level(data_input, models_from_data):
     # Package results for easy comparison with simulator results.
     hard_coded_variances = np.array([level_0_variance, discrepancy_variance])
     hard_coded_sample_sizes = np.array([level_0_sample_size, level_1_sample_size])
-    hard_coded_estimate = (np.mean(sample_0) + np.mean(sample_1)) / 2.
+    #hard_coded_estimate = (np.mean(sample_0) + np.mean(sample_1)) / 2.
+    hard_coded_estimate = np.mean(np.concatenate((sample_0, sample_1), axis=0))
 
     # Run Simulation for comparison to hard coded results.
     models = models_from_data[:2]
@@ -444,9 +445,13 @@ def test_hard_coded_test_3_level(data_input, models_from_data):
                                         level_1_sample_size,
                                         level_2_sample_size])
 
-    hard_coded_estimate = (np.mean(sample_0) +
-                        np.mean(sample_1) +
-                        np.mean(sample_2)) / 3.
+    # hard_coded_estimate = (np.mean(sample_0) +
+    #                     np.mean(sample_1) +
+    #                     np.mean(sample_2)) / 3.
+
+    hard_coded_estimate = np.mean(np.concatenate((sample_0,
+                                                  sample_1,
+                                                  sample_2), axis=0))
 
     # Run Simulation for comparison to hard coded results.
     data_input.reset_sampling()
