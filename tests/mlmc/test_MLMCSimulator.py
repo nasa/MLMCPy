@@ -244,20 +244,35 @@ def test_final_variances_less_than_epsilon_squared(beta_distribution_input,
     assert variances[0] < epsilon ** 2
 
 
-@pytest.mark.parametrize('cost', [100, 10, 1])
-def test_fixed_cost(beta_distribution_input, spring_models, cost):
+@pytest.mark.parametrize('target_cost', [10, 1, .1])
+def test_fixed_cost(beta_distribution_input, spring_models, target_cost):
 
     # Ensure costs are evaluated by simulator via timeit.
     for model in spring_models:
         delattr(model, 'cost')
 
-    sim = MLMCSimulator(models=spring_models, data=beta_distribution_input)
+    sim = MLMCSimulator(models=spring_models,
+                        data=beta_distribution_input)
+
+    # Multiply sample sizes times costs and take the sum; verify that this is
+    # close to the target cost.
+    sim._initial_sample_size = 100
+    sim._target_cost = target_cost
+
+    costs, variances = sim._compute_costs_and_variances()
+    sim._compute_optimal_sample_sizes(costs, variances)
+    sample_sizes = sim._sample_sizes
+
+    assert np.isclose(np.sum(costs * sample_sizes), target_cost, rtol=.05)
+
+    # Disable caching to ensure accuracy of compute time measurement.
+    sim._initial_sample_size = 0
 
     start_time = timeit.default_timer()
-    sim.simulate(.1, 100, target_cost=cost)
+    sim._run_simulation()
     compute_time = timeit.default_timer() - start_time
 
-    assert np.isclose(compute_time, cost, rtol=.1)
+    assert np.isclose(compute_time, target_cost, rtol=.2)
 
 
 @pytest.mark.parametrize("cache_size", [20, 200, 2000])

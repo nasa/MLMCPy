@@ -272,8 +272,7 @@ class MLMCSimulator:
 
         # Compute costs based on compute time differences between levels.
         if not costs_precomputed:
-            costs[0] = compute_times[0]
-            costs[1:] = compute_times[1:] + compute_times[0:-1]
+            costs = compute_times / self._initial_sample_size
 
         if self._verbose:
             print np.array2string(costs)
