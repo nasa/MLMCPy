@@ -126,8 +126,8 @@ class MLMCSimulator:
             sums_of_outputs += np.sum(output, axis=0)
             sums_of_output_squares += np.sum(np.square(output), axis=0)
 
-        estimates, variances = self._compute_summary_data(sums_of_outputs,
-                                                          sums_of_output_squares)
+        estimates, variances = \
+            self._compute_summary_data(sums_of_outputs, sums_of_output_squares)
 
         return estimates, self._sample_sizes, variances
 
@@ -246,7 +246,9 @@ class MLMCSimulator:
 
             variances[level] = np.var(self._cache[level] - sublevel_outputs)
 
-        return self._compute_costs(compute_times), variances
+        costs = self._compute_costs(compute_times)
+
+        return costs, variances
 
     def _compute_costs(self, compute_times):
         """
@@ -272,8 +274,7 @@ class MLMCSimulator:
 
         # Compute costs based on compute time differences between levels.
         if not costs_precomputed:
-            costs[0] = compute_times[0]
-            costs[1:] = compute_times[1:] + compute_times[0:-1]
+            costs = compute_times / self._initial_sample_size
 
         if self._verbose:
             print np.array2string(costs)
