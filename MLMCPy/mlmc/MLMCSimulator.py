@@ -145,7 +145,7 @@ class MLMCSimulator:
 
         means = sums_of_outputs / total_samples
 
-        normalizer = 1. / (total_samples * (total_samples - 1.))
+        normalizer = 1. / (total_samples ** 2 - total_samples)
 
         variances = (sums_of_output_squares / total_samples -
                      np.square(means)) * normalizer
