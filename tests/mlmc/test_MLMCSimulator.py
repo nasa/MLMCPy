@@ -66,6 +66,18 @@ def models_from_data():
     return [model1, model2, model3]
 
 
+@pytest.fixture
+def filename_2d_5_column_data():
+
+    return os.path.join(data_path, "2D_test_data_long.csv")
+
+
+@pytest.fixture
+def filename_2d_3_column_data():
+
+    return os.path.join(data_path, "2D_test_data_output_3_col.csv")
+
+
 def test_model_from_data(data_input, models_from_data):
 
     sim = MLMCSimulator(models=models_from_data, data=data_input)
@@ -267,6 +279,40 @@ def test_output_caching(data_input, models_from_data, cache_size):
     assert np.array_equal(variances1, variances2)
 
 
+def test_input_output_with_differing_column_count(filename_2d_5_column_data,
+                                                  filename_2d_3_column_data):
+
+    model1 = ModelFromData(filename_2d_5_column_data,
+                           filename_2d_3_column_data,
+                           1.)
+
+    model2 = ModelFromData(filename_2d_5_column_data,
+                           filename_2d_3_column_data,
+                           4.)
+
+    data_input = InputFromData(filename_2d_5_column_data)
+
+    sim = MLMCSimulator(models=[model1, model2], data=data_input)
+    sim.simulate(100., 10)
+
+
+def test_fail_if_model_outputs_do_not_match_shapes(filename_2d_5_column_data,
+                                                   filename_2d_3_column_data):
+
+    model1 = ModelFromData(filename_2d_5_column_data,
+                           filename_2d_5_column_data,
+                           1.)
+
+    model2 = ModelFromData(filename_2d_5_column_data,
+                           filename_2d_3_column_data,
+                           4.)
+
+    data_input = InputFromData(filename_2d_5_column_data)
+
+    with pytest.raises(ValueError):
+        MLMCSimulator(models=[model1, model2], data=data_input)
+
+
 def test_monte_carlo(data_input, models_from_data):
 
     np.random.seed(1)
@@ -297,17 +343,17 @@ def test_hard_coded_test_2_level(data_input, models_from_data):
     input_samples = data_input.draw_samples(initial_sample_size)
 
     for i, sample in enumerate(input_samples):
-        level_0_data[i] = models_from_data[0].evaluate(sample)[0]
+        level_0_data[i] = models_from_data[0].evaluate(sample)
 
     level_0_variance = np.var(level_0_data)
 
     # Must resample level 0 for level 0-1 discrepancy variance.
     input_samples = data_input.draw_samples(initial_sample_size)
     for i, sample in enumerate(input_samples):
-        level_0_data[i] = models_from_data[0].evaluate(sample)[0]
+        level_0_data[i] = models_from_data[0].evaluate(sample)
 
     for i, sample in enumerate(input_samples):
-        level_1_data[i] = models_from_data[1].evaluate(sample)[0]
+        level_1_data[i] = models_from_data[1].evaluate(sample)
 
     data_input.reset_sampling()
 
@@ -343,7 +389,6 @@ def test_hard_coded_test_2_level(data_input, models_from_data):
     # Package results for easy comparison with simulator results.
     hard_coded_variances = np.array([level_0_variance, discrepancy_variance])
     hard_coded_sample_sizes = np.array([level_0_sample_size, level_1_sample_size])
-    #hard_coded_estimate = (np.mean(sample_0) + np.mean(sample_1)) / 2.
     hard_coded_estimate = np.mean(np.concatenate((sample_0, sample_1), axis=0))
 
     # Run Simulation for comparison to hard coded results.
@@ -374,7 +419,7 @@ def test_hard_coded_test_3_level(data_input, models_from_data):
     input_samples = data_input.draw_samples(initial_sample_size)
 
     for i, sample in enumerate(input_samples):
-        level_0_data[i] = models_from_data[0].evaluate(sample)[0]
+        level_0_data[i] = models_from_data[0].evaluate(sample)
 
     level_0_variance = np.var(level_0_data)
 
@@ -382,10 +427,10 @@ def test_hard_coded_test_3_level(data_input, models_from_data):
     input_samples = data_input.draw_samples(initial_sample_size)
 
     for i, sample in enumerate(input_samples):
-        level_0_data[i] = models_from_data[0].evaluate(sample)[0]
+        level_0_data[i] = models_from_data[0].evaluate(sample)
 
     for i, sample in enumerate(input_samples):
-        level_1_data[i] = models_from_data[1].evaluate(sample)[0]
+        level_1_data[i] = models_from_data[1].evaluate(sample)
 
     level_discrepancy_01 = level_1_data - level_0_data
     discrepancy_variance_01 = np.var(level_discrepancy_01)
@@ -394,10 +439,10 @@ def test_hard_coded_test_3_level(data_input, models_from_data):
     input_samples = data_input.draw_samples(initial_sample_size)
 
     for i, sample in enumerate(input_samples):
-        level_1_data[i] = models_from_data[1].evaluate(sample)[0]
+        level_1_data[i] = models_from_data[1].evaluate(sample)
 
     for i, sample in enumerate(input_samples):
-        level_2_data[i] = models_from_data[2].evaluate(sample)[0]
+        level_2_data[i] = models_from_data[2].evaluate(sample)
 
     # Compute level 1-2 discrepancy variance.
     level_discrepancy_12 = level_2_data - level_1_data
@@ -444,10 +489,6 @@ def test_hard_coded_test_3_level(data_input, models_from_data):
     hard_coded_sample_sizes = np.array([level_0_sample_size,
                                         level_1_sample_size,
                                         level_2_sample_size])
-
-    # hard_coded_estimate = (np.mean(sample_0) +
-    #                     np.mean(sample_1) +
-    #                     np.mean(sample_2)) / 3.
 
     hard_coded_estimate = np.mean(np.concatenate((sample_0,
                                                   sample_1,

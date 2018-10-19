@@ -288,7 +288,7 @@ class MLMCSimulator:
         self._data.reset_sampling()
 
         test_output = self._models[0].evaluate(test_sample)
-        self._output_size = test_output.shape[0]
+        self._output_size = test_output.size
 
     def _compute_optimal_sample_sizes(self, costs, variances):
         """
@@ -313,8 +313,11 @@ class MLMCSimulator:
 
         # Compute sample sizes.
         sqrt_v_over_c = np.sqrt(variances / costs_2d)
-        self._sample_sizes = np.amax(np.ceil(mu * sqrt_v_over_c), axis=1).\
-            astype(int)
+        self._sample_sizes = np.amax(np.ceil(mu * sqrt_v_over_c), axis=1)
+
+        # Set sample sizes to ints and replace any 0s with  1.
+        self._sample_sizes = self._sample_sizes.astype(int)
+        self._sample_sizes[self._sample_sizes == 0] = 1
 
         if self._verbose:
             print np.array2string(self._sample_sizes)
@@ -372,8 +375,7 @@ class MLMCSimulator:
 
         return epsilon
 
-    @staticmethod
-    def __check_init_parameters(data, models):
+    def __check_init_parameters(self, data, models):
 
         if not isinstance(data, Input):
             TypeError("data must inherit from Input class.")
@@ -381,9 +383,22 @@ class MLMCSimulator:
         if not isinstance(models, list):
             TypeError("models must be a list of models.")
 
+        # Ensure all models have the same output dimensions.
+        output_sizes = []
+        test_sample = data.draw_samples(1)[0]
+        data.reset_sampling()
+
         for model in models:
             if not isinstance(model, Model):
                 TypeError("models must be a list of models.")
+
+            test_output = model.evaluate(test_sample)
+            output_sizes.append(test_output.size)
+
+        output_sizes = np.array(output_sizes)
+        if not np.all(output_sizes == output_sizes[0]):
+            raise ValueError("All models must return the same output " +
+                             "dimensions.")
 
     @staticmethod
     def __check_simulate_parameters(starting_sample_size, maximum_cost):

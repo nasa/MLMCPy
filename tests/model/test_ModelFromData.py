@@ -23,6 +23,12 @@ def output_data_file():
 
 
 @pytest.fixture
+def bad_data_file():
+    data_file = os.path.join(data_path, "bad_data.txt")
+    return data_file
+
+
+@pytest.fixture
 def input_data_file_2d():
     input_data_file = os.path.join(data_path, "2D_test_data.csv")
     return input_data_file
@@ -101,3 +107,29 @@ def test_init_fails_on_incompatible_data(input_data_file, output_data_file_2d):
 
     with pytest.raises(ValueError):
         ModelFromData(input_data_file, output_data_file_2d, 1.)
+
+
+def test_fail_on_nan_data(bad_data_file, input_data_file, output_data_file):
+
+    with pytest.raises(ValueError):
+        ModelFromData(bad_data_file, output_data_file, 1.)
+
+    with pytest.raises(ValueError):
+        ModelFromData(input_data_file, bad_data_file, 1.)
+
+
+@pytest.mark.parametrize("rows_to_skip", [1, 2, 3])
+def test_skip_rows(input_data_file_2d, output_data_file_2d, rows_to_skip):
+
+    normal_model = ModelFromData(input_data_file_2d, output_data_file_2d, 1.)
+
+    normal_row_count = normal_model._inputs.shape[0]
+
+    skipped_row_model = ModelFromData(input_data_file_2d,
+                                      output_data_file_2d,
+                                      skip_header=rows_to_skip,
+                                      cost=1.)
+
+    skipped_row_count = skipped_row_model._inputs.shape[0]
+
+    assert normal_row_count - rows_to_skip == skipped_row_count
