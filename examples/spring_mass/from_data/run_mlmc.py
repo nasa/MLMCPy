@@ -20,8 +20,8 @@ model_level3 = ModelFromData(inputfile, outputfile_level3, cost=100.0)
 models = [model_level1, model_level2, model_level3]
 
 mlmc_simulator = MLMCSimulator(data_input, models)
-[estimates, sample_sizes, variances] = mlmc_simulator.simulate(epsilon=.1)
+estimates, sample_sizes, variances = mlmc_simulator.simulate(epsilon=.1)
 
-print 'Estimate: %s' % estimates
+print 'Estimate: %s' % estimates[0]
 print 'Sample sizes used: %s' % sample_sizes
-print 'Variance: %s' % variances
+print 'Variance: %s' % variances[0]
