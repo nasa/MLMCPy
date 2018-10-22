@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+import timeit
 import os
 
 from MLMCPy.mlmc import MLMCSimulator
@@ -65,6 +66,18 @@ def models_from_data():
     return [model1, model2, model3]
 
 
+@pytest.fixture
+def filename_2d_5_column_data():
+
+    return os.path.join(data_path, "2D_test_data_long.csv")
+
+
+@pytest.fixture
+def filename_2d_3_column_data():
+
+    return os.path.join(data_path, "2D_test_data_output_3_col.csv")
+
+
 def test_model_from_data(data_input, models_from_data):
 
     sim = MLMCSimulator(models=models_from_data, data=data_input)
@@ -91,16 +104,22 @@ def test_simulate_exception_for_invalid_parameters(data_input,
     with pytest.raises(TypeError):
         test_mlmc.simulate(epsilon=.1, initial_sample_size='five')
 
+    with pytest.raises(TypeError):
+        test_mlmc.simulate(epsilon=.1, initial_sample_size=5, target_cost='3')
+
+    with pytest.raises(ValueError):
+        test_mlmc.simulate(epsilon=.1, initial_sample_size=5, target_cost=-1)
+
 
 def test_simulate_expected_output_types(data_input, models_from_data):
 
     test_mlmc = MLMCSimulator(models=models_from_data, data=data_input)
 
-    result, sample_counts, variances = test_mlmc.simulate(epsilon=1.,
-                                                          initial_sample_size=20)
+    result, sample_count, variances = test_mlmc.simulate(epsilon=1.,
+                                                         initial_sample_size=20)
 
     assert isinstance(result, np.ndarray)
-    assert isinstance(sample_counts, np.ndarray)
+    assert isinstance(sample_count, np.ndarray)
     assert isinstance(variances, np.ndarray)
 
 
@@ -214,6 +233,17 @@ def test_calculate_estimate_for_springmass_random_input(beta_distribution_input,
     assert np.isclose(estimate[0], mc_20000_output_sample_mean, rtol=.5)
 
 
+@pytest.mark.parametrize("epsilon", [1., .5, .1])
+def test_final_variances_less_than_epsilon_squared(beta_distribution_input,
+                                                   spring_models,
+                                                   epsilon):
+
+    sim = MLMCSimulator(models=spring_models, data=beta_distribution_input)
+    estimate, sample_sizes, variances = sim.simulate(epsilon, 200)
+
+    assert variances[0] < epsilon ** 2
+
+
 @pytest.mark.parametrize("cache_size", [20, 200, 2000])
 def test_output_caching(data_input, models_from_data, cache_size):
 
@@ -231,6 +261,40 @@ def test_output_caching(data_input, models_from_data, cache_size):
     # If caching is working properly, they should match.
     assert np.array_equal(estimate1, estimate2)
     assert np.array_equal(variances1, variances2)
+
+
+def test_input_output_with_differing_column_count(filename_2d_5_column_data,
+                                                  filename_2d_3_column_data):
+
+    model1 = ModelFromData(filename_2d_5_column_data,
+                           filename_2d_3_column_data,
+                           1.)
+
+    model2 = ModelFromData(filename_2d_5_column_data,
+                           filename_2d_3_column_data,
+                           4.)
+
+    data_input = InputFromData(filename_2d_5_column_data)
+
+    sim = MLMCSimulator(models=[model1, model2], data=data_input)
+    sim.simulate(100., 10)
+
+
+def test_fail_if_model_outputs_do_not_match_shapes(filename_2d_5_column_data,
+                                                   filename_2d_3_column_data):
+
+    model1 = ModelFromData(filename_2d_5_column_data,
+                           filename_2d_5_column_data,
+                           1.)
+
+    model2 = ModelFromData(filename_2d_5_column_data,
+                           filename_2d_3_column_data,
+                           4.)
+
+    data_input = InputFromData(filename_2d_5_column_data)
+
+    with pytest.raises(ValueError):
+        MLMCSimulator(models=[model1, model2], data=data_input)
 
 
 def test_monte_carlo(data_input, models_from_data):
@@ -263,17 +327,17 @@ def test_hard_coded_test_2_level(data_input, models_from_data):
     input_samples = data_input.draw_samples(initial_sample_size)
 
     for i, sample in enumerate(input_samples):
-        level_0_data[i] = models_from_data[0].evaluate(sample)[0]
+        level_0_data[i] = models_from_data[0].evaluate(sample)
 
     level_0_variance = np.var(level_0_data)
 
     # Must resample level 0 for level 0-1 discrepancy variance.
     input_samples = data_input.draw_samples(initial_sample_size)
     for i, sample in enumerate(input_samples):
-        level_0_data[i] = models_from_data[0].evaluate(sample)[0]
+        level_0_data[i] = models_from_data[0].evaluate(sample)
 
     for i, sample in enumerate(input_samples):
-        level_1_data[i] = models_from_data[1].evaluate(sample)[0]
+        level_1_data[i] = models_from_data[1].evaluate(sample)
 
     data_input.reset_sampling()
 
@@ -309,7 +373,7 @@ def test_hard_coded_test_2_level(data_input, models_from_data):
     # Package results for easy comparison with simulator results.
     hard_coded_variances = np.array([level_0_variance, discrepancy_variance])
     hard_coded_sample_sizes = np.array([level_0_sample_size, level_1_sample_size])
-    hard_coded_estimate = (np.mean(sample_0) + np.mean(sample_1)) / 2.
+    hard_coded_estimate = np.mean(np.concatenate((sample_0, sample_1), axis=0))
 
     # Run Simulation for comparison to hard coded results.
     models = models_from_data[:2]
@@ -339,7 +403,7 @@ def test_hard_coded_test_3_level(data_input, models_from_data):
     input_samples = data_input.draw_samples(initial_sample_size)
 
     for i, sample in enumerate(input_samples):
-        level_0_data[i] = models_from_data[0].evaluate(sample)[0]
+        level_0_data[i] = models_from_data[0].evaluate(sample)
 
     level_0_variance = np.var(level_0_data)
 
@@ -347,10 +411,10 @@ def test_hard_coded_test_3_level(data_input, models_from_data):
     input_samples = data_input.draw_samples(initial_sample_size)
 
     for i, sample in enumerate(input_samples):
-        level_0_data[i] = models_from_data[0].evaluate(sample)[0]
+        level_0_data[i] = models_from_data[0].evaluate(sample)
 
     for i, sample in enumerate(input_samples):
-        level_1_data[i] = models_from_data[1].evaluate(sample)[0]
+        level_1_data[i] = models_from_data[1].evaluate(sample)
 
     level_discrepancy_01 = level_1_data - level_0_data
     discrepancy_variance_01 = np.var(level_discrepancy_01)
@@ -359,10 +423,10 @@ def test_hard_coded_test_3_level(data_input, models_from_data):
     input_samples = data_input.draw_samples(initial_sample_size)
 
     for i, sample in enumerate(input_samples):
-        level_1_data[i] = models_from_data[1].evaluate(sample)[0]
+        level_1_data[i] = models_from_data[1].evaluate(sample)
 
     for i, sample in enumerate(input_samples):
-        level_2_data[i] = models_from_data[2].evaluate(sample)[0]
+        level_2_data[i] = models_from_data[2].evaluate(sample)
 
     # Compute level 1-2 discrepancy variance.
     level_discrepancy_12 = level_2_data - level_1_data
@@ -410,9 +474,9 @@ def test_hard_coded_test_3_level(data_input, models_from_data):
                                         level_1_sample_size,
                                         level_2_sample_size])
 
-    hard_coded_estimate = (np.mean(sample_0) +
-                           np.mean(sample_1) +
-                           np.mean(sample_2)) / 3.
+    hard_coded_estimate = np.mean(np.concatenate((sample_0,
+                                                  sample_1,
+                                                  sample_2), axis=0))
 
     # Run Simulation for comparison to hard coded results.
     data_input.reset_sampling()
@@ -425,63 +489,35 @@ def test_hard_coded_test_3_level(data_input, models_from_data):
     assert np.array_equal(sim._sample_sizes, hard_coded_sample_sizes)
     assert np.array_equal(sim_estimate[0], hard_coded_estimate)
 
-@pytest.mark.parametrize("num_cpus", [2, 3, 4, 5, 6, 8])
-def test_multiple_mock_CPUs(data_input, models_from_data, num_cpus,
-                            mocker):
 
-    epsilon = .5
-    initial_sample_size = 100
+@pytest.mark.parametrize('target_cost', [3, 1, .5, .1])
+def test_fixed_cost(beta_distribution_input, spring_models, target_cost):
 
-    # Spy on _collect_outputs in order to get arguments passed into it.
-    spy_fun = mocker.spy(MLMCSimulator, '_collect_outputs')
+    # Ensure costs are evaluated by simulator via timeit.
+    for model in spring_models:
+        delattr(model, 'cost')
 
-    reference_sim = MLMCSimulator(models=models_from_data, data=data_input)
-    reference_estimate, reference_sample_sizes, reference_variances = \
-        reference_sim.simulate(epsilon=epsilon,
-                               initial_sample_size=initial_sample_size)
+    sim = MLMCSimulator(models=spring_models,
+                        data=beta_distribution_input)
 
-    # Collect parameters passed into _collect_outputs in reference run.
-    all_outputs = []
-    for output in spy_fun.func_dict['call_args_list']:
+    # Multiply sample sizes times costs and take the sum; verify that this is
+    # close to the target cost.
+    sim._initial_sample_size = 100
+    sim._target_cost = target_cost
 
-        all_outputs.append(output[0][1])
+    costs, variances = sim._compute_costs_and_variances()
+    sim._compute_optimal_sample_sizes(costs, variances)
+    sample_sizes = sim._sample_sizes
 
-    mpi_sim_estimates = np.zeros(num_cpus)
-    mpi_sim_sample_sizes = np.zeros(num_cpus)
-    mpi_sim_variances = np.zeros(num_cpus)
+    expected_cost = np.sum(costs * sample_sizes)
 
-    # Function to replace MLMCSimulator._collect_outputs in order to simulate
-    # an MPI environment. Should return all outputs as if it collected them
-    # from other CPUs.
-    @classmethod
-    def mock_collect_outputs(self, local_outputs):
+    assert np.isclose(expected_cost, target_cost, rtol=.05)
 
-        self.level_track += 1
-        return self.all_outputs[self.level_track]
+    # Disable caching to ensure accuracy of compute time measurement.
+    sim._initial_sample_size = 0
 
-    with mocker.patch.object(MLMCSimulator,
-                             '_collect_outputs',
-                             mock_collect_outputs):
+    start_time = timeit.default_timer()
+    sim._run_simulation()
+    compute_time = timeit.default_timer() - start_time
 
-        for i in range(num_cpus):
-            sim = MLMCSimulator(models=models_from_data, data=data_input)
-            sim._number_CPUs = num_cpus
-            sim._cpu_rank = i
-            sim.all_outputs = all_outputs
-            sim.level_track = -1
-
-            sim_estimate, sim_sample_sizes, sim_variances = \
-                sim.simulate(epsilon=epsilon,
-                             initial_sample_size=initial_sample_size)
-
-            mpi_sim_estimates.append(sim_estimate)
-            mpi_sim_sample_sizes.append(sim_sample_sizes)
-            mpi_sim_variances.append(sim_variances)
-
-    assert np.all_equal(mpi_sim_estimates)
-    assert np.all_equal(mpi_sim_sample_sizes)
-    assert np.all_equal(mpi_sim_variances)
-
-    assert mpi_sim_estimates[0] == reference_estimate[0]
-    assert mpi_sim_sample_sizes[0] == reference_sample_sizes
-    assert mpi_sim_variances[0] == reference_variances
+    assert np.isclose(compute_time, target_cost, rtol=.2)

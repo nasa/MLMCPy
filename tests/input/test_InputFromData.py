@@ -32,6 +32,19 @@ def get_full_data_set(file_path):
     return full_data_set
 
 
+@pytest.fixture
+def data_filename_2d():
+
+    return os.path.join(data_path, "2D_test_data.csv")
+
+
+@pytest.fixture
+def bad_data_file():
+
+    data_file_with_bad_data = os.path.join(data_path, "bad_data.txt")
+    return data_file_with_bad_data
+
+
 def test_init_fails_on_invalid_input_file():
 
     with pytest.raises(IOError):
@@ -111,3 +124,23 @@ def test_draw_samples_invalid_parameters_fails(data_filename):
 
     with pytest.raises(ValueError):
         data_sampler.draw_samples(0)
+
+
+def test_fail_on_nan_data(bad_data_file):
+
+    with pytest.raises(ValueError):
+        InputFromData(bad_data_file)
+
+
+@pytest.mark.parametrize("rows_to_skip", [1, 2, 3])
+def test_skip_rows(data_filename_2d, rows_to_skip):
+
+    normal_input = InputFromData(data_filename_2d)
+    normal_row_count = normal_input._data.shape[0]
+
+    skipped_row_input = InputFromData(data_filename_2d,
+                                      skip_header=rows_to_skip,)
+
+    skipped_row_count = skipped_row_input._data.shape[0]
+
+    assert normal_row_count - rows_to_skip == skipped_row_count

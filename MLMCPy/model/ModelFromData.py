@@ -10,7 +10,8 @@ class ModelFromData(Model):
     Used to acquire output data corresponding to given input data, all
     of which is acquired via data stored in files.
     """
-    def __init__(self, input_filename, output_filename, cost, delimiter=None):
+    def __init__(self, input_filename, output_filename, cost, delimiter=None,
+                 skip_header=0):
         """
         :param input_filename: path to file containing input data.
         :type string
@@ -21,8 +22,20 @@ class ModelFromData(Model):
         """
         self.__check_parameters(output_filename, input_filename, cost)
 
-        self._inputs = np.genfromtxt(input_filename, delimiter=delimiter)
-        self._outputs = np.genfromtxt(output_filename, delimiter=delimiter)
+        self._inputs = np.genfromtxt(input_filename,
+                                     delimiter=delimiter,
+                                     skip_header=skip_header)
+
+        self._outputs = np.genfromtxt(output_filename,
+                                      delimiter=delimiter,
+                                      skip_header=skip_header)
+
+        # Data should not contain NaN.
+        if np.isnan(self._inputs).any():
+            raise ValueError("Input data file contains invalid (NaN) entries.")
+
+        if np.isnan(self._outputs).any():
+            raise ValueError("Output data file contains invalid (NaN) entries.")
 
         self.cost = cost
 
@@ -53,16 +66,23 @@ class ModelFromData(Model):
             raise ValueError("input_data should be zero or one dimensional.")
 
         # Get outputs that matched the input data.
-        output_data = self._outputs[input_data[:, ...] == self._inputs[:, ...]]
+        matches = np.equal(input_data, self._inputs)
+
+        # If we are matching by row instead of element, we want indices
+        # of matching rows.
+        if len(matches.shape) > 1:
+            matches = matches.all(-1)
+
+        output_data = self._outputs[matches]
 
         if len(output_data) == 0:
             raise ValueError("Input data not found in model.")
 
-        # Check for duplication in input_data based on shape of matched output.
-        if isinstance(output_data[0], np.ndarray) and len(output_data[0]) > 1:
+        # Check for duplication in input_data based on number of matches.
+        if np.sum(matches.astype(int)) > 1:
             raise ValueError("Input data contains duplicate information.")
 
-        return output_data
+        return np.squeeze(output_data)
 
     @staticmethod
     def __check_parameters(output_filename, input_filename, cost):
