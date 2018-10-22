@@ -1,7 +1,9 @@
 import pytest
 import numpy as np
 import timeit
+import imp
 import os
+import warnings
 
 from MLMCPy.mlmc import MLMCSimulator
 from MLMCPy.model import ModelFromData
@@ -76,6 +78,21 @@ def filename_2d_5_column_data():
 def filename_2d_3_column_data():
 
     return os.path.join(data_path, "2D_test_data_output_3_col.csv")
+
+
+@pytest.fixture
+def mpi_info():
+    try:
+        imp.find_module('mpi4py')
+
+        from mpi4py import MPI
+        comm = MPI.COMM_WORLD
+
+        return comm.size, comm.rank
+
+    except ImportError:
+
+        return 1, 0
 
 
 def test_model_from_data(data_input, models_from_data):
@@ -187,7 +204,8 @@ def test_calculate_initial_variances(beta_distribution_input, spring_models):
 
     sim = MLMCSimulator(models=spring_models, data=beta_distribution_input)
 
-    sim._initial_sample_size = 100
+    np.random.seed(1)
+    sim._initial_sample_size = 100 // sim._number_cpus
 
     costs, variances = sim._compute_costs_and_variances()
 
@@ -195,11 +213,11 @@ def test_calculate_initial_variances(beta_distribution_input, spring_models):
                                [0.0857219498864355],
                                [7.916295509470576e-06]])
 
-    assert np.isclose(true_variances, variances, rtol=.1).all()
+    assert np.isclose(true_variances, variances, rtol=.05).all()
 
 
-def test_calculate_costs_and_variances_for_springmass_from_data(data_input,
-                                                              models_from_data):
+def test_calculate_costs_and_variances_for_springmass_data(data_input,
+                                                           models_from_data):
 
     sim = MLMCSimulator(models=models_from_data, data=data_input)
     
@@ -255,7 +273,11 @@ def test_output_caching(data_input, models_from_data, cache_size):
     # Set initial_sample_size to 0 and run simulation again so that it will
     # not use cached values.
     sim._initial_sample_size = 0
-    estimate2, sample_sizes, variances2 = sim._run_simulation()
+
+    # Ignore divide by zero warning cause by 0 initial_sample_size.
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        estimate2, sample_sizes, variances2 = sim._run_simulation()
 
     # Now compare final estimator and output variances.
     # If caching is working properly, they should match.
@@ -502,7 +524,7 @@ def test_fixed_cost(beta_distribution_input, spring_models, target_cost):
 
     # Multiply sample sizes times costs and take the sum; verify that this is
     # close to the target cost.
-    sim._initial_sample_size = 100
+    sim._initial_sample_size = 100 // sim._number_cpus
     sim._target_cost = target_cost
 
     costs, variances = sim._compute_costs_and_variances()
@@ -516,8 +538,35 @@ def test_fixed_cost(beta_distribution_input, spring_models, target_cost):
     # Disable caching to ensure accuracy of compute time measurement.
     sim._initial_sample_size = 0
 
-    start_time = timeit.default_timer()
-    sim._run_simulation()
-    compute_time = timeit.default_timer() - start_time
+    # Ignore divide by zero warning cause by 0 initial_sample_size.
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+
+        start_time = timeit.default_timer()
+        sim._run_simulation()
+        compute_time = timeit.default_timer() - start_time
 
     assert np.isclose(compute_time, target_cost, rtol=.2)
+
+
+def test_mpi_random_input_unique_per_cpu(mpi_info, beta_distribution_input,
+                                         spring_models):
+
+    # This is an MPI only test, so pass if we're running in single cpu mode.
+    if mpi_info == (1, 0):
+        return
+
+    # Allow simulator to set up sampling and draw a sample.
+    sim = MLMCSimulator(models=spring_models, data=beta_distribution_input)
+    sim_data = sim._data.draw_samples(10)
+
+    # Share data across cpus and compare to ensure each cpu has unique samples.
+    from mpi4py import MPI
+    comm = MPI.COMM_WORLD
+
+    all_sim_data = comm.allgather(sim_data)
+
+    assert len(all_sim_data) == 2
+
+    for cpu_data in all_sim_data:
+        assert not np.array_equal(all_sim_data[0], cpu_data)
