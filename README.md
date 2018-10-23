@@ -42,7 +42,10 @@ The report can be found in the docs/references directory. Thanks!
 
 -------------------------------------------------------------------------------
 
-**Author**: <br />
+**Authors**: <br />
+Luke Morrill <br />
+Georgia Tech 
+
 James Warner <br />
 UQ Center of Excellence <br />
 NASA Langley Research Center <br /> 
