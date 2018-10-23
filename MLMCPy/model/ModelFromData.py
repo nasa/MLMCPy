@@ -1,6 +1,7 @@
 import numpy as np
 import numbers
 import os
+import time
 
 from Model import Model
 
@@ -42,13 +43,15 @@ class ModelFromData(Model):
         if self._inputs.shape[0] != self._outputs.shape[0]:
             raise ValueError("input and output data must have same length.")
 
-    def evaluate(self, input_data):
+    def evaluate(self, input_data, wait_cost_duration=False):
         """
         Returns outputs corresponding to provided input_data. input_data will
         be searched for within the stored input data and indices of matches
         will be used to extract and return output data.
 
         :param input_data: scalar or vector to be searched for in input data.
+        :param wait_cost_duration: whether to sleep for the duration of the
+            cost in order to simulate real time model evaluation.
         :return: ndarray of matched output_data.
         """
         # input_data should be an ndarray.
@@ -81,6 +84,9 @@ class ModelFromData(Model):
         # Check for duplication in input_data based on number of matches.
         if np.sum(matches.astype(int)) > 1:
             raise ValueError("Input data contains duplicate information.")
+
+        if wait_cost_duration:
+            time.sleep(self.cost)
 
         return np.squeeze(output_data)
 

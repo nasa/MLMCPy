@@ -244,37 +244,6 @@ def test_final_variances_less_than_epsilon_squared(beta_distribution_input,
     assert variances[0] < epsilon ** 2
 
 
-@pytest.mark.parametrize('target_cost', [10, 1, .1])
-def test_fixed_cost(beta_distribution_input, spring_models, target_cost):
-
-    # Ensure costs are evaluated by simulator via timeit.
-    for model in spring_models:
-        delattr(model, 'cost')
-
-    sim = MLMCSimulator(models=spring_models,
-                        data=beta_distribution_input)
-
-    # Multiply sample sizes times costs and take the sum; verify that this is
-    # close to the target cost.
-    sim._initial_sample_size = 100
-    sim._target_cost = target_cost
-
-    costs, variances = sim._compute_costs_and_variances()
-    sim._compute_optimal_sample_sizes(costs, variances)
-    sample_sizes = sim._sample_sizes
-
-    assert np.isclose(np.sum(costs * sample_sizes), target_cost, rtol=.05)
-
-    # Disable caching to ensure accuracy of compute time measurement.
-    sim._initial_sample_size = 0
-
-    start_time = timeit.default_timer()
-    sim._run_simulation()
-    compute_time = timeit.default_timer() - start_time
-
-    assert np.isclose(compute_time, target_cost, rtol=.2)
-
-
 @pytest.mark.parametrize("cache_size", [20, 200, 2000])
 def test_output_caching(data_input, models_from_data, cache_size):
 
@@ -347,175 +316,75 @@ def test_monte_carlo(data_input, models_from_data):
 
 def test_hard_coded_test_2_level(data_input, models_from_data):
 
+    # Get simulation results.
     np.random.seed(1)
-    initial_sample_size = 200
-    epsilon = 1.
-
-    # Get output data for each layer.
-    level_0_data = np.zeros(initial_sample_size)
-    level_1_data = np.zeros(initial_sample_size)
-
-    input_samples = data_input.draw_samples(initial_sample_size)
-
-    for i, sample in enumerate(input_samples):
-        level_0_data[i] = models_from_data[0].evaluate(sample)
-
-    level_0_variance = np.var(level_0_data)
-
-    # Must resample level 0 for level 0-1 discrepancy variance.
-    input_samples = data_input.draw_samples(initial_sample_size)
-    for i, sample in enumerate(input_samples):
-        level_0_data[i] = models_from_data[0].evaluate(sample)
-
-    for i, sample in enumerate(input_samples):
-        level_1_data[i] = models_from_data[1].evaluate(sample)
-
-    data_input.reset_sampling()
-
-    target_variance = epsilon ** 2
-
-    # Define discrepancy model and compute variance.
-    level_discrepancy = level_1_data - level_0_data
-    discrepancy_variance = np.var(level_discrepancy)
-
-    layer_0_cost = 1
-    layer_1_cost = 1 + 4
-
-    r = np.sqrt(discrepancy_variance / layer_1_cost *
-                layer_0_cost / level_0_variance)
-
-    # Calculate sample sizes for each level.
-    s = (r * level_0_variance + discrepancy_variance) / (r * target_variance)
-    level_0_sample_size = int(np.ceil(s))
-    level_1_sample_size = int(np.ceil(r * s))
-
-    # Draw samples based on computed sample sizes.
-    data_input.reset_sampling()
-    sample_0 = data_input.draw_samples(level_0_sample_size)
-    sample_1 = data_input.draw_samples(level_1_sample_size)
-
-    # Evaluate samples.
-    for i, sample in enumerate(sample_0):
-        sample_0[i] = models_from_data[0].evaluate(sample)
-
-    for i, sample in enumerate(sample_1):
-        sample_1[i] = models_from_data[1].evaluate(sample)
-
-    # Package results for easy comparison with simulator results.
-    hard_coded_variances = np.array([level_0_variance, discrepancy_variance])
-    hard_coded_sample_sizes = np.array([level_0_sample_size, level_1_sample_size])
-    hard_coded_estimate = np.mean(np.concatenate((sample_0, sample_1), axis=0))
-
-    # Run Simulation for comparison to hard coded results.
     models = models_from_data[:2]
 
     sim = MLMCSimulator(models=models, data=data_input)
     sim_estimate, sim_sample_sizes, output_variances = \
-        sim.simulate(epsilon=epsilon, initial_sample_size=initial_sample_size)
+        sim.simulate(epsilon=1., initial_sample_size=200)
     sim_costs, sim_variances = sim._compute_costs_and_variances()
 
-    assert np.array_equal(np.squeeze(sim_variances), hard_coded_variances)
+    # Results from hard coded testing with same parameters.
+    hard_coded_variances = np.array([[7.4369484729553506], [0.07298233959565989]])
+    hard_coded_sample_sizes = np.array([10, 1])
+    hard_coded_estimate = np.array([11.131425234107827])
+
+    assert np.array_equal(sim_variances, hard_coded_variances)
     assert np.array_equal(sim._sample_sizes, hard_coded_sample_sizes)
-    assert np.array_equal(sim_estimate[0], hard_coded_estimate)
+    assert np.array_equal(sim_estimate, hard_coded_estimate)
 
 
 def test_hard_coded_test_3_level(data_input, models_from_data):
 
-    np.random.seed(1)
-    initial_sample_size = 200
-    epsilon = 1.
-
-    # Get output data for each layer.
-    level_0_data = np.zeros(initial_sample_size)
-    level_1_data = np.zeros(initial_sample_size)
-    level_2_data = np.zeros(initial_sample_size)
-
-    # Compute level 0 variance
-    input_samples = data_input.draw_samples(initial_sample_size)
-
-    for i, sample in enumerate(input_samples):
-        level_0_data[i] = models_from_data[0].evaluate(sample)
-
-    level_0_variance = np.var(level_0_data)
-
-    # Compute level 0-1 discrepancy variance.
-    input_samples = data_input.draw_samples(initial_sample_size)
-
-    for i, sample in enumerate(input_samples):
-        level_0_data[i] = models_from_data[0].evaluate(sample)
-
-    for i, sample in enumerate(input_samples):
-        level_1_data[i] = models_from_data[1].evaluate(sample)
-
-    level_discrepancy_01 = level_1_data - level_0_data
-    discrepancy_variance_01 = np.var(level_discrepancy_01)
-
-    # Get new input samples for level 1-2 discrepancy.
-    input_samples = data_input.draw_samples(initial_sample_size)
-
-    for i, sample in enumerate(input_samples):
-        level_1_data[i] = models_from_data[1].evaluate(sample)
-
-    for i, sample in enumerate(input_samples):
-        level_2_data[i] = models_from_data[2].evaluate(sample)
-
-    # Compute level 1-2 discrepancy variance.
-    level_discrepancy_12 = level_2_data - level_1_data
-    discrepancy_variance_12 = np.var(level_discrepancy_12)
-
-    target_variance = epsilon ** 2
-
-    level_0_cost = 1
-    level_1_cost = 1 + 4
-    level_2_cost = 4 + 16
-
-    mu = (np.sqrt(level_0_variance * level_0_cost) +
-            np.sqrt(discrepancy_variance_01 * level_1_cost) +
-            np.sqrt(discrepancy_variance_12 * level_2_cost)) / target_variance
-
-    level_0_sample_size = mu * np.sqrt(level_0_variance / level_0_cost)
-    level_1_sample_size = mu * np.sqrt(discrepancy_variance_01 / level_1_cost)
-    level_2_sample_size = mu * np.sqrt(discrepancy_variance_12 / level_2_cost)
-
-    level_0_sample_size = int(np.ceil(level_0_sample_size))
-    level_1_sample_size = int(np.ceil(level_1_sample_size))
-    level_2_sample_size = int(np.ceil(level_2_sample_size))
-
-    # Draw samples based on computed sample sizes.
-    data_input.reset_sampling()
-    sample_0 = data_input.draw_samples(level_0_sample_size)
-    sample_1 = data_input.draw_samples(level_1_sample_size)
-    sample_2 = data_input.draw_samples(level_2_sample_size)
-
-    # Evaluate samples.
-    for i, sample in enumerate(sample_0):
-        sample_0[i] = models_from_data[0].evaluate(sample)
-
-    for i, sample in enumerate(sample_1):
-        sample_1[i] = models_from_data[1].evaluate(sample)
-
-    for i, sample in enumerate(sample_2):
-        sample_2[i] = models_from_data[2].evaluate(sample)
-
-    hard_coded_variances = np.array([level_0_variance,
-                                    discrepancy_variance_01,
-                                    discrepancy_variance_12])
-
-    hard_coded_sample_sizes = np.array([level_0_sample_size,
-                                        level_1_sample_size,
-                                        level_2_sample_size])
-
-    hard_coded_estimate = np.mean(np.concatenate((sample_0,
-                                                  sample_1,
-                                                  sample_2), axis=0))
-
-    # Run Simulation for comparison to hard coded results.
-    data_input.reset_sampling()
+    # Get simulation results.
     sim = MLMCSimulator(models=models_from_data, data=data_input)
     sim_estimate, sim_sample_sizes, output_variances = \
-        sim.simulate(epsilon=epsilon, initial_sample_size=initial_sample_size)
+        sim.simulate(epsilon=1., initial_sample_size=200)
     sim_costs, sim_variances = sim._compute_costs_and_variances()
 
-    assert np.array_equal(np.squeeze(sim_variances), hard_coded_variances)
+    # Results from hard coded testing with same parameters.
+    hard_coded_variances = np.array([[7.4369484729553506],
+                                     [7.298233959565989e-02],
+                                     [7.3539883278145636e-06]])
+
+    hard_coded_sample_sizes = np.array([10, 1, 1])
+    hard_coded_estimate = np.array([11.819384316572874])
+
+    assert np.array_equal(sim_variances, hard_coded_variances)
     assert np.array_equal(sim._sample_sizes, hard_coded_sample_sizes)
-    assert np.array_equal(sim_estimate[0], hard_coded_estimate)
+    assert np.array_equal(sim_estimate, hard_coded_estimate)
+
+
+@pytest.mark.parametrize('target_cost', [3, 1, .5, .1])
+def test_fixed_cost(beta_distribution_input, spring_models, target_cost):
+
+    # Ensure costs are evaluated by simulator via timeit.
+    for model in spring_models:
+        delattr(model, 'cost')
+
+    sim = MLMCSimulator(models=spring_models,
+                        data=beta_distribution_input)
+
+    # Multiply sample sizes times costs and take the sum; verify that this is
+    # close to the target cost.
+    sim._initial_sample_size = 100
+    sim._target_cost = target_cost
+
+    costs, variances = sim._compute_costs_and_variances()
+    sim._compute_optimal_sample_sizes(costs, variances)
+    sample_sizes = sim._sample_sizes
+
+    expected_cost = np.sum(costs * sample_sizes)
+
+    assert np.isclose(expected_cost, target_cost, rtol=.05)
+
+    # Disable caching to ensure accuracy of compute time measurement.
+    sim._initial_sample_size = 0
+
+    start_time = timeit.default_timer()
+    sim._run_simulation()
+    compute_time = timeit.default_timer() - start_time
+
+    # We should be within the smallest model cost of the target cost.
+    assert np.isclose(compute_time, target_cost, rtol=.05)
