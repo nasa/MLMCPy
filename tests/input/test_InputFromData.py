@@ -68,7 +68,7 @@ def test_can_load_alternatively_delimited_files(delimiter, filename):
     sampler = InputFromData(file_path, delimiter=delimiter)
     sample = sampler.draw_samples(5)
 
-    assert int(np.sum(sample)) == 125
+    assert np.sum(sample) == 125.
 
 
 @pytest.mark.parametrize("data_filename", data_file_paths, ids=data_file_names)

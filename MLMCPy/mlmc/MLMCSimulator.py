@@ -47,7 +47,6 @@ class MLMCSimulator:
         # Enabled diagnostic text output.
         self._verbose = False
 
-
     def simulate(self, epsilon, initial_sample_size=1000, target_cost=None,
                  verbose=False):
         """

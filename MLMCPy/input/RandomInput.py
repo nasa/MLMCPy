@@ -31,7 +31,7 @@ class RandomInput(Input):
         numpy array.
 
         :param num_samples: Size of array to return.
-        :type int
+        :type: int
         :return: ndarray of distribution sample.
         """
         if not isinstance(num_samples, int):

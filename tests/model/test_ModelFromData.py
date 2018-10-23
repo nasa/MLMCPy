@@ -10,7 +10,6 @@ my_path = os.path.dirname(os.path.abspath(__file__))
 data_path = my_path + "/../testing_data"
 
 
-
 @pytest.fixture
 def input_data_file():
     input_data_file = os.path.join(data_path, "spring_mass_1D_inputs.txt")

@@ -64,7 +64,8 @@ def models_from_data():
     input_filepath = os.path.join(data_path, "spring_mass_1D_inputs.txt")
     output1_filepath = os.path.join(data_path, "spring_mass_1D_outputs_1.0.txt")
     output2_filepath = os.path.join(data_path, "spring_mass_1D_outputs_0.1.txt")
-    output3_filepath = os.path.join(data_path, "spring_mass_1D_outputs_0.01.txt")
+    output3_filepath = os.path.join(data_path,
+                                    "spring_mass_1D_outputs_0.01.txt")
 
     model1 = ModelFromData(input_filepath, output1_filepath, 1.)
     model2 = ModelFromData(input_filepath, output2_filepath, 4.)
@@ -165,8 +166,8 @@ def test_compute_optimal_sample_sizes_expected_outputs(data_input,
     assert np.array_equal(sample_sizes, [800, 200])
 
 
-def test_compute_optimal_sample_sizes_expected_outputs_2_qoi(data_input,
-                                                          models_from_data):
+def test_optimal_sample_sizes_expected_outputs_2_qoi(data_input,
+                                                     models_from_data):
 
     # Set up simulator with values that should produce predictable results
     # from computation of optimal sample sizes.
@@ -220,8 +221,8 @@ def test_calculate_initial_variances(beta_distribution_input, spring_models):
     assert np.isclose(true_variances, variances, rtol=.1).all()
 
 
-def test_calculate_costs_and_variances_for_springmass_from_data(data_input,
-                                                              models_from_data):
+def test_costs_and_variances_for_springmass_from_data(data_input,
+                                                      models_from_data):
 
     sim = MLMCSimulator(models=models_from_data, data=data_input)
     
@@ -348,7 +349,9 @@ def test_hard_coded_test_2_level(data_input, models_from_data):
     sim_costs, sim_variances = sim._compute_costs_and_variances()
 
     # Results from hard coded testing with same parameters.
-    hard_coded_variances = np.array([[7.4369484729553506], [0.07298233959565989]])
+    hard_coded_variances = np.array([[7.4369484729553506],
+                                     [0.07298233959565989]])
+
     hard_coded_sample_sizes = np.array([10, 1])
     hard_coded_estimate = np.array([11.131425234107827])
 

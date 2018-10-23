@@ -31,6 +31,7 @@ estimates, sample_sizes, variances = mlmc_simulator.simulate(epsilon=.1)
 print 'Estimate: %s' % estimates[0]
 print 'Sample sizes used: %s' % sample_sizes
 print 'Variance: %s' % variances[0]
+
 ```
 
 -------------------------------------------------------------------------------
