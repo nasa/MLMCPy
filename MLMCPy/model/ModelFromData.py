@@ -15,11 +15,11 @@ class ModelFromData(Model):
                  skip_header=0):
         """
         :param input_filename: path to file containing input data.
-        :type string
+        :type: string
         :param output_filename: path to file containing output data.
-        :type string
+        :type: string
         :param delimiter: delimiter used to separate data in data files.
-        :type string, int (fixed width data), list of ints
+        :type: string, int (fixed width data), list of ints
         """
         self.__check_parameters(output_filename, input_filename, cost)
 
