@@ -386,9 +386,18 @@ def test_graceful_handling_of_insufficient_samples(data_input_2d,
     sim.simulate(epsilon=1., initial_sample_size=10)
 
     # Test when sampling with too large computed sample sizes.
-    data_input_2d.reset_sampling()
     sim = MLMCSimulator(models=models_from_2d_data, data=data_input_2d)
     sim.simulate(epsilon=.01, initial_sample_size=10)
+
+
+def test_can_run_simulation_multiple_times_without_exception(data_input,
+                                                             models_from_data):
+
+    sim = MLMCSimulator(models=models_from_data, data=data_input)
+    sim.simulate(epsilon=1., initial_sample_size=10)
+
+    sim = MLMCSimulator(models=models_from_data, data=data_input)
+    sim.simulate(epsilon=1., initial_sample_size=10)
 
 
 @pytest.mark.parametrize('target_cost', [3, 1, .5, .1])

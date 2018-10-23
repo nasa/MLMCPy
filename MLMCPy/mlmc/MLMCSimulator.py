@@ -47,6 +47,7 @@ class MLMCSimulator:
         # Enabled diagnostic text output.
         self._verbose = False
 
+
     def simulate(self, epsilon, initial_sample_size=1000, target_cost=None,
                  verbose=False):
         """
@@ -70,6 +71,9 @@ class MLMCSimulator:
 
         self.__check_simulate_parameters(initial_sample_size, target_cost)
         self._target_cost = target_cost
+
+        # Reset sampling in case simulation is run more than once.
+        self._data.reset_sampling()
 
         # If only one model was provided, run standard monte carlo.
         if self._num_levels == 1:
@@ -441,13 +445,17 @@ class MLMCSimulator:
 
         return epsilon
 
-    def __check_init_parameters(self, data, models):
+    @staticmethod
+    def __check_init_parameters(data, models):
 
         if not isinstance(data, Input):
             TypeError("data must inherit from Input class.")
 
         if not isinstance(models, list):
             TypeError("models must be a list of models.")
+
+        # Reset sampling in case input data is used more than once.
+        data.reset_sampling()
 
         # Ensure all models have the same output dimensions.
         output_sizes = []
