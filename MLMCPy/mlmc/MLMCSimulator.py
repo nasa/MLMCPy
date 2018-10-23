@@ -117,16 +117,21 @@ class MLMCSimulator:
         # Time simulation. If target_cost was specified we will need this
         # information later to approximate the target.
         start_time = timeit.default_timer()
-        self._run_simulation_loop()
+        sums_of_outputs, sums_of_output_squares = self._run_simulation_loop()
         end_time = timeit.default_timer()
 
         # If a target cost was specified and we still have time left, add
         # additional model runs until we hit the target cost.
-        if self._target_cost is not None and \
-           end_time - start_time < self._target_cost - np.min(self._costs):
+        if self._target_cost is not None:
 
-            self._run_extended_simulation(sums_of_outputs,
-                                          sums_of_output_squares)
+            time_remaining = self._target_cost - (end_time - start_time)
+
+            if time_remaining > np.min(self._costs):
+
+                sums_of_outputs, sums_of_output_squares = \
+                    self._run_extended_simulation_loop(sums_of_outputs,
+                                                       sums_of_output_squares,
+                                                       time_remaining)
 
         estimates, variances = \
             self._compute_summary_data(sums_of_outputs, sums_of_output_squares)
@@ -134,7 +139,13 @@ class MLMCSimulator:
         return estimates, self._sample_sizes, variances
 
     def _run_simulation_loop(self):
-
+        """
+        Main simulation loop where sample sizes determined in setup phase are
+        drawn from the input data and run through the models. Sums of the model
+        outputs and their squares are accumulated in order to compute the
+        final estimates and variances later.
+        :return:
+        """
         sums_of_outputs = np.zeros(self._output_size)
         sums_of_output_squares = np.zeros(self._output_size)
 
@@ -150,7 +161,37 @@ class MLMCSimulator:
             sums_of_outputs += np.sum(output, axis=0)
             sums_of_output_squares += np.sum(np.square(output), axis=0)
 
+        return sums_of_outputs, sums_of_output_squares
 
+    def _run_extended_simulation_loop(self, sums, squares, time_budget):
+        """
+        Keep sampling from the most expensive model we have remaining time
+        available for based on model evaluation cost. This should only be
+        run when target_cost has been set and the simulation loop has completed
+        earlier than anticipated.
+
+        :param sums: output sums ndarray to add to.
+        :param squares: output square sums ndarray to add to.
+        :param time_budget: Amount of time we can fill with additional
+            model evaluations.
+        :return: tuple of updated sums and squares ndarrays.
+        """
+        target_time = timeit.default_timer() + time_budget
+        time_remaining = target_time - timeit.default_timer()
+
+        for level in range(self._num_levels-1, 0, -1):
+
+            while self._costs[level] < time_remaining:
+
+                sample = self._data.draw_samples(1)
+                output = self._evaluate_sample(0, sample, level)
+
+                sums += output
+                squares += np.square(output)
+
+                time_remaining = target_time - timeit.default_timer()
+
+        return sums, squares
 
     def _compute_summary_data(self, sums_of_outputs, sums_of_output_squares):
         """
@@ -298,7 +339,7 @@ class MLMCSimulator:
             costs = compute_times / self._initial_sample_size
 
         # Save copy of costs for use in simulation.
-        self.costs = np.copy(costs)
+        self._costs = np.copy(costs)
 
         if self._verbose:
             print np.array2string(costs)
