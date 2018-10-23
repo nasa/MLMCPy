@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 import os
+import timeit
 
 from MLMCPy.model import ModelFromData
 
@@ -133,3 +134,16 @@ def test_skip_rows(input_data_file_2d, output_data_file_2d, rows_to_skip):
     skipped_row_count = skipped_row_model._inputs.shape[0]
 
     assert normal_row_count - rows_to_skip == skipped_row_count
+
+
+@pytest.mark.parametrize("cost", [.01, .05, .1])
+def test_evaluate_with_cost_delay(cost, input_data_file, output_data_file):
+
+    model = ModelFromData(input_data_file, output_data_file, cost)
+    sample = model._inputs[0]
+
+    start_time = timeit.default_timer()
+    model.evaluate(sample, wait_cost_duration=cost)
+    evaluation_time = timeit.default_timer() - start_time
+
+    assert np.abs(evaluation_time - cost) < .01
