@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import warnings
 
 from Input import Input
 
@@ -66,7 +67,8 @@ class InputFromData(Input):
             error_message = "Only %s of the %s requested samples are " + \
                             "available.\nEither provide more sample data or" + \
                             " increase epsilon to reduce sample size needed."
-            raise ValueError(error_message % (sample_size, num_samples))
+            warning = UserWarning(error_message)
+            warnings.warn(warning)
 
         return np.copy(sample)
 

@@ -144,3 +144,11 @@ def test_skip_rows(data_filename_2d, rows_to_skip):
     skipped_row_count = skipped_row_input._data.shape[0]
 
     assert normal_row_count - rows_to_skip == skipped_row_count
+
+
+def test_draw_sample_warning_issued_for_insufficient_data(data_filename_2d):
+
+    small_input = InputFromData(data_filename_2d)
+
+    with pytest.warns(UserWarning):
+        small_input.draw_samples(1000)

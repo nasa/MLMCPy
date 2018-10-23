@@ -30,6 +30,13 @@ def data_input():
 
 
 @pytest.fixture
+def data_input_2d():
+
+    return InputFromData(os.path.join(data_path, "2D_test_data.csv"),
+                         shuffle_data=False)
+
+
+@pytest.fixture
 def beta_distribution_input():
 
     np.random.seed(1)
@@ -58,6 +65,21 @@ def models_from_data():
     output1_filepath = os.path.join(data_path, "spring_mass_1D_outputs_1.0.txt")
     output2_filepath = os.path.join(data_path, "spring_mass_1D_outputs_0.1.txt")
     output3_filepath = os.path.join(data_path, "spring_mass_1D_outputs_0.01.txt")
+
+    model1 = ModelFromData(input_filepath, output1_filepath, 1.)
+    model2 = ModelFromData(input_filepath, output2_filepath, 4.)
+    model3 = ModelFromData(input_filepath, output3_filepath, 16.)
+
+    return [model1, model2, model3]
+
+
+@pytest.fixture
+def models_from_2d_data():
+
+    input_filepath = os.path.join(data_path, "2D_test_data.csv")
+    output1_filepath = os.path.join(data_path, "2D_test_data_output.csv")
+    output2_filepath = os.path.join(data_path, "2D_test_data_output.csv")
+    output3_filepath = os.path.join(data_path, "2D_test_data_output.csv")
 
     model1 = ModelFromData(input_filepath, output1_filepath, 1.)
     model2 = ModelFromData(input_filepath, output2_filepath, 4.)
@@ -354,6 +376,19 @@ def test_hard_coded_test_3_level(data_input, models_from_data):
     assert np.array_equal(sim_variances, hard_coded_variances)
     assert np.array_equal(sim._sample_sizes, hard_coded_sample_sizes)
     assert np.array_equal(sim_estimate, hard_coded_estimate)
+
+
+def test_graceful_handling_of_insufficient_samples(data_input_2d,
+                                                   models_from_2d_data):
+
+    # Test when sampling with too large initial sample size.
+    sim = MLMCSimulator(models=models_from_2d_data, data=data_input_2d)
+    sim.simulate(epsilon=1., initial_sample_size=10)
+
+    # Test when sampling with too large computed sample sizes.
+    data_input_2d.reset_sampling()
+    sim = MLMCSimulator(models=models_from_2d_data, data=data_input_2d)
+    sim.simulate(epsilon=.01, initial_sample_size=10)
 
 
 @pytest.mark.parametrize('target_cost', [3, 1, .5, .1])
