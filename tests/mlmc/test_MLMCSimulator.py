@@ -520,4 +520,4 @@ def test_fixed_cost(beta_distribution_input, spring_models, target_cost):
     sim._run_simulation()
     compute_time = timeit.default_timer() - start_time
 
-    assert np.isclose(compute_time, target_cost, rtol=.2)
+    assert np.isclose(compute_time, target_cost, rtol=.05)
