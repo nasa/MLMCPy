@@ -52,7 +52,7 @@ class MLMCSimulator:
         """
         Perform MLMC simulation.
         Computes number of samples per level before running simulations
-        to determine estimate.
+        to determine estimates.
 
         :param epsilon: Desired accuracy to be achieved for each quantity of
             interest.
@@ -64,7 +64,8 @@ class MLMCSimulator:
         :type target_cost: float or int
         :param verbose: Whether to print useful diagnostic information.
         :type verbose: bool
-        :return: (value, list of sample count at each level, error)
+        :return: Tuple of ndarrays
+            (estimates, sample count per level, variances)
         """
         self._verbose = verbose
 

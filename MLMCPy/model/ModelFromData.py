@@ -23,7 +23,7 @@ class ModelFromData(Model):
         :type cost: float or ndarray
         :param delimiter: Delimiter used to separate data in data files, or
             size of each entry in the case of fixed width data.
-        :type delimiter: string, int, list of ints
+        :type delimiter: string, int, list(int)
         """
         self.__check_parameters(output_filename, input_filename, cost)
 
@@ -66,7 +66,7 @@ class ModelFromData(Model):
         :param wait_cost_duration: Whether to sleep for the duration of the
             cost in order to simulate real time model evaluation.
         :type wait_cost_duration: bool
-        :return: ndarray of matched output_data.
+        :return: A ndarray of matched output_data.
         """
         # input_data should be an ndarray.
         # Automatically convert a list or numeric type into ndarray.
