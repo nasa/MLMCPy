@@ -1,5 +1,6 @@
 import pytest
 import os
+import imp
 import numpy as np
 
 from MLMCPy.input import InputFromData
@@ -43,6 +44,21 @@ def bad_data_file():
 
     data_file_with_bad_data = os.path.join(data_path, "bad_data.txt")
     return data_file_with_bad_data
+
+
+@pytest.fixture
+def mpi_info():
+    try:
+        imp.find_module('mpi4py')
+
+        from mpi4py import MPI
+        comm = MPI.COMM_WORLD
+
+        return comm.size, comm.rank
+
+    except ImportError:
+
+        return 1, 0
 
 
 def test_init_fails_on_invalid_input_file():
@@ -152,3 +168,27 @@ def test_draw_sample_warning_issued_for_insufficient_data(data_filename_2d):
 
     with pytest.warns(UserWarning):
         small_input.draw_samples(1000)
+
+
+@pytest.mark.parametrize("data_filename", data_file_paths, ids=data_file_names)
+def test_mpi_input_sample_sliced(mpi_info, data_filename):
+
+    # This is an MPI only test, so pass if we're running in single cpu mode.
+    if mpi_info == (1, 0):
+        return
+
+    num_cpus, cpu_rank = mpi_info
+
+    # Get expected slice.
+    data_input = InputFromData(data_filename)
+    all_data = get_full_data_set(data_filename)
+
+    slice_size = all_data.shape[0] // num_cpus
+
+    slice_start_index = slice_size * cpu_rank
+    sliced_data = all_data[slice_start_index: slice_start_index + slice_size]
+
+    input_data = data_input._data
+
+    # Ensure InputFromData sliced the data in the same way.
+    assert np.array_equal(sliced_data, input_data)

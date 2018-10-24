@@ -1,6 +1,7 @@
 import numpy as np
 import timeit
 import sys
+import imp
 
 from MLMCPy.input import Input
 from MLMCPy.model import Model
@@ -47,6 +48,9 @@ class MLMCSimulator:
         # Enabled diagnostic text output.
         self._verbose = False
 
+        # Detect whether we have access to multiple cpus.
+        self.__detect_parallelization()
+
     def simulate(self, epsilon, initial_sample_size=1000, target_cost=None,
                  verbose=False):
         """
@@ -67,7 +71,7 @@ class MLMCSimulator:
         :return: Tuple of ndarrays
             (estimates, sample count per level, variances)
         """
-        self._verbose = verbose
+        self._verbose = verbose and self._cpu_rank == 0
 
         self.__check_simulate_parameters(initial_sample_size, target_cost)
         self._target_cost = target_cost
@@ -94,7 +98,19 @@ class MLMCSimulator:
         :param initial_sample_size: Sample size used when computing sample sizes
             for each level in simulation.
         """
-        self._initial_sample_size = initial_sample_size
+        self._initial_sample_size = initial_sample_size // self._number_cpus
+
+        if self._verbose and self._number_cpus > 1:
+
+            print "Running %s initial samples per core." % \
+                  self._initial_sample_size
+
+            if self._initial_sample_size * self._number_cpus != \
+               initial_sample_size:
+
+                print 'WARNING: Initial samples cannot be evenly divided ' + \
+                      'among processors, so results may deviate from ' + \
+                      'a serial implementation.'
 
         # Run models with initial sample sizes to compute costs, outputs.
         costs, variances = self._compute_costs_and_variances()
@@ -229,6 +245,10 @@ class MLMCSimulator:
                 print 'QOI #%s: variance: %s, epsilon^2: %s, success: %s' % \
                       (i, variance, epsilon_squared, passed)
 
+        # Get mean of results across all cpus.
+        means = self._mean_over_all_cpus(means)
+        variances = self._mean_over_all_cpus(variances)
+
         return means, variances
 
     def _evaluate_sample(self, i, sample, level):
@@ -314,6 +334,9 @@ class MLMCSimulator:
 
         costs = self._compute_costs(compute_times)
 
+        costs = self._mean_over_all_cpus(costs)
+        variances = self._mean_over_all_cpus(variances)
+
         return costs, variances
 
     def _compute_costs(self, compute_times):
@@ -379,11 +402,14 @@ class MLMCSimulator:
         if self._target_cost is None:
             mu = np.power(self._epsilons, -2) * sum_sqrt_vc
         else:
-            mu = self._target_cost / sum_sqrt_vc
+            mu = self._target_cost * self._number_cpus / sum_sqrt_vc
 
         # Compute sample sizes.
         sqrt_v_over_c = np.sqrt(variances / costs)
         self._sample_sizes = np.amax(np.ceil(mu * sqrt_v_over_c), axis=1)
+
+        # Divide sampling evenly across cpus.
+        self._sample_sizes /= self._number_cpus
 
         # Set sample sizes to ints and replace any 0s with  1.
         self._sample_sizes = self._sample_sizes.astype(int)
@@ -406,8 +432,13 @@ class MLMCSimulator:
         if self._verbose:
             print 'Only one model provided; running standard monte carlo.'
 
-        samples = self._data.draw_samples(num_samples)
-        outputs = np.zeros(num_samples)
+        cpu_samples = num_samples // self._number_cpus
+
+        if self._verbose and cpu_samples * self._number_cpus != num_samples:
+            print 'WARNING: Could not divide samples evenly across all CPUs!'
+
+        samples = self._data.draw_samples(cpu_samples)
+        outputs = np.zeros(cpu_samples)
 
         for i, sample in enumerate(samples):
             outputs[i] = self._models[0].evaluate(sample)
@@ -416,6 +447,10 @@ class MLMCSimulator:
         estimates = np.array([np.mean(outputs)])
         sample_sizes = np.array([num_samples])
         variances = np.array([np.var(outputs)])
+
+        # If we're running on multiple CPUs, get mean of all results.
+        estimates = self._mean_over_all_cpus(estimates)
+        variances = self._mean_over_all_cpus(variances)
 
         return estimates, sample_sizes, variances
 
@@ -492,3 +527,38 @@ class MLMCSimulator:
 
             if maximum_cost <= 0:
                 raise ValueError("maximum cost must be greater than zero.")
+
+    def __detect_parallelization(self):
+        """
+        Detects whether multiple processors are available and sets
+        self.number_CPUs and self.cpu_rank accordingly.
+        """
+        try:
+            imp.find_module('mpi4py')
+
+            from mpi4py import MPI
+            comm = MPI.COMM_WORLD
+
+            self._number_cpus = comm.size
+            self._cpu_rank = comm.rank
+
+        except ImportError:
+
+            self._number_cpus = 1
+            self._cpu_rank = 0
+
+    def _mean_over_all_cpus(self, values):
+        """
+        Finds the mean of ndarray of values across cpus and returns result.
+        :param values: ndarray of any shape.
+        :return: ndarray of same shape as values with mean from all cpus.
+        """
+        if self._number_cpus == 1:
+            return values
+
+        from mpi4py import MPI
+        comm = MPI.COMM_WORLD
+
+        all_values = comm.allgather(values)
+
+        return np.mean(all_values, 0)

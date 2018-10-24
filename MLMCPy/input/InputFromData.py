@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import warnings
+import imp
 
 from Input import Input
 
@@ -38,6 +39,9 @@ class InputFromData(Input):
         # one dimensional data to a 2d array with one column.
         if len(self._data .shape) == 1:
             self._data = self._data.reshape(self._data.shape[0], -1)
+
+        # Use subset of data if we are in multiprocessor environment.
+        self.__detect_parallelization()
 
         if shuffle_data:
             np.random.shuffle(self._data)
@@ -80,3 +84,27 @@ class InputFromData(Input):
         Used to restart sampling from beginning of data set.
         """
         self._index = 0
+
+    def __detect_parallelization(self):
+        """
+        If multiple cpus detected, split the data across cpus so that
+        each will have a unique subset of sample data.
+        """
+        try:
+            imp.find_module('mpi4py')
+
+            from mpi4py import MPI
+            comm = MPI.COMM_WORLD
+
+            cpu_rank = comm.rank
+            num_cpus = comm.size
+
+        except ImportError:
+            num_cpus = 0
+
+        finally:
+            slice_size = self._data.shape[0] // num_cpus
+
+            slice_start_index = slice_size * cpu_rank
+            self._data = self._data[slice_start_index:
+                                    slice_start_index + slice_size]

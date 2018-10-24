@@ -1,4 +1,5 @@
 import numpy as np
+import imp
 
 from Input import Input
 
@@ -27,6 +28,9 @@ class RandomInput(Input):
         self._distribution = distribution_function
         self._args = distribution_function_args
 
+        # Set random seed based on cpu rank.
+        self.__detect_parallelization()
+
     def draw_samples(self, num_samples):
         """
         Returns num_samples samples from a distribution in the form of a
@@ -53,3 +57,20 @@ class RandomInput(Input):
 
     def reset_sampling(self):
         pass
+
+    @staticmethod
+    def __detect_parallelization():
+
+        try:
+            imp.find_module('mpi4py')
+
+            from mpi4py import MPI
+            comm = MPI.COMM_WORLD
+
+            cpu_rank = comm.rank
+
+        except ImportError:
+            cpu_rank = 0
+
+        finally:
+            np.random.seed(cpu_rank)
