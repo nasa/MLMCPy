@@ -78,6 +78,13 @@ def test_evaluate_2d_data(input_data_file_2d, output_data_file_2d, index):
     assert np.all(np.isclose(model_output, true_output))
 
 
+@pytest.mark.parametrize("cost", [1, [1, 2], "one", np.zeros(7)])
+def test_init_fails_on_invalid_cost(input_data_file, output_data_file, cost):
+
+    with pytest.raises(Exception):
+        ModelFromData(input_data_file, output_data_file, cost)
+
+
 def test_evaluate_fails_on_invalid_input(input_data_file, output_data_file):
 
     data_model = ModelFromData(input_data_file, output_data_file, 1.)
