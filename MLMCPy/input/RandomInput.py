@@ -5,19 +5,21 @@ from Input import Input
 
 class RandomInput(Input):
     """
-    Used to draw samples from a specified distribution, with a uniform
-    distribution as the default. Any distribution function provided
-    must accept a "size" parameter that determines the sample size.
-
-    :param distribution_function returns a sample of a distribution
-        with the sample sized determined by a "size" parameter.
-    :type function
-    :param distribution_function_args any arguments required by the distribution
-        function, with the exception of "size", which will be provided to the
-        function when draw_samples is called.
+    Used to draw samples from a specified distribution . Any distribution
+    function provided must accept a "size" parameter that determines the
+    sample size.
     """
-    def __init__(self, distribution_function=np.random.uniform,
+    def __init__(self, distribution_function,
                  **distribution_function_args):
+        """
+        :param distribution_function: Returns a sample of a distribution
+            with the sample sized determined by a "size" parameter. Typically,
+            a numpy function such as numpy.random.uniform() is used.
+        :type distribution_function: function
+        :param distribution_function_args: Any arguments required by the
+            distribution function, with the exception of "size", which will be
+            provided to the function when draw_samples is called.
+        """
 
         if not callable(distribution_function):
             raise TypeError('distribution_function must be a function.')
@@ -31,8 +33,8 @@ class RandomInput(Input):
         numpy array.
 
         :param num_samples: Size of array to return.
-        :type: int
-        :return: ndarray of distribution sample.
+        :type num_samples: int
+        :return: A ndarray of distribution sample.
         """
         if not isinstance(num_samples, int):
             raise TypeError("num_samples must be an integer.")

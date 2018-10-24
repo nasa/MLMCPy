@@ -8,7 +8,7 @@ from MLMCPy.model import Model
 
 class MLMCSimulator:
     """
-    Computes an estimate based on the MultiLevel Monte Carlo algorithm.
+    Computes an estimate based on the Multi-Level Monte Carlo algorithm.
     """
     def __init__(self, data, models):
         """
@@ -16,9 +16,9 @@ class MLMCSimulator:
         of increasing fidelity.
 
         :param data: Provides a data sampling function.
-        :type: Input
+        :type data: Input
         :param models: Each model Produces outputs from sample data input.
-        :type: list of Model objects
+        :type models: list(Model)
         """
         self.__check_init_parameters(data, models)
 
@@ -56,15 +56,15 @@ class MLMCSimulator:
 
         :param epsilon: Desired accuracy to be achieved for each quantity of
             interest.
-        :type: float, list of floats, or ndarray.
+        :type epsilon: float, list of floats, or ndarray.
         :param initial_sample_size: Sample size used when computing sample sizes
             for each level in simulation.
-        :type: int
+        :type initial_sample_size: int
         :param target_cost: Target cost to run simulation.
-        :type: float or int
+        :type target_cost: float or int
         :param verbose: Whether to print useful diagnostic information.
-        :type: bool
-        :returns (value, list of sample count at each level, error)
+        :type verbose: bool
+        :return: (value, list of sample count at each level, error)
         """
         self._verbose = verbose
 

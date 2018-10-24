@@ -8,18 +8,22 @@ from Model import Model
 
 class ModelFromData(Model):
     """
-    Used to acquire output data corresponding to given input data, all
-    of which is acquired via data stored in files.
+    Used to produce outputs from inputs based on data provided in text files.
     """
     def __init__(self, input_filename, output_filename, cost, delimiter=None,
                  skip_header=0):
         """
-        :param input_filename: path to file containing input data.
-        :type: string
-        :param output_filename: path to file containing output data.
-        :type: string
-        :param delimiter: delimiter used to separate data in data files.
-        :type: string, int (fixed width data), list of ints
+        :param input_filename: Path to file containing input data.
+        :type input_filename: string
+        :param output_filename: Path to file containing output data.
+        :type output_filename: string
+        :param cost: The average cost of computing a sample output. If multiple
+            quantities of interest are provided in the data, an ndarray of costs
+            can specify cost for each quantity of interest.
+        :type cost: float or ndarray
+        :param delimiter: Delimiter used to separate data in data files, or
+            size of each entry in the case of fixed width data.
+        :type delimiter: string, int, list of ints
         """
         self.__check_parameters(output_filename, input_filename, cost)
 
@@ -43,15 +47,25 @@ class ModelFromData(Model):
         if self._inputs.shape[0] != self._outputs.shape[0]:
             raise ValueError("input and output data must have same length.")
 
+        # If multiple costs are provided, ensure the number of costs matches
+        # the number of quantities of interest.
+        if isinstance(cost, np.ndarray) and cost.size > 1:
+
+            if cost.size != self._inputs.shape[-1]:
+                raise ValueError("Size of array of costs must match number of" +
+                                 " quantities of interest in sample data.")
+
     def evaluate(self, input_data, wait_cost_duration=False):
         """
         Returns outputs corresponding to provided input_data. input_data will
-        be searched for within the stored input data and indices of matches
+        be searched for within the stored input data and the index of the match
         will be used to extract and return output data.
 
-        :param input_data: scalar or vector to be searched for in input data.
-        :param wait_cost_duration: whether to sleep for the duration of the
+        :param input_data: Scalar or vector to be searched for in input data.
+        :type input_data: ndarray
+        :param wait_cost_duration: Whether to sleep for the duration of the
             cost in order to simulate real time model evaluation.
+        :type wait_cost_duration: bool
         :return: ndarray of matched output_data.
         """
         # input_data should be an ndarray.
@@ -105,5 +119,5 @@ class ModelFromData(Model):
         if not os.path.isfile(input_filename):
             raise IOError("input_filename is not a valid file.")
 
-        if not (isinstance(cost, float) or isinstance(cost, np.float)):
-            raise TypeError("costs must be a list or ndarray.")
+        if not (isinstance(cost, float) or isinstance(cost, np.ndarray)):
+            raise TypeError("cost must be of type float or ndarray.")
