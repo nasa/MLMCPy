@@ -264,7 +264,7 @@ class MLMCSimulator:
 
         if self._verbose:
             progress = str((float(i) / self._sample_sizes[level]) * 100)[:5]
-            sys.stdout.write("\rLevel %s progress: %s%%" % level, progress)
+            sys.stdout.write("\rLevel %s progress: %s%%" % (level, progress))
 
         # If we have the output for this sample cached, use it.
         # Otherwise, compute the output via the model.
