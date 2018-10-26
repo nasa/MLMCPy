@@ -237,13 +237,14 @@ class MLMCSimulator:
 
             print
 
+            epsilons_squared = np.square(self._epsilons)
             for i, variance in enumerate(variances):
 
-                epsilon_squared = self._epsilons[i] ** 2
-                passed = variance < epsilon_squared
+                epsilon_squared = np.square(epsilons_squared[i])
+                passed = variance < epsilons_squared[i]
 
                 print 'QOI #%s: variance: %s, epsilon^2: %s, success: %s' % \
-                      (i, variance, epsilon_squared, passed)
+                      (i, float(variance), float(epsilons_squared[i]), passed)
 
         # Get mean of results across all cpus.
         means = self._mean_over_all_cpus(means)
@@ -264,7 +265,7 @@ class MLMCSimulator:
 
         if self._verbose:
             progress = str((float(i) / self._sample_sizes[level]) * 100)[:5]
-            sys.stdout.write("\rLevel %s progress: %s%%" % level, progress)
+            sys.stdout.write("\rLevel %s progress: %s%%" % (level, progress))
 
         # If we have the output for this sample cached, use it.
         # Otherwise, compute the output via the model.
@@ -284,6 +285,9 @@ class MLMCSimulator:
         can_use_cache = cached_index < self._initial_sample_size and \
             cached_level == level
 
+        if self._verbose:
+            sys.stdout.write("\r                                              ")
+
         if can_use_cache:
             return self._cache[level][cached_index]
         else:
@@ -298,7 +302,7 @@ class MLMCSimulator:
             2d ndarray of variances
         """
         if self._verbose:
-            sys.stdout.write("Determining costs and variances: ")
+            sys.stdout.write("Determining costs: ")
 
         self._determine_output_size()
 
@@ -352,7 +356,8 @@ class MLMCSimulator:
         # If the models have costs precomputed, use them to compute costs
         # between each level.
         costs_precomputed = False
-        if hasattr(self._models[0], 'cost'):
+        if hasattr(self._models[0], 'cost') and \
+           self._models[0].cost is not None:
 
             costs_precomputed = True
             for i, model in enumerate(self._models):
