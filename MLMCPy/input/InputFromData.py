@@ -90,6 +90,9 @@ class InputFromData(Input):
         If multiple cpus detected, split the data across cpus so that
         each will have a unique subset of sample data.
         """
+        num_cpus = 1
+        cpu_rank = 0
+
         try:
             imp.find_module('mpi4py')
 
@@ -100,7 +103,8 @@ class InputFromData(Input):
             num_cpus = comm.size
 
         except ImportError:
-            num_cpus = 0
+            num_cpus = 1
+            cpu_rank = 0
 
         finally:
             slice_size = self._data.shape[0] // num_cpus
