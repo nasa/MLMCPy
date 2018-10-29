@@ -145,11 +145,14 @@ def test_skip_rows(input_data_file_2d, output_data_file_2d, rows_to_skip):
 @pytest.mark.parametrize("cost", [.01, .05, .1])
 def test_evaluate_with_cost_delay(cost, input_data_file, output_data_file):
 
-    model = ModelFromData(input_data_file, output_data_file, cost)
+    model = ModelFromData(input_data_file, output_data_file, cost=cost,
+                          wait_cost_duration=True)
+
     sample = model._inputs[0]
 
     start_time = timeit.default_timer()
-    model.evaluate(sample, wait_cost_duration=cost)
+    model.evaluate(sample)
     evaluation_time = timeit.default_timer() - start_time
 
+    # Ensure evaluation time was close to specified cost.
     assert np.abs(evaluation_time - cost) < .01
