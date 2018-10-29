@@ -300,6 +300,7 @@ def test_output_caching(data_input, models_from_data, cache_size):
     # Ignore divide by zero warning cause by 0 initial_sample_size.
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
+
         estimate2, sample_sizes, variances2 = sim._run_simulation()
 
     # Now compare final estimator and output variances.
@@ -342,7 +343,7 @@ def test_fail_if_model_outputs_do_not_match_shapes(filename_2d_5_column_data,
         MLMCSimulator(models=[model1, model2], data=data_input)
 
 
-def test_monte_carlo(data_input, models_from_data):
+def test_monte_carlo_estimate_value(data_input, models_from_data):
 
     np.random.seed(1)
 
@@ -357,6 +358,21 @@ def test_monte_carlo(data_input, models_from_data):
     estimate, sample_sizes, variances = sim.simulate(1., 50)
 
     assert np.isclose(estimate, mc_20000_output_sample_mean, atol=.25)
+
+
+def test_MC_output_shapes_match_MLMC(data_input, models_from_data):
+
+    first_model = [models_from_data[0]]
+
+    mc_sim = MLMCSimulator(models=first_model, data=data_input)
+    mc_estimate, mc_sample_sizes, mc_variances = mc_sim.simulate(1., 50)
+
+    mlmc_sim = MLMCSimulator(models=models_from_data, data=data_input)
+    mlmc_estimate, mlmc_sample_sizes, mlmc_variances = mlmc_sim.simulate(1., 50)
+
+    assert mc_estimate.shape == mlmc_estimate.shape
+    assert mc_variances.shape == mlmc_variances.shape
+    assert mc_sample_sizes.shape != mlmc_sample_sizes.shape
 
 
 def test_hard_coded_test_2_level(data_input, models_from_data):
