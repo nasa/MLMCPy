@@ -360,7 +360,7 @@ def test_monte_carlo_estimate_value(data_input, models_from_data):
     assert np.isclose(estimate, mc_20000_output_sample_mean, atol=.25)
 
 
-def test_MC_output_shapes_match_MLMC(data_input, models_from_data):
+def test_mc_output_shapes_match_mlmc(data_input, models_from_data):
 
     first_model = [models_from_data[0]]
 
