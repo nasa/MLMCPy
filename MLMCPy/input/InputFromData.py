@@ -71,9 +71,11 @@ class InputFromData(Input):
         sample_size = sample.shape[0]
         if num_samples > sample_size:
 
-            error_message = "Only %s of the %s requested samples are " + \
-                            "available.\nEither provide more sample data or" + \
-                            " increase epsilon to reduce sample size needed."
+            error_message = "Only " + str(sample_size) + " of the " + \
+                            str(num_samples) + " requested samples are " + \
+                            "available.\nEither provide more sample data " + \
+                            "or increase epsilon to reduce sample size needed."
+
             warning = UserWarning(error_message)
             warnings.warn(warning)
 

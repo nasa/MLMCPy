@@ -173,7 +173,15 @@ class MLMCSimulator:
         for level in range(self._num_levels):
 
             samples = self._data.draw_samples(self._sample_sizes[level])
-            output = np.zeros((self._sample_sizes[level], self._output_size))
+            samples_taken = samples.shape[0]
+
+            # If we've run out of sample data, we should adjust the sample
+            # size values accordingly in order to avoid incorrect arithmetic
+            # later when summarizing results.
+            if samples_taken < self._sample_sizes[level]:
+                self._sample_sizes[level] = samples_taken
+
+            output = np.zeros((samples_taken, self._output_size))
 
             for i, sample in enumerate(samples):
                 output[i] = self._evaluate_sample(i, sample, level)
@@ -182,6 +190,47 @@ class MLMCSimulator:
             sums_of_output_squares += np.sum(np.square(output), axis=0)
 
         return sums_of_outputs, sums_of_output_squares
+
+    def _evaluate_sample(self, i, sample, level):
+        """
+        Evaluate output of an input sample, either by running the model or
+        retrieving the output from the cache.
+
+        :param i: sample index
+        :param sample: sample value
+        :param level: model level
+        :return: result of evaluation
+        """
+
+        if self._verbose:
+            progress = str((float(i) / self._sample_sizes[level]) * 100)[:5]
+            sys.stdout.write("\rLevel %s progress: %s%%" % (level, progress))
+
+        # If we have the output for this sample cached, use it.
+        # Otherwise, compute the output via the model.
+
+        # Absolute index of current sample.
+        sample_index = np.sum(self._sample_sizes[:level]) + i
+
+        # Level in cache that a sample with above index would be at.
+        # This must match the current level.
+        cached_level = sample_index // self._initial_sample_size
+
+        # Index within cached level for sample output.
+        cached_index = sample_index - level * self._initial_sample_size
+
+        # Level and index within cache must be correct for the
+        # appropriate cached value to be found.
+        can_use_cache = cached_index < self._initial_sample_size and \
+            cached_level == level
+
+        if self._verbose:
+            sys.stdout.write("\r                                              ")
+
+        if can_use_cache:
+            return self._cache[level][cached_index]
+        else:
+            return self._models[level].evaluate(sample)
 
     def _run_extended_simulation_loop(self, sums, squares, time_budget):
         """
@@ -204,6 +253,13 @@ class MLMCSimulator:
             while self._costs[level] < time_remaining:
 
                 sample = self._data.draw_samples(1)
+
+                # Ensure we haven't run out of samples.
+                if sample.size == 0:
+                    return sums, squares
+
+                self._sample_sizes[level] += 1
+
                 output = self._evaluate_sample(0, sample, level)
 
                 sums += output
@@ -251,47 +307,6 @@ class MLMCSimulator:
         variances = self._mean_over_all_cpus(variances)
 
         return means, variances
-
-    def _evaluate_sample(self, i, sample, level):
-        """
-        Evaluate output of an input sample, either by running the model or
-        retrieving the output from the cache.
-
-        :param i: sample index
-        :param sample: sample value
-        :param level: model level
-        :return: result of evaluation
-        """
-
-        if self._verbose:
-            progress = str((float(i) / self._sample_sizes[level]) * 100)[:5]
-            sys.stdout.write("\rLevel %s progress: %s%%" % (level, progress))
-
-        # If we have the output for this sample cached, use it.
-        # Otherwise, compute the output via the model.
-
-        # Absolute index of current sample.
-        sample_index = np.sum(self._sample_sizes[:level]) + i
-
-        # Level in cache that a sample with above index would be at.
-        # This must match the current level.
-        cached_level = sample_index // self._initial_sample_size
-
-        # Index within cached level for sample output.
-        cached_index = sample_index - level * self._initial_sample_size
-
-        # Level and index within cache must be correct for the
-        # appropriate cached value to be found.
-        can_use_cache = cached_index < self._initial_sample_size and \
-            cached_level == level
-
-        if self._verbose:
-            sys.stdout.write("\r                                              ")
-
-        if can_use_cache:
-            return self._cache[level][cached_index]
-        else:
-            return self._models[level].evaluate(sample)
 
     def _compute_costs_and_variances(self):
         """
