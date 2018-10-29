@@ -100,7 +100,7 @@ class InputFromData(Input):
             num_cpus = comm.size
 
         except ImportError:
-            num_cpus = 0
+            num_cpus = 1
 
         finally:
             slice_size = self._data.shape[0] // num_cpus
