@@ -81,7 +81,7 @@ class MLMCSimulator:
 
         # If only one model was provided, run standard monte carlo.
         if self._num_levels == 1:
-            return self._run_monte_carlo(initial_sample_size)
+            return self._run_monte_carlo(initial_sample_size, self._models[0])
 
         # Compute optimal sample sizes for each level, as well as alpha value.
         self._setup_simulation(epsilon, initial_sample_size)
@@ -418,7 +418,7 @@ class MLMCSimulator:
         if self._verbose:
             print np.array2string(self._sample_sizes)
 
-    def _run_monte_carlo(self, num_samples):
+    def _run_monte_carlo(self, num_samples, model):
         """
         Runs a standard monte carlo simulation. Used when only one model
         is provided.
@@ -438,13 +438,16 @@ class MLMCSimulator:
             print 'WARNING: Could not divide samples evenly across all CPUs!'
 
         samples = self._data.draw_samples(cpu_samples)
-        outputs = np.zeros(cpu_samples)
+
+        self._output_size = model.evaluate(samples[0]).size
+
+        outputs = np.zeros((cpu_samples, self._output_size))
 
         for i, sample in enumerate(samples):
-            outputs[i] = self._models[0].evaluate(sample)
+            outputs[i] = model.evaluate(sample)
 
         # Return values should have same signature as regular MLMC simulation.
-        estimates = np.array([np.mean(outputs)])
+        estimates = np.mean(outputs, axis=0)
         sample_sizes = np.array([num_samples])
         variances = np.array([np.var(outputs)])
 

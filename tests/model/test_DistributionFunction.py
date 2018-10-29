@@ -133,3 +133,28 @@ def test_sim_evaluate_returns_expected_results():
 
     # Verify that area under function sums to one.
     assert np.isclose(np.sum(cdf[1:-1] - cdf[:-2]), 1., atol=.05)
+
+
+def test_monte_carlo_sim_evaluate_returns_expected_results():
+
+    grid = np.arange(0, 100)
+
+    inner_model = TestingModel('repeat')
+    distribution_function = CDFWrapperModel(inner_model, grid)
+    models = [distribution_function]
+
+    data = np.arange(0, 100)
+    data_input = TestingInput(data)
+
+    simulator = MLMCSimulator(data_input, models)
+    cdf, sample_counts, variances = \
+        simulator.simulate(epsilon=.05, initial_sample_size=100)
+
+    # Verify that cdf is monotonic.
+    for i in range(1, len(cdf)):
+
+        if cdf[i] < cdf[i-1]:
+            assert False
+
+    # Verify that area under function sums to one.
+    assert np.isclose(np.sum(cdf[1:-1] - cdf[:-2]), 1., atol=.05)
