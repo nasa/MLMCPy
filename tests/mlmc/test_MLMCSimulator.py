@@ -387,8 +387,8 @@ def test_hard_coded_test_2_level(data_input, models_from_data):
     sim_costs, sim_variances = sim._compute_costs_and_variances()
 
     # Results from hard coded testing with same parameters.
-    hard_coded_variances = np.array([[7.4369484729553506],
-                                     [0.07298233959565989]])
+    hard_coded_variances = np.array([[7.931500775888307],
+                                     [0.07433907059039102]])
 
     hard_coded_sample_sizes = np.array([10, 1])
     hard_coded_estimate = np.array([11.131425234107827])
@@ -407,9 +407,9 @@ def test_hard_coded_test_3_level(data_input, models_from_data):
     sim_costs, sim_variances = sim._compute_costs_and_variances()
 
     # Results from hard coded testing with same parameters.
-    hard_coded_variances = np.array([[7.4369484729553506],
-                                     [7.298233959565989e-02],
-                                     [7.3539883278145636e-06]])
+    hard_coded_variances = np.array([[7.680235831075362],
+                                     [0.07425502614473008],
+                                     [7.463599141719924e-06]])
 
     hard_coded_sample_sizes = np.array([10, 1, 1])
     hard_coded_estimate = np.array([11.819384316572874])
@@ -439,6 +439,7 @@ def test_can_run_simulation_multiple_times_without_exception(data_input,
 
     sim = MLMCSimulator(models=models_from_data, data=data_input)
     sim.simulate(epsilon=1., initial_sample_size=10)
+    sim.simulate(epsilon=2., initial_sample_size=20)
 
 
 @pytest.mark.parametrize('target_cost', [3, 1, .5, .1])

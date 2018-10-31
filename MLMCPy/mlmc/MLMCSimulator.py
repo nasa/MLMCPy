@@ -1,5 +1,6 @@
 import numpy as np
 import timeit
+from datetime import timedelta
 import sys
 import imp
 
@@ -76,8 +77,7 @@ class MLMCSimulator:
         self.__check_simulate_parameters(initial_sample_size, target_cost)
         self._target_cost = target_cost
 
-        # Reset sampling in case simulation is run more than once.
-        self._data.reset_sampling()
+        self._determine_output_size()
 
         # If only one model was provided, run standard monte carlo.
         if self._num_levels == 1:
@@ -112,11 +112,11 @@ class MLMCSimulator:
                       'among processors, so results may deviate from ' + \
                       'a serial implementation.'
 
-        # Run models with initial sample sizes to compute costs, outputs.
-        costs, variances = self._compute_costs_and_variances()
-
         # Epsilon should be array that matches output width.
         self._epsilons = self._process_epsilon(epsilon)
+
+        # Run models with initial sample sizes to compute costs, outputs.
+        costs, variances = self._compute_costs_and_variances()
 
         # Compute optimal sample size at each level.
         self._compute_optimal_sample_sizes(costs, variances)
@@ -319,8 +319,6 @@ class MLMCSimulator:
         if self._verbose:
             sys.stdout.write("Determining costs: ")
 
-        self._determine_output_size()
-
         # Cache model outputs computed here so that they can be reused
         # in the simulation.
         self._cache = np.zeros((self._num_levels,
@@ -397,6 +395,7 @@ class MLMCSimulator:
         """
         Runs model on a small test sample to determine shape of output.
         """
+        self._data.reset_sampling()
         test_sample = self._data.draw_samples(1)[0]
         self._data.reset_sampling()
 
@@ -436,7 +435,12 @@ class MLMCSimulator:
         self._sample_sizes[self._sample_sizes == 0] = 1
 
         if self._verbose:
+
             print np.array2string(self._sample_sizes)
+
+            estimated_runtime = np.sum(self._sample_sizes * np.squeeze(costs))
+
+            self._show_time_estimate(estimated_runtime)
 
     def _run_monte_carlo(self, num_samples, model):
         """
@@ -452,16 +456,16 @@ class MLMCSimulator:
         if self._verbose:
             print 'Only one model provided; running standard monte carlo.'
 
-        cpu_samples = num_samples // self._number_cpus
+        num_cpu_samples = num_samples // self._number_cpus
 
-        if self._verbose and cpu_samples * self._number_cpus != num_samples:
+        if self._verbose and num_cpu_samples * self._number_cpus != num_samples:
             print 'WARNING: Could not divide samples evenly across all CPUs!'
 
-        samples = self._data.draw_samples(cpu_samples)
+        if self._verbose and hasattr(model, 'cost'):
+            self._show_time_estimate(int(num_cpu_samples * model.cost))
 
-        self._output_size = model.evaluate(samples[0]).size
-
-        outputs = np.zeros((cpu_samples, self._output_size))
+        samples = self._data.draw_samples(num_cpu_samples)
+        outputs = np.zeros((num_cpu_samples, self._output_size))
 
         for i, sample in enumerate(samples):
             outputs[i] = model.evaluate(sample)
@@ -476,7 +480,6 @@ class MLMCSimulator:
         variances = self._mean_over_all_cpus(variances)
 
         return estimates, sample_sizes, variances
-
 
     def _process_epsilon(self, epsilon):
         """
@@ -586,3 +589,10 @@ class MLMCSimulator:
         all_values = comm.allgather(values)
 
         return np.mean(all_values, 0)
+
+    @staticmethod
+    def _show_time_estimate(seconds):
+
+        time_delta = timedelta(seconds=seconds)
+
+        print 'Estimated simulation time: %s' % str(time_delta)
