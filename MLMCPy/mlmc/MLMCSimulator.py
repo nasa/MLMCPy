@@ -347,6 +347,9 @@ class MLMCSimulator:
         costs = self._mean_over_all_cpus(costs)
         variances = self._mean_over_all_cpus(variances)
 
+        if self._verbose and self._cpu_rank == 0:
+            print 'Initial sample variances: \n%s' % variances
+
         return costs, variances
 
     def _compute_costs(self, compute_times):
