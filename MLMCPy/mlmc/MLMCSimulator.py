@@ -81,7 +81,7 @@ class MLMCSimulator:
 
         # If only one model was provided, run standard monte carlo.
         if self._num_levels == 1:
-            return self._run_monte_carlo(initial_sample_size, self._models[0])
+            return self._run_monte_carlo(self._models[0], epsilon)
 
         # Compute optimal sample sizes for each level, as well as alpha value.
         self._setup_simulation(epsilon, initial_sample_size)
@@ -104,13 +104,6 @@ class MLMCSimulator:
 
             print "Running %s initial samples per core." % \
                   self._initial_sample_size
-
-            if self._initial_sample_size * self._number_cpus != \
-               initial_sample_size:
-
-                print 'WARNING: Initial samples cannot be evenly divided ' + \
-                      'among processors, so results may deviate from ' + \
-                      'a serial implementation.'
 
         # Epsilon should be array that matches output width.
         self._epsilons = self._process_epsilon(epsilon)
@@ -442,24 +435,27 @@ class MLMCSimulator:
 
             self._show_time_estimate(estimated_runtime)
 
-    def _run_monte_carlo(self, num_samples, model):
+    def _run_monte_carlo(self, model, epsilon):
         """
         Runs a standard monte carlo simulation. Used when only one model
         is provided.
 
-        :param num_samples: Number of samples to take.
+        :param model: Model to evaluate.
+        :param epsilon: Desired precision, determines number of samples.
         :return: tuple containing three ndarrays with one element each:
             estimates: Estimates for each quantity of interest
             sample_sizes: The sample sizes used at each level.
             variances: Variance of model outputs at each level.
         """
+        # Epsilon should be array that matches output width.
+        epsilons = self._process_epsilon(epsilon)
+
+        num_samples = epsilons[-1] ** -2
+        num_cpu_samples = int(max(1, num_samples // self._number_cpus))
+
         if self._verbose:
             print 'Only one model provided; running standard monte carlo.'
-
-        num_cpu_samples = num_samples // self._number_cpus
-
-        if self._verbose and num_cpu_samples * self._number_cpus != num_samples:
-            print 'WARNING: Could not divide samples evenly across all CPUs!'
+            print 'Performing %s samples per core.' % num_cpu_samples
 
         if self._verbose and hasattr(model, 'cost'):
             self._show_time_estimate(int(num_cpu_samples * model.cost))
