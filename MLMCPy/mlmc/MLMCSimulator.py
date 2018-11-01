@@ -422,7 +422,8 @@ class MLMCSimulator:
 
         # Compute sample sizes.
         sqrt_v_over_c = np.sqrt(variances / costs)
-        self._sample_sizes = np.amax(np.ceil(mu * sqrt_v_over_c), axis=1)
+        self._sample_sizes = np.amax(np.ceil(mu * sqrt_v_over_c),
+                                     axis=1)
 
         # Divide sampling evenly across cpus.
         self._sample_sizes /= self._number_cpus
