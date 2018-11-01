@@ -340,7 +340,8 @@ class MLMCSimulator:
 
             compute_times[level] = timeit.default_timer() - start_time
 
-            variances[level] = np.var(self._cache[level] - sublevel_outputs)
+            variances[level] = np.var(self._cache[level] - sublevel_outputs,
+                                      axis=0)
 
         costs = self._compute_costs(compute_times)
 
@@ -426,7 +427,7 @@ class MLMCSimulator:
         # Divide sampling evenly across cpus.
         self._sample_sizes /= self._number_cpus
 
-        # Set sample sizes to ints and replace any 0s with  1.
+        # Set sample sizes to ints and replace any 0s with 1.
         self._sample_sizes = self._sample_sizes.astype(int)
         self._sample_sizes[self._sample_sizes == 0] = 1
 
