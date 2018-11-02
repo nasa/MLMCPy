@@ -76,12 +76,9 @@ class MLMCSimulator:
 
         self.__check_simulate_parameters(initial_sample_size, target_cost)
         self._target_cost = target_cost
+        initial_sample_size // self._num_cpus
 
         self._determine_output_size()
-
-        # If only one model was provided, run standard monte carlo.
-        if self._num_levels == 1:
-            return self._run_monte_carlo(self._models[0], epsilon)
 
         # Compute optimal sample sizes for each level, as well as alpha value.
         self._setup_simulation(epsilon, initial_sample_size)
@@ -98,9 +95,9 @@ class MLMCSimulator:
         :param initial_sample_size: Sample size used when computing sample sizes
             for each level in simulation.
         """
-        self._initial_sample_size = initial_sample_size // self._number_cpus
+        self._initial_sample_size = initial_sample_size
 
-        if self._verbose and self._number_cpus > 1:
+        if self._verbose and self._num_cpus > 1:
 
             print "Running %s initial samples per core." % \
                   self._initial_sample_size
@@ -418,7 +415,7 @@ class MLMCSimulator:
         if self._target_cost is None:
             mu = np.power(self._epsilons, -2) * sum_sqrt_vc
         else:
-            mu = self._target_cost * self._number_cpus / sum_sqrt_vc
+            mu = self._target_cost * self._num_cpus / sum_sqrt_vc
 
         # Compute sample sizes.
         sqrt_v_over_c = np.sqrt(variances / costs)
@@ -426,7 +423,7 @@ class MLMCSimulator:
                                      axis=1)
 
         # Divide sampling evenly across cpus.
-        self._sample_sizes /= self._number_cpus
+        self._sample_sizes /= self._num_cpus
 
         # Set sample sizes to ints and replace any 0s with 1.
         self._sample_sizes = self._sample_sizes.astype(int)
@@ -439,48 +436,6 @@ class MLMCSimulator:
             estimated_runtime = np.sum(self._sample_sizes * np.squeeze(costs))
 
             self._show_time_estimate(estimated_runtime)
-
-    def _run_monte_carlo(self, model, epsilon):
-        """
-        Runs a standard monte carlo simulation. Used when only one model
-        is provided.
-
-        :param model: Model to evaluate.
-        :param epsilon: Desired precision, determines number of samples.
-        :return: tuple containing three ndarrays with one element each:
-            estimates: Estimates for each quantity of interest
-            sample_sizes: The sample sizes used at each level.
-            variances: Variance of model outputs at each level.
-        """
-        # Epsilon should be array that matches output width.
-        epsilons = self._process_epsilon(epsilon)
-
-        num_samples = epsilons[-1] ** -2
-        num_cpu_samples = int(max(1, num_samples // self._number_cpus))
-
-        if self._verbose:
-            print 'Only one model provided; running standard monte carlo.'
-            print 'Performing %s samples per core.' % num_cpu_samples
-
-        if self._verbose and hasattr(model, 'cost'):
-            self._show_time_estimate(int(num_cpu_samples * model.cost))
-
-        samples = self._data.draw_samples(num_cpu_samples)
-        outputs = np.zeros((num_cpu_samples, self._output_size))
-
-        for i, sample in enumerate(samples):
-            outputs[i] = model.evaluate(sample)
-
-        # Return values should have same signature as regular MLMC simulation.
-        estimates = np.mean(outputs, axis=0)
-        sample_sizes = np.array([num_samples])
-        variances = np.array([np.var(outputs)])
-
-        # If we're running on multiple CPUs, get mean of all results.
-        estimates = self._mean_over_all_cpus(estimates)
-        variances = self._mean_over_all_cpus(variances)
-
-        return estimates, sample_sizes, variances
 
     def _process_epsilon(self, epsilon):
         """
@@ -567,12 +522,12 @@ class MLMCSimulator:
             from mpi4py import MPI
             comm = MPI.COMM_WORLD
 
-            self._number_cpus = comm.size
+            self._num_cpus = comm.size
             self._cpu_rank = comm.rank
 
         except ImportError:
 
-            self._number_cpus = 1
+            self._num_cpus = 1
             self._cpu_rank = 0
 
     def _mean_over_all_cpus(self, values):
@@ -581,7 +536,7 @@ class MLMCSimulator:
         :param values: ndarray of any shape.
         :return: ndarray of same shape as values with mean from all cpus.
         """
-        if self._number_cpus == 1:
+        if self._num_cpus == 1:
             return values
 
         from mpi4py import MPI

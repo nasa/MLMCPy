@@ -228,7 +228,7 @@ def test_calculate_initial_variances(beta_distribution_input, spring_models):
     sim = MLMCSimulator(models=spring_models, data=beta_distribution_input)
 
     np.random.seed(1)
-    sim._initial_sample_size = 100 // sim._number_cpus
+    sim._initial_sample_size = 100 // sim._num_cpus
 
     costs, variances = sim._compute_costs_and_variances()
 
@@ -355,7 +355,7 @@ def test_monte_carlo_estimate_value(data_input, models_from_data):
     models = [models_from_data[0]]
 
     sim = MLMCSimulator(models=models, data=data_input)
-    estimate, sample_sizes, variances = sim.simulate(1., 50)
+    estimate, sample_sizes, variances = sim.simulate(.05, 50)
 
     assert np.isclose(estimate, mc_20000_output_sample_mean, atol=.25)
 
@@ -454,7 +454,7 @@ def test_fixed_cost(beta_distribution_input, spring_models, target_cost):
 
     # Multiply sample sizes times costs and take the sum; verify that this is
     # close to the target cost.
-    sim._initial_sample_size = 100 // sim._number_cpus
+    sim._initial_sample_size = 100 // sim._num_cpus
     sim._target_cost = target_cost
 
     costs, variances = sim._compute_costs_and_variances()
