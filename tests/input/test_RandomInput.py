@@ -50,13 +50,11 @@ def test_extra_distribution_function_parameters():
     assert sample.shape == (5, 1)
 
 
-def test_draw_samples_invalid_arguments(uniform_distribution_input):
+@pytest.mark.parametrize('argument', [1., 0, 'a'])
+def test_draw_samples_invalid_arguments(uniform_distribution_input, argument):
 
-    with pytest.raises(TypeError):
-        uniform_distribution_input.draw_samples(1.)
-
-    with pytest.raises(ValueError):
-        uniform_distribution_input.draw_samples(0)
+    with pytest.raises(Exception):
+        uniform_distribution_input.draw_samples(argument)
 
 
 def test_distribution_exception_if_size_parameter_not_accepted():
