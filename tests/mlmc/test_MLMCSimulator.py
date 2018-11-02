@@ -375,6 +375,30 @@ def test_mc_output_shapes_match_mlmc(data_input, models_from_data):
     assert mc_sample_sizes.shape != mlmc_sample_sizes.shape
 
 
+@pytest.mark.parametrize('num_cpus', [1, 2, 3, 4, 7, 12])
+def test_multi_cpu_sample_sizing(data_input, models_from_data, num_cpus):
+
+    total_samples = 100
+
+    sample_sizes = np.zeros(num_cpus)
+
+    sim = MLMCSimulator(models=models_from_data, data=data_input)
+
+    for cpu_rank in range(num_cpus):
+
+        sim._num_cpus = num_cpus
+        sim._cpu_rank = cpu_rank
+
+        sample_sizes[cpu_rank] = sim._determine_num_cpu_samples(total_samples)
+
+    # Test that all samples will be utilized.
+    assert np.sum(sample_sizes) == total_samples
+
+    # Test that there is never more than a difference of one sample
+    # between processes.
+    assert np.max(sample_sizes) - np.min(sample_sizes) <= 1
+
+
 def test_hard_coded_test_2_level(data_input, models_from_data):
 
     # Get simulation results.

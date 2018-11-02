@@ -76,7 +76,6 @@ class MLMCSimulator:
 
         self.__check_simulate_parameters(initial_sample_size, target_cost)
         self._target_cost = target_cost
-        initial_sample_size // self._num_cpus
 
         self._determine_output_size()
 
@@ -95,7 +94,8 @@ class MLMCSimulator:
         :param initial_sample_size: Sample size used when computing sample sizes
             for each level in simulation.
         """
-        self._initial_sample_size = initial_sample_size
+        self._initial_sample_size = \
+            self._determine_num_cpu_samples(initial_sample_size)
 
         if self._verbose and self._num_cpus > 1:
 
@@ -286,7 +286,6 @@ class MLMCSimulator:
             epsilons_squared = np.square(self._epsilons)
             for i, variance in enumerate(variances):
 
-                epsilon_squared = np.square(epsilons_squared[i])
                 passed = variance < epsilons_squared[i]
 
                 print 'QOI #%s: variance: %s, epsilon^2: %s, success: %s' % \
@@ -423,7 +422,8 @@ class MLMCSimulator:
                                      axis=1)
 
         # Divide sampling evenly across cpus.
-        self._sample_sizes /= self._num_cpus
+        split_samples = np.vectorize(self._determine_num_cpu_samples)
+        self._sample_sizes = split_samples(self._sample_sizes)
 
         # Set sample sizes to ints and replace any 0s with 1.
         self._sample_sizes = self._sample_sizes.astype(int)
@@ -546,9 +546,24 @@ class MLMCSimulator:
 
         return np.mean(all_values, 0)
 
+    def _determine_num_cpu_samples(self, total_num_samples):
+        """Determines number of samples to be run on current cpu based on
+            total number of samples to be run.
+            :param total_num_samples: Total samples to be taken.
+            :return: Samples to be taken by this cpu.
+        """
+        num_cpu_samples = total_num_samples // self._num_cpus
+        num_residual_samples = total_num_samples - num_cpu_samples * self._num_cpus
+
+        if self._cpu_rank < num_residual_samples:
+            num_cpu_samples += 1
+
+        return num_cpu_samples
+
     @staticmethod
     def _show_time_estimate(seconds):
 
         time_delta = timedelta(seconds=seconds)
 
         print 'Estimated simulation time: %s' % str(time_delta)
+
