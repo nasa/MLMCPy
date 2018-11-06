@@ -493,7 +493,7 @@ class MLMCSimulator:
                              "dimensions.")
 
     @staticmethod
-    def __check_simulate_parameters(starting_sample_size, maximum_cost):
+    def __check_simulate_parameters(starting_sample_size, target_cost):
 
         if not isinstance(starting_sample_size, int):
             raise TypeError("starting_sample_size must be an integer.")
@@ -501,14 +501,14 @@ class MLMCSimulator:
         if starting_sample_size < 1:
             raise ValueError("starting_sample_size must be greater than zero.")
 
-        if maximum_cost is not None:
+        if target_cost is not None:
 
-            if not (isinstance(maximum_cost, float) or
-                    isinstance(maximum_cost, int)):
+            if not (isinstance(target_cost, float) or
+                    isinstance(target_cost, int)):
 
                 raise TypeError('maximum cost must be an int or float.')
 
-            if maximum_cost <= 0:
+            if target_cost <= 0:
                 raise ValueError("maximum cost must be greater than zero.")
 
     def __detect_parallelization(self):
@@ -566,4 +566,3 @@ class MLMCSimulator:
         time_delta = timedelta(seconds=seconds)
 
         print 'Estimated simulation time: %s' % str(time_delta)
-
