@@ -33,14 +33,6 @@ print 'Sample sizes used: %s' % sample_sizes
 print 'Variance: %s' % variances[0]
 
 ```
-
--------------------------------------------------------------------------------
-If you use MLMCPy for your research, please cite the technical report:
-
-Warner, J. E. (2018). Multi-Level Monte Carlo with Python (MLMCPy). NASA/TM-2018-??????. 
-
-The report can be found in the docs/references directory. Thanks!
-
 -------------------------------------------------------------------------------
 
 **Authors**: <br />
