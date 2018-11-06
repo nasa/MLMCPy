@@ -132,7 +132,11 @@ class MLMCSimulator:
 
         # If a target cost was specified and we still have time left, add
         # additional model runs until we hit the target cost.
-        if self._target_cost is not None:
+        # However, don't run extended loop if we are simulating costs, in which
+        # case time measurements are irrelevant, such as when using
+        # ModelFromData.
+        if self._target_cost is not None and \
+                not hasattr(self._models[0], 'cost'):
 
             time_remaining = self._target_cost - (end_time - start_time)
 
