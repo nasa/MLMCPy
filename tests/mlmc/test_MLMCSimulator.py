@@ -130,6 +130,13 @@ def test_spring_model(beta_distribution_input, spring_models):
     sim.simulate(1., initial_sample_size=20)
 
 
+def test_for_verbose_exceptions(beta_distribution_input, spring_models):
+
+    sim = MLMCSimulator(models=spring_models, data=beta_distribution_input)
+    sim.simulate(1., initial_sample_size=20, verbose=True)
+
+
+
 def test_simulate_exception_for_invalid_parameters(data_input,
                                                    models_from_data):
 
