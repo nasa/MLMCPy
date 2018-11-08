@@ -187,7 +187,7 @@ def test_compute_optimal_sample_sizes_expected_outputs(data_input,
     # Check results.
     sample_sizes = test_mlmc._sample_sizes
 
-    assert np.array_equal(sample_sizes, [800, 200])
+    assert np.all(np.isclose(sample_sizes, [800, 200], atol=1))
 
 
 def test_optimal_sample_sizes_expected_outputs_2_qoi(data_input,
@@ -418,11 +418,11 @@ def test_hard_coded_test_2_level(data_input, models_from_data):
     sim_costs, sim_variances = sim._compute_costs_and_variances()
 
     # Results from hard coded testing with same parameters.
-    hard_coded_variances = np.array([[7.931500775888307],
-                                     [0.07433907059039102]])
+    hard_coded_variances = np.array([[7.659619446414387],
+                                     [0.07288894751770203]])
 
-    hard_coded_sample_sizes = np.array([10, 1])
-    hard_coded_estimate = np.array([11.131425234107827])
+    hard_coded_sample_sizes = np.array([9, 0])
+    hard_coded_estimate = np.array([11.639166038233583])
 
     assert np.array_equal(sim_variances, hard_coded_variances)
     assert np.array_equal(sim._sample_sizes, hard_coded_sample_sizes)
@@ -438,12 +438,12 @@ def test_hard_coded_test_3_level(data_input, models_from_data):
     sim_costs, sim_variances = sim._compute_costs_and_variances()
 
     # Results from hard coded testing with same parameters.
-    hard_coded_variances = np.array([[7.680235831075362],
-                                     [0.07425502614473008],
-                                     [7.463599141719924e-06]])
+    hard_coded_variances = np.array([[7.659619446414387],
+                                     [0.07288894751770203],
+                                     [7.363159154583542e-06]])
 
-    hard_coded_sample_sizes = np.array([10, 1, 1])
-    hard_coded_estimate = np.array([11.819384316572874])
+    hard_coded_sample_sizes = np.array([9, 0, 0])
+    hard_coded_estimate = np.array([11.639166038233583])
 
     assert np.array_equal(sim_variances, hard_coded_variances)
     assert np.array_equal(sim._sample_sizes, hard_coded_sample_sizes)
@@ -473,8 +473,10 @@ def test_can_run_simulation_multiple_times_without_exception(data_input,
     sim.simulate(epsilon=2., initial_sample_size=20)
 
 
-@pytest.mark.parametrize('target_cost', [3, 1, .5, .1])
+@pytest.mark.parametrize('target_cost', [3, 1, .1, .001])
 def test_fixed_cost(beta_distribution_input, spring_models, target_cost):
+
+    np.random.seed(1)
 
     # Ensure costs are evaluated by simulator via timeit.
     for model in spring_models:
@@ -486,7 +488,7 @@ def test_fixed_cost(beta_distribution_input, spring_models, target_cost):
     # Multiply sample sizes times costs and take the sum; verify that this is
     # close to the target cost.
     sim._initial_sample_size = 100 // sim._num_cpus
-    sim._target_cost = target_cost
+    sim._target_cost = float(target_cost)
 
     costs, variances = sim._compute_costs_and_variances()
     sim._compute_optimal_sample_sizes(costs, variances)
@@ -494,7 +496,7 @@ def test_fixed_cost(beta_distribution_input, spring_models, target_cost):
 
     expected_cost = np.sum(costs * sample_sizes)
 
-    assert np.isclose(expected_cost, target_cost, rtol=.05)
+    assert expected_cost <= target_cost
 
     # Disable caching to ensure accuracy of compute time measurement.
     sim._initial_sample_size = 0
@@ -507,8 +509,8 @@ def test_fixed_cost(beta_distribution_input, spring_models, target_cost):
         sim._run_simulation()
         compute_time = timeit.default_timer() - start_time
 
-    # We should be within the smallest model cost of the target cost.
-    assert np.isclose(compute_time, target_cost, rtol=.05)
+    # We should be less than or at least very close to the target.
+    assert compute_time < target_cost * 1.01
 
 
 def test_mpi_random_input_unique_per_cpu(mpi_info, beta_distribution_input,

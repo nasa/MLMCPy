@@ -75,7 +75,9 @@ class MLMCSimulator:
         self._verbose = verbose and self._cpu_rank == 0
 
         self.__check_simulate_parameters(initial_sample_size, target_cost)
-        self._target_cost = target_cost
+
+        if target_cost is not None:
+            self._target_cost = float(target_cost)
 
         self._determine_output_size()
 
@@ -165,6 +167,9 @@ class MLMCSimulator:
 
         # Compute sample outputs.
         for level in range(self._num_levels):
+
+            if self._sample_sizes[level] == 0:
+                continue
 
             samples = self._data.draw_samples(self._sample_sizes[level])
             samples_taken = samples.shape[0]
@@ -277,7 +282,14 @@ class MLMCSimulator:
 
         means = sums_of_outputs / total_samples
 
-        normalizer = 1. / (total_samples ** 2 - total_samples)
+        # If only one sample was taken, we need to take measures to avoid
+        # a division by zero scenario.
+        samples_squared_minus_samples = total_samples ** 2 - total_samples
+
+        if total_samples ** 2 - total_samples != 0:
+            normalizer = 1. / samples_squared_minus_samples
+        else:
+            normalizer = 1.
 
         variances = (sums_of_output_squares / total_samples -
                      np.square(means)) * normalizer
@@ -418,20 +430,22 @@ class MLMCSimulator:
         if self._target_cost is None:
             mu = np.power(self._epsilons, -2) * sum_sqrt_vc
         else:
-            mu = self._target_cost * self._num_cpus / sum_sqrt_vc
+            mu = self._target_cost * float(self._num_cpus) / sum_sqrt_vc
 
         # Compute sample sizes.
         sqrt_v_over_c = np.sqrt(variances / costs)
-        self._sample_sizes = np.amax(np.ceil(mu * sqrt_v_over_c),
-                                     axis=1)
+        self._sample_sizes = np.amax(np.trunc(mu * sqrt_v_over_c), axis=1)
+
+        # Manually tweak sample sizes to get predicted cost closer to target.
+        if self._target_cost is not None:
+            self._fit_samples_sizes_to_target_cost(np.squeeze(costs))
 
         # Divide sampling evenly across cpus.
         split_samples = np.vectorize(self._determine_num_cpu_samples)
         self._sample_sizes = split_samples(self._sample_sizes)
 
-        # Set sample sizes to ints and replace any 0s with 1.
+        # Set sample sizes to ints.
         self._sample_sizes = self._sample_sizes.astype(int)
-        self._sample_sizes[self._sample_sizes == 0] = 1
 
         if self._verbose:
 
@@ -440,6 +454,40 @@ class MLMCSimulator:
             estimated_runtime = np.sum(self._sample_sizes * np.squeeze(costs))
 
             self._show_time_estimate(estimated_runtime)
+
+    def _fit_samples_sizes_to_target_cost(self, costs):
+        """
+        Adjust sample sizes to be as close to the target cost as possible.
+        """
+        # Find difference between projected total cost and target.
+        total_cost = np.sum(costs * self._sample_sizes)
+        difference = self._target_cost - total_cost
+
+        # If the difference is greater than the lowest cost model, adjust
+        # the sample sizes.
+        if abs(difference) > costs[0]:
+
+            # Start with highest cost model and add samples in order to fill
+            # the cost gap as much as possible.
+            for i in range(len(costs) - 1, -1, -1):
+                if costs[i] < abs(difference):
+
+                    # Compute number of samples we can fill the gap with at
+                    # current level.
+                    delta = np.trunc(difference / costs[i])
+                    self._sample_sizes[i] += delta
+
+                    if self._sample_sizes[i] < 0:
+                        self._sample_sizes[i] = 0
+
+                    # Update difference from target cost.
+                    total_cost = np.sum(costs * self._sample_sizes)
+                    difference = self._target_cost - total_cost
+
+        # If target cost is less than cost of least expensive model, run it
+        # once so we are at least doing something in the simulation.
+        if np.sum(self._sample_sizes) == 0.:
+            self._sample_sizes[0] = 1
 
     def _process_epsilon(self, epsilon):
         """
