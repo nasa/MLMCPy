@@ -44,6 +44,10 @@ UQ Center of Excellence <br />
 NASA Langley Research Center <br /> 
 james.e.warner@nasa.gov
 
+
+This software was funded by and developed under the High Performance Computing
+Incubator (HPCI) at NASA Langley Research Center. 
+
 -------------------------------------------------------------------------------
 
 Notices:
