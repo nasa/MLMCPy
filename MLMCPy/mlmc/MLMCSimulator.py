@@ -75,13 +75,11 @@ class MLMCSimulator:
         self._verbose = verbose and self._cpu_rank == 0
 
         self.__check_simulate_parameters(initial_sample_size, target_cost)
-        self._target_cost = target_cost
+
+        if target_cost is not None:
+            self._target_cost = float(target_cost)
 
         self._determine_output_size()
-
-        # If only one model was provided, run standard monte carlo.
-        if self._num_levels == 1:
-            return self._run_monte_carlo(self._models[0], epsilon)
 
         # Compute optimal sample sizes for each level, as well as alpha value.
         self._setup_simulation(epsilon, initial_sample_size)
@@ -98,9 +96,10 @@ class MLMCSimulator:
         :param initial_sample_size: Sample size used when computing sample sizes
             for each level in simulation.
         """
-        self._initial_sample_size = initial_sample_size // self._number_cpus
+        self._initial_sample_size = \
+            self._determine_num_cpu_samples(initial_sample_size)
 
-        if self._verbose and self._number_cpus > 1:
+        if self._verbose and self._num_cpus > 1:
 
             print "Running %s initial samples per core." % \
                   self._initial_sample_size
@@ -135,7 +134,11 @@ class MLMCSimulator:
 
         # If a target cost was specified and we still have time left, add
         # additional model runs until we hit the target cost.
-        if self._target_cost is not None:
+        # However, don't run extended loop if we are simulating costs, in which
+        # case time measurements are irrelevant, such as when using
+        # ModelFromData.
+        if self._target_cost is not None and \
+                not hasattr(self._models[0], 'cost'):
 
             time_remaining = self._target_cost - (end_time - start_time)
 
@@ -164,6 +167,9 @@ class MLMCSimulator:
 
         # Compute sample outputs.
         for level in range(self._num_levels):
+
+            if self._sample_sizes[level] == 0:
+                continue
 
             samples = self._data.draw_samples(self._sample_sizes[level])
             samples_taken = samples.shape[0]
@@ -276,7 +282,14 @@ class MLMCSimulator:
 
         means = sums_of_outputs / total_samples
 
-        normalizer = 1. / (total_samples ** 2 - total_samples)
+        # If only one sample was taken, we need to take measures to avoid
+        # a division by zero scenario.
+        samples_squared_minus_samples = total_samples ** 2 - total_samples
+
+        if total_samples ** 2 - total_samples != 0:
+            normalizer = 1. / samples_squared_minus_samples
+        else:
+            normalizer = 1.
 
         variances = (sums_of_output_squares / total_samples -
                      np.square(means)) * normalizer
@@ -289,7 +302,6 @@ class MLMCSimulator:
             epsilons_squared = np.square(self._epsilons)
             for i, variance in enumerate(variances):
 
-                epsilon_squared = np.square(epsilons_squared[i])
                 passed = variance < epsilons_squared[i]
 
                 print 'QOI #%s: variance: %s, epsilon^2: %s, success: %s' % \
@@ -418,19 +430,22 @@ class MLMCSimulator:
         if self._target_cost is None:
             mu = np.power(self._epsilons, -2) * sum_sqrt_vc
         else:
-            mu = self._target_cost * self._number_cpus / sum_sqrt_vc
+            mu = self._target_cost * float(self._num_cpus) / sum_sqrt_vc
 
         # Compute sample sizes.
         sqrt_v_over_c = np.sqrt(variances / costs)
-        self._sample_sizes = np.amax(np.ceil(mu * sqrt_v_over_c),
-                                     axis=1)
+        self._sample_sizes = np.amax(np.trunc(mu * sqrt_v_over_c), axis=1)
+
+        # Manually tweak sample sizes to get predicted cost closer to target.
+        if self._target_cost is not None:
+            self._fit_samples_sizes_to_target_cost(np.squeeze(costs))
 
         # Divide sampling evenly across cpus.
-        self._sample_sizes /= self._number_cpus
+        split_samples = np.vectorize(self._determine_num_cpu_samples)
+        self._sample_sizes = split_samples(self._sample_sizes)
 
-        # Set sample sizes to ints and replace any 0s with 1.
+        # Set sample sizes to ints.
         self._sample_sizes = self._sample_sizes.astype(int)
-        self._sample_sizes[self._sample_sizes == 0] = 1
 
         if self._verbose:
 
@@ -440,47 +455,39 @@ class MLMCSimulator:
 
             self._show_time_estimate(estimated_runtime)
 
-    def _run_monte_carlo(self, model, epsilon):
+    def _fit_samples_sizes_to_target_cost(self, costs):
         """
-        Runs a standard monte carlo simulation. Used when only one model
-        is provided.
-
-        :param model: Model to evaluate.
-        :param epsilon: Desired precision, determines number of samples.
-        :return: tuple containing three ndarrays with one element each:
-            estimates: Estimates for each quantity of interest
-            sample_sizes: The sample sizes used at each level.
-            variances: Variance of model outputs at each level.
+        Adjust sample sizes to be as close to the target cost as possible.
         """
-        # Epsilon should be array that matches output width.
-        epsilons = self._process_epsilon(epsilon)
+        # Find difference between projected total cost and target.
+        total_cost = np.sum(costs * self._sample_sizes)
+        difference = self._target_cost - total_cost
 
-        num_samples = epsilons[-1] ** -2
-        num_cpu_samples = int(max(1, num_samples // self._number_cpus))
+        # If the difference is greater than the lowest cost model, adjust
+        # the sample sizes.
+        if abs(difference) > costs[0]:
 
-        if self._verbose:
-            print 'Only one model provided; running standard monte carlo.'
-            print 'Performing %s samples per core.' % num_cpu_samples
+            # Start with highest cost model and add samples in order to fill
+            # the cost gap as much as possible.
+            for i in range(len(costs) - 1, -1, -1):
+                if costs[i] < abs(difference):
 
-        if self._verbose and hasattr(model, 'cost'):
-            self._show_time_estimate(int(num_cpu_samples * model.cost))
+                    # Compute number of samples we can fill the gap with at
+                    # current level.
+                    delta = np.trunc(difference / costs[i])
+                    self._sample_sizes[i] += delta
 
-        samples = self._data.draw_samples(num_cpu_samples)
-        outputs = np.zeros((num_cpu_samples, self._output_size))
+                    if self._sample_sizes[i] < 0:
+                        self._sample_sizes[i] = 0
 
-        for i, sample in enumerate(samples):
-            outputs[i] = model.evaluate(sample)
+                    # Update difference from target cost.
+                    total_cost = np.sum(costs * self._sample_sizes)
+                    difference = self._target_cost - total_cost
 
-        # Return values should have same signature as regular MLMC simulation.
-        estimates = np.mean(outputs, axis=0)
-        sample_sizes = np.array([num_samples])
-        variances = np.array([np.var(outputs)])
-
-        # If we're running on multiple CPUs, get mean of all results.
-        estimates = self._mean_over_all_cpus(estimates)
-        variances = self._mean_over_all_cpus(variances)
-
-        return estimates, sample_sizes, variances
+        # If target cost is less than cost of least expensive model, run it
+        # once so we are at least doing something in the simulation.
+        if np.sum(self._sample_sizes) == 0.:
+            self._sample_sizes[0] = 1
 
     def _process_epsilon(self, epsilon):
         """
@@ -538,7 +545,7 @@ class MLMCSimulator:
                              "dimensions.")
 
     @staticmethod
-    def __check_simulate_parameters(starting_sample_size, maximum_cost):
+    def __check_simulate_parameters(starting_sample_size, target_cost):
 
         if not isinstance(starting_sample_size, int):
             raise TypeError("starting_sample_size must be an integer.")
@@ -546,14 +553,14 @@ class MLMCSimulator:
         if starting_sample_size < 1:
             raise ValueError("starting_sample_size must be greater than zero.")
 
-        if maximum_cost is not None:
+        if target_cost is not None:
 
-            if not (isinstance(maximum_cost, float) or
-                    isinstance(maximum_cost, int)):
+            if not (isinstance(target_cost, float) or
+                    isinstance(target_cost, int)):
 
                 raise TypeError('maximum cost must be an int or float.')
 
-            if maximum_cost <= 0:
+            if target_cost <= 0:
                 raise ValueError("maximum cost must be greater than zero.")
 
     def __detect_parallelization(self):
@@ -567,12 +574,12 @@ class MLMCSimulator:
             from mpi4py import MPI
             comm = MPI.COMM_WORLD
 
-            self._number_cpus = comm.size
+            self._num_cpus = comm.size
             self._cpu_rank = comm.rank
 
         except ImportError:
 
-            self._number_cpus = 1
+            self._num_cpus = 1
             self._cpu_rank = 0
 
     def _mean_over_all_cpus(self, values):
@@ -581,7 +588,7 @@ class MLMCSimulator:
         :param values: ndarray of any shape.
         :return: ndarray of same shape as values with mean from all cpus.
         """
-        if self._number_cpus == 1:
+        if self._num_cpus == 1:
             return values
 
         from mpi4py import MPI
@@ -590,6 +597,20 @@ class MLMCSimulator:
         all_values = comm.allgather(values)
 
         return np.mean(all_values, 0)
+
+    def _determine_num_cpu_samples(self, total_num_samples):
+        """Determines number of samples to be run on current cpu based on
+            total number of samples to be run.
+            :param total_num_samples: Total samples to be taken.
+            :return: Samples to be taken by this cpu.
+        """
+        num_cpu_samples = total_num_samples // self._num_cpus
+        num_residual_samples = total_num_samples - num_cpu_samples * self._num_cpus
+
+        if self._cpu_rank < num_residual_samples:
+            num_cpu_samples += 1
+
+        return num_cpu_samples
 
     @staticmethod
     def _show_time_estimate(seconds):
