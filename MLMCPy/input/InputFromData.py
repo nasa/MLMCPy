@@ -41,7 +41,7 @@ class InputFromData(Input):
             self._data = self._data.reshape(self._data.shape[0], -1)
 
         # Use subset of data if we are in multiprocessor environment.
-        self.__detect_parallelization()
+        self._detect_parallelization()
 
         if shuffle_data:
             np.random.shuffle(self._data)
@@ -87,29 +87,37 @@ class InputFromData(Input):
         """
         self._index = 0
 
-    def __detect_parallelization(self):
+    def _detect_parallelization(self, num_cpus=1, cpu_rank=0, override=False):
         """
         If multiple cpus detected, split the data across cpus so that
         each will have a unique subset of sample data.
         """
-        num_cpus = 1
-        cpu_rank = 0
 
         try:
-            imp.find_module('mpi4py')
+            if not override:
 
-            from mpi4py import MPI
-            comm = MPI.COMM_WORLD
+                imp.find_module('mpi4py')
 
-            cpu_rank = comm.rank
-            num_cpus = comm.size
+                from mpi4py import MPI
+                comm = MPI.COMM_WORLD
+
+                cpu_rank = comm.rank
+                num_cpus = comm.size
 
         except ImportError:
+
             num_cpus = 1
             cpu_rank = 0
 
         finally:
+
+            total_num_samples = self._data.shape[0]
             slice_size = self._data.shape[0] // num_cpus
+
+            num_residual_samples = total_num_samples - slice_size * num_cpus
+
+            if cpu_rank < num_residual_samples:
+                slice_size += 1
 
             slice_start_index = slice_size * cpu_rank
             self._data = self._data[slice_start_index:

@@ -103,21 +103,6 @@ def filename_2d_3_column_data():
     return os.path.join(data_path, "2D_test_data_output_3_col.csv")
 
 
-@pytest.fixture
-def mpi_info():
-    try:
-        imp.find_module('mpi4py')
-
-        from mpi4py import MPI
-        comm = MPI.COMM_WORLD
-
-        return comm.size, comm.rank
-
-    except ImportError:
-
-        return 1, 0
-
-
 def test_model_from_data(data_input, models_from_data):
 
     sim = MLMCSimulator(models=models_from_data, data=data_input)
@@ -522,30 +507,6 @@ def test_mc_output_shapes_match_mlmc(data_input, models_from_data):
     assert mc_sample_sizes.shape != mlmc_sample_sizes.shape
 
 
-@pytest.mark.parametrize('num_cpus', [1, 2, 3, 4, 7, 12])
-def test_multi_cpu_sample_sizing(data_input, models_from_data, num_cpus):
-
-    total_samples = 100
-
-    sample_sizes = np.zeros(num_cpus)
-
-    sim = MLMCSimulator(models=models_from_data, data=data_input)
-
-    for cpu_rank in range(num_cpus):
-
-        sim._num_cpus = num_cpus
-        sim._cpu_rank = cpu_rank
-
-        sample_sizes[cpu_rank] = sim._determine_num_cpu_samples(total_samples)
-
-    # Test that all samples will be utilized.
-    assert np.sum(sample_sizes) == total_samples
-
-    # Test that there is never more than a difference of one sample
-    # between processes.
-    assert np.max(sample_sizes) - np.min(sample_sizes) <= 1
-
-
 def test_hard_coded_test_2_level(data_input, models_from_data):
 
     # Get simulation results.
@@ -651,27 +612,79 @@ def test_fixed_cost(beta_distribution_input, spring_models, target_cost):
 
     # We should be less than or at least very close to the target.
     # TODO: Try to reduce this overrun with profiling/refactoring.
-    assert compute_time < target_cost * 1.1
+    assert compute_time < target_cost * 1.2
 
 
-def test_mpi_random_input_unique_per_cpu(mpi_info, beta_distribution_input,
-                                         spring_models):
+@pytest.mark.parametrize('num_cpus', [1, 2, 3, 4, 7, 12])
+def test_multi_cpu_sample_splitting(data_input, models_from_data, num_cpus):
 
-    # This is an MPI only test, so pass if we're running in single cpu mode.
-    if mpi_info == (1, 0):
+    total_samples = 100
+
+    sample_sizes = np.zeros(num_cpus)
+
+    sim = MLMCSimulator(models=models_from_data, data=data_input)
+
+    for cpu_rank in range(num_cpus):
+
+        sim._num_cpus = num_cpus
+        sim._cpu_rank = cpu_rank
+
+        sample_sizes[cpu_rank] = sim._determine_num_cpu_samples(total_samples)
+
+    # Test that all samples will be utilized.
+    assert np.sum(sample_sizes) == total_samples
+
+    # Test that there is never more than a difference of one sample
+    # between processes.
+    assert np.max(sample_sizes) - np.min(sample_sizes) <= 1
+
+
+def test_multiple_cpu(data_input, models_from_data):
+
+    try:
+        imp.find_module('mpi4py')
+
+        from mpi4py import MPI
+        comm = MPI.COMM_WORLD
+
+    except ImportError:
+
         return
 
-    # Allow simulator to set up sampling and draw a sample.
-    sim = MLMCSimulator(models=spring_models, data=beta_distribution_input)
-    sim_data = sim._data.draw_samples(10)
+    # Set up baseline simulation like single processor run.
+    data_filename = os.path.join(data_path, "spring_mass_1D_inputs.txt")
+    full_data_input = InputFromData(data_filename)
+    full_data_input._data = np.genfromtxt(data_filename)
 
-    # Share data across cpus and compare to ensure each cpu has unique samples.
-    from mpi4py import MPI
-    comm = MPI.COMM_WORLD
+    base_sim = MLMCSimulator(models=models_from_data, data=full_data_input)
+    base_sim._num_cpus = 1
+    base_sim._cpu_rank = 0
 
-    all_sim_data = comm.allgather(sim_data)
+    base_estimate, base_sample_sizes, base_variances = \
+        base_sim.simulate(.1, 200)
 
-    assert len(all_sim_data) == 2
+    base_costs, base_initial_variances = base_sim._compute_costs_and_variances()
 
-    for cpu_data in all_sim_data:
-        assert not np.array_equal(all_sim_data[0], cpu_data)
+    sim = MLMCSimulator(models=models_from_data, data=data_input)
+    estimates, sample_sizes, variances = sim.simulate(.1, 200)
+
+    sim_costs, initial_variances = sim._compute_costs_and_variances()
+
+    assert np.array_equal(base_initial_variances, initial_variances)
+    assert np.array_equal(base_costs, sim_costs)
+
+    all_estimates = comm.allgather(estimates)
+    all_sample_sizes = comm.allgather(sample_sizes)
+    all_variances = comm.allgather(variances)
+
+    for estimate in all_estimates:
+        assert np.all(np.isclose(estimate, base_estimate))
+
+    for variance in all_variances:
+        assert np.all(np.isclose(variance, base_variances))
+
+    every_sample_size = np.zeros((comm.size, 3))
+    for i, sample_size in enumerate(all_sample_sizes):
+        every_sample_size[i] = sample_size
+
+    assert np.array_equal(np.sum(every_sample_size, axis=0), base_sample_sizes)

@@ -1,6 +1,5 @@
 import pytest
 import os
-import imp
 import numpy as np
 
 from MLMCPy.input import InputFromData
@@ -24,13 +23,13 @@ for data_file in data_file_names:
 # Pull all scrambled sample data from a file as one ndarray.
 def get_full_data_set(file_path):
 
-    filename = os.path.basename(file_path)
-    file_length = data_file_lengths[filename]
+    return np.genfromtxt(file_path)
 
-    data_sampler = InputFromData(file_path)
-    full_data_set = data_sampler.draw_samples(file_length)
 
-    return full_data_set
+def get_data_file_size(file_path):
+
+    file_name = os.path.basename(file_path)
+    return data_file_lengths[file_name]
 
 
 @pytest.fixture
@@ -44,21 +43,6 @@ def bad_data_file():
 
     data_file_with_bad_data = os.path.join(data_path, "bad_data.txt")
     return data_file_with_bad_data
-
-
-@pytest.fixture
-def mpi_info():
-    try:
-        imp.find_module('mpi4py')
-
-        from mpi4py import MPI
-        comm = MPI.COMM_WORLD
-
-        return comm.size, comm.rank
-
-    except ImportError:
-
-        return 1, 0
 
 
 def test_init_fails_on_invalid_input_file():
@@ -115,19 +99,20 @@ def test_draw_samples_pulls_all_input_data(data_filename):
     file_data = np.genfromtxt(data_filename)
     file_data = file_data.reshape(file_data.shape[0], -1)
 
-    assert all_sampled_data.shape == file_data.shape
+    assert all_sampled_data.shape[0] == file_data.shape[0]
 
 
 @pytest.mark.parametrize("data_filename", data_file_paths, ids=data_file_names)
 def test_sample_data_is_scrambled(data_filename):
 
-    all_sampled_data = get_full_data_set(data_filename)
+    all_file_data = get_full_data_set(data_filename)
+    file_length = all_file_data.shape[0]
 
-    file_data = np.genfromtxt(data_filename)
-    file_data = file_data.reshape(file_data.shape[0], -1)
+    data_sampler = InputFromData(data_filename)
+    sample_data = data_sampler.draw_samples(file_length)
 
-    assert not np.array_equal(all_sampled_data, file_data)
-    assert np.isclose(np.sum(all_sampled_data), np.sum(file_data))
+    assert not np.array_equal(all_file_data, sample_data)
+    assert np.isclose(np.sum(all_file_data), np.sum(sample_data))
 
 
 @pytest.mark.parametrize("data_filename", data_file_paths, ids=data_file_names)
@@ -171,24 +156,31 @@ def test_draw_sample_warning_issued_for_insufficient_data(data_filename_2d):
 
 
 @pytest.mark.parametrize("data_filename", data_file_paths, ids=data_file_names)
-def test_mpi_input_sample_sliced(mpi_info, data_filename):
+def test_multi_cpu_input_sample_slicing(data_filename):
 
-    # This is an MPI only test, so pass if we're running in single cpu mode.
-    if mpi_info == (1, 0):
-        return
+    all_data_size = get_data_file_size(data_filename)
 
-    num_cpus, cpu_rank = mpi_info
+    for num_cpus in [1, 2, 3, 4, 7]:
 
-    # Get expected slice.
-    data_input = InputFromData(data_filename)
-    all_data = get_full_data_set(data_filename)
+        slice_sizes = list()
 
-    slice_size = all_data.shape[0] // num_cpus
+        for cpu_rank in range(num_cpus):
 
-    slice_start_index = slice_size * cpu_rank
-    sliced_data = all_data[slice_start_index: slice_start_index + slice_size]
+            # Force data_input to slice as if in MPI environment.
+            data_input = InputFromData(data_filename)
+            data_input._detect_parallelization(num_cpus, cpu_rank, True)
 
-    input_data = data_input._data
+            # Get expected slice size.
+            slice_size = all_data_size // num_cpus
+            num_residual_samples = all_data_size - slice_size * num_cpus
 
-    # Ensure InputFromData sliced the data in the same way.
-    assert np.array_equal(sliced_data, input_data)
+            if cpu_rank < num_residual_samples:
+                slice_size += 1
+
+            slice_sizes.append(slice_size)
+
+            # Ensure InputFromData sliced the data in the same way.
+            assert np.array_equal(slice_size, data_input._data.shape[0])
+
+        # Ensure all data is going to be used.
+        assert np.sum(slice_sizes) == all_data_size

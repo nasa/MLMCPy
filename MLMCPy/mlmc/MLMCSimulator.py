@@ -271,7 +271,6 @@ class MLMCSimulator:
         # Variance is computed from difference between outputs of adjacent
         # layers evaluated from the same samples.
         compute_times = np.zeros(self._num_levels)
-        variances = np.zeros((self._num_levels, self._output_size))
 
         for level in range(self._num_levels):
 
@@ -285,17 +284,19 @@ class MLMCSimulator:
                 self._cache[level, i] = self._models[level].evaluate(sample)
 
                 if level > 0:
-                    lower_level_outputs[i] = self._models[level-1].evaluate(sample)
+                    lower_level_outputs[i] = \
+                        self._models[level-1].evaluate(sample)
 
             compute_times[level] = timeit.default_timer() - start_time
 
             self._cache[level] -= lower_level_outputs
-            variances[level] = np.var(self._cache[level], axis=0)
+
+        # Get outputs across all CPUs before computing variances.
+        all_outputs = self._concatenate_arrays_over_all_cpus(self._cache,
+                                                             axis=1)
+        variances = np.var(all_outputs, axis=1)
 
         costs = self._compute_costs(compute_times)
-
-        costs = self._mean_over_all_cpus(costs)
-        variances = self._mean_over_all_cpus(variances)
 
         if self._verbose and self._cpu_rank == 0:
             print 'Initial sample variances: \n%s' % variances
@@ -326,6 +327,12 @@ class MLMCSimulator:
         else:
             # Compute costs based on compute time differences between levels.
             costs = compute_times / self._initial_sample_size
+
+            # If costs are determined by time, we also need to multiply them
+            # by the number of cpus so that they are based on total cost.
+            costs *= self._num_cpus
+
+        costs = self._mean_over_all_cpus(costs)
 
         # Save copy of costs for use in simulation as is.
         self._costs = np.copy(costs)
@@ -533,6 +540,18 @@ class MLMCSimulator:
 
         return np.mean(all_values, 0)
 
+    def _concatenate_arrays_over_all_cpus(self, arrays, axis=0):
+
+        if self._num_cpus == 1:
+            return arrays
+
+        from mpi4py import MPI
+        comm = MPI.COMM_WORLD
+
+        all_arrays = comm.allgather(arrays)
+
+        return np.concatenate(all_arrays, axis=axis)
+
     def _determine_num_cpu_samples(self, total_num_samples):
         """Determines number of samples to be run on current cpu based on
             total number of samples to be run.
@@ -541,7 +560,7 @@ class MLMCSimulator:
         """
         num_cpu_samples = total_num_samples // self._num_cpus
         num_residual_samples = total_num_samples - \
-                               num_cpu_samples * self._num_cpus
+            num_cpu_samples * self._num_cpus
 
         if self._cpu_rank < num_residual_samples:
             num_cpu_samples += 1
