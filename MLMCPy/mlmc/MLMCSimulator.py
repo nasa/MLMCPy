@@ -145,8 +145,8 @@ class MLMCSimulator:
         final estimates and variances later.
         :return:
         """
-        level_sums = np.zeros((self._num_levels, self._output_size))
-        level_variances = np.zeros((self._num_levels, self._output_size))
+        estimates = np.zeros(self._output_size)
+        variances = np.zeros(self._output_size)
 
         for level in range(self._num_levels):
 
@@ -166,14 +166,11 @@ class MLMCSimulator:
             for i, sample in enumerate(samples):
                 output_differences[i] = self._evaluate_sample(i, sample, level)
 
-            level_sums[level] = np.sum(output_differences, axis=0) \
+            estimates += np.sum(output_differences, axis=0) \
                 / self._sample_sizes[level]
 
-            level_variances[level] = np.var(output_differences, axis=0) \
+            variances += np.var(output_differences, axis=0) \
                 / self._sample_sizes[level]
-
-        estimates = np.sum(level_sums, axis=0)
-        variances = np.sum(level_variances, axis=0)
 
         estimates = self._mean_over_all_cpus(estimates)
         variances = self._mean_over_all_cpus(variances)
