@@ -129,28 +129,11 @@ class MLMCSimulator:
         # Time simulation. If target_cost was specified we will need this
         # information later to approximate the target.
         start_time = timeit.default_timer()
-        sums_of_outputs, sums_of_output_squares = self._run_simulation_loop()
+        estimates, variances = self._run_simulation_loop()
         end_time = timeit.default_timer()
 
-        # If a target cost was specified and we still have time left, add
-        # additional model runs until we hit the target cost.
-        # However, don't run extended loop if we are simulating costs, in which
-        # case time measurements are irrelevant, such as when using
-        # ModelFromData.
-        if self._target_cost is not None and \
-                not hasattr(self._models[0], 'cost'):
-
-            time_remaining = self._target_cost - (end_time - start_time)
-
-            if time_remaining > np.min(self._costs):
-
-                sums_of_outputs, sums_of_output_squares = \
-                    self._run_extended_simulation_loop(sums_of_outputs,
-                                                       sums_of_output_squares,
-                                                       time_remaining)
-
-        estimates, variances = \
-            self._compute_summary_data(sums_of_outputs, sums_of_output_squares)
+        if self._verbose:
+            self._show_summary_data(estimates, variances, end_time - start_time)
 
         return estimates, self._sample_sizes, variances
 
@@ -162,47 +145,55 @@ class MLMCSimulator:
         final estimates and variances later.
         :return:
         """
-        sums_of_outputs = np.zeros(self._output_size)
-        sums_of_output_squares = np.zeros(self._output_size)
+        level_sums = np.zeros((self._num_levels, self._output_size))
+        level_variances = np.zeros((self._num_levels, self._output_size))
 
-        # Compute sample outputs.
         for level in range(self._num_levels):
 
             if self._sample_sizes[level] == 0:
                 continue
 
             samples = self._data.draw_samples(self._sample_sizes[level])
-            samples_taken = samples.shape[0]
+            self._sample_sizes[level] = samples.shape[0]
 
-            # If we've run out of sample data, we should adjust the sample
-            # size values accordingly in order to avoid incorrect arithmetic
-            # later when summarizing results.
-            if samples_taken < self._sample_sizes[level]:
-                self._sample_sizes[level] = samples_taken
+            # Input is out of samples; conclude loop.
+            if self._sample_sizes[level] == 0:
+                break
 
-            output = np.zeros((samples_taken, self._output_size))
+            output_differences = np.zeros((self._sample_sizes[level],
+                                           self._output_size))
 
             for i, sample in enumerate(samples):
-                output[i] = self._evaluate_sample(i, sample, level)
+                output_differences[i] = self._evaluate_sample(i, sample, level)
 
-            sums_of_outputs += np.sum(output, axis=0)
-            sums_of_output_squares += np.sum(np.square(output), axis=0)
+            level_sums[level] = np.sum(output_differences, axis=0) \
+                / self._sample_sizes[level]
 
-        return sums_of_outputs, sums_of_output_squares
+            level_variances[level] = np.var(output_differences, axis=0) \
+                / self._sample_sizes[level]
+
+        estimates = np.sum(level_sums, axis=0)
+        variances = np.sum(level_variances, axis=0)
+
+        estimates = self._mean_over_all_cpus(estimates)
+        variances = self._mean_over_all_cpus(variances)
+
+        return estimates, variances
 
     def _evaluate_sample(self, i, sample, level):
         """
         Evaluate output of an input sample, either by running the model or
-        retrieving the output from the cache.
+        retrieving the output from the cache. For levels > 0, returns
+        difference between current level and lower level outputs.
 
         :param i: sample index
         :param sample: sample value
         :param level: model level
         :return: result of evaluation
         """
-
         if self._verbose:
             progress = str((float(i) / self._sample_sizes[level]) * 100)[:5]
+            sys.stdout.write("\r                                              ")
             sys.stdout.write("\rLevel %s progress: %s%%" % (level, progress))
 
         # If we have the output for this sample cached, use it.
@@ -223,95 +214,41 @@ class MLMCSimulator:
         can_use_cache = cached_index < self._initial_sample_size and \
             cached_level == level
 
-        if self._verbose:
-            sys.stdout.write("\r                                              ")
-
         if can_use_cache:
-            return self._cache[level][cached_index]
+            return self._cache[level, cached_index]
         else:
-            return self._models[level].evaluate(sample)
 
-    def _run_extended_simulation_loop(self, sums, squares, time_budget):
+            output = self._models[level].evaluate(sample)
+
+            if level > 0:
+                lower_level_output = self._models[level-1].evaluate(sample)
+            else:
+                lower_level_output = np.zeros_like(output)
+
+            return output - lower_level_output
+
+    def _show_summary_data(self, estimates, variances, run_time):
         """
-        Keep sampling from the most expensive model we have remaining time
-        available for based on model evaluation cost. This should only be
-        run when target_cost has been set and the simulation loop has completed
-        earlier than anticipated.
+        Shows summary of simulation.
 
-        :param sums: output sums ndarray to add to.
-        :param squares: output square sums ndarray to add to.
-        :param time_budget: Amount of time we can fill with additional
-            model evaluations.
-        :return: tuple of updated sums and squares ndarrays.
+        :param estimates: ndarray of estimates for each QoI.
+        :param variances: ndarray of variances for each QoI.
         """
-        target_time = timeit.default_timer() + time_budget
-        time_remaining = target_time - timeit.default_timer()
-
-        for level in range(self._num_levels-1, 0, -1):
-
-            while self._costs[level] < time_remaining:
-
-                sample = self._data.draw_samples(1)
-
-                # Ensure we haven't run out of samples.
-                if sample.size == 0:
-                    return sums, squares
-
-                self._sample_sizes[level] += 1
-
-                output = self._evaluate_sample(0, sample, level)
-
-                sums += output
-                squares += np.square(output)
-
-                time_remaining = target_time - timeit.default_timer()
-
-        return sums, squares
-
-    def _compute_summary_data(self, sums_of_outputs, sums_of_output_squares):
-        """
-        Compute means and variances of output data.
-
-        :param sums_of_outputs: ndarray of model output sums for each QoI.
-        :param sums_of_output_squares: ndarray of model outputs squared for
-               each QoI.
-        :return: tuple of ndarrays of estimates and variances
-        """
-        # Compute total variance for each quantity of interest.
-        total_samples = np.sum(self._sample_sizes)
-
-        means = sums_of_outputs / total_samples
-
-        # If only one sample was taken, we need to take measures to avoid
-        # a division by zero scenario.
-        samples_squared_minus_samples = total_samples ** 2 - total_samples
-
-        if total_samples ** 2 - total_samples != 0:
-            normalizer = 1. / samples_squared_minus_samples
-        else:
-            normalizer = 1.
-
-        variances = (sums_of_output_squares / total_samples -
-                     np.square(means)) * normalizer
-
         # Compare variance for each quantity of interest to epsilon values.
-        if self._verbose:
+        print
+        print 'Total run time: %s' % str(run_time)
+        print
 
-            print
+        epsilons_squared = np.square(self._epsilons)
+        for i, variance in enumerate(variances):
 
-            epsilons_squared = np.square(self._epsilons)
-            for i, variance in enumerate(variances):
+            passed = variance < epsilons_squared[i]
+            estimate = estimates[i]
 
-                passed = variance < epsilons_squared[i]
-
-                print 'QOI #%s: variance: %s, epsilon^2: %s, success: %s' % \
-                      (i, float(variance), float(epsilons_squared[i]), passed)
-
-        # Get mean of results across all cpus.
-        means = self._mean_over_all_cpus(means)
-        variances = self._mean_over_all_cpus(variances)
-
-        return means, variances
+            print 'QOI #%s: estimate: %s, variance: %s, " + "' \
+                  'epsilon^2: %s, success: %s' % \
+                  (i, float(estimate), float(variance),
+                   float(epsilons_squared[i]), passed)
 
     def _compute_costs_and_variances(self):
         """
@@ -339,8 +276,8 @@ class MLMCSimulator:
         for level in range(self._num_levels):
 
             input_samples = self._data.draw_samples(self._initial_sample_size)
-            sublevel_outputs = np.zeros((self._initial_sample_size,
-                                        self._output_size))
+            lower_level_outputs = np.zeros((self._initial_sample_size,
+                                            self._output_size))
 
             start_time = timeit.default_timer()
             for i, sample in enumerate(input_samples):
@@ -348,12 +285,12 @@ class MLMCSimulator:
                 self._cache[level, i] = self._models[level].evaluate(sample)
 
                 if level > 0:
-                    sublevel_outputs[i] = self._models[level-1].evaluate(sample)
+                    lower_level_outputs[i] = self._models[level-1].evaluate(sample)
 
             compute_times[level] = timeit.default_timer() - start_time
 
-            variances[level] = np.var(self._cache[level] - sublevel_outputs,
-                                      axis=0)
+            self._cache[level] -= lower_level_outputs
+            variances[level] = np.var(self._cache[level], axis=0)
 
         costs = self._compute_costs(compute_times)
 
@@ -375,24 +312,22 @@ class MLMCSimulator:
         """
         costs = np.ones(self._num_levels)
 
-        # If the models have costs precomputed, use them to compute costs
+        # If the models have costs predetermined, use them to compute costs
         # between each level.
-        costs_precomputed = False
-        if hasattr(self._models[0], 'cost') and \
-           self._models[0].cost is not None:
+        model_cost_defined = hasattr(self._models[0], 'cost')
+        if model_cost_defined and self._models[0].cost is not None:
 
-            costs_precomputed = True
             for i, model in enumerate(self._models):
                 costs[i] = model.cost
 
             # Costs at level > 0 should be summed with previous level.
             costs[1:] = costs[1:] + costs[:-1]
 
-        # Compute costs based on compute time differences between levels.
-        if not costs_precomputed:
+        else:
+            # Compute costs based on compute time differences between levels.
             costs = compute_times / self._initial_sample_size
 
-        # Save copy of costs for use in simulation.
+        # Save copy of costs for use in simulation as is.
         self._costs = np.copy(costs)
 
         if self._verbose:
@@ -605,7 +540,8 @@ class MLMCSimulator:
             :return: Samples to be taken by this cpu.
         """
         num_cpu_samples = total_num_samples // self._num_cpus
-        num_residual_samples = total_num_samples - num_cpu_samples * self._num_cpus
+        num_residual_samples = total_num_samples - \
+                               num_cpu_samples * self._num_cpus
 
         if self._cpu_rank < num_residual_samples:
             num_cpu_samples += 1
