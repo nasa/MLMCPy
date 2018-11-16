@@ -1,13 +1,34 @@
+import os
+import sys
+import imp
 import pytest
 import numpy as np
 
-from MLMCPy.input import RandomInput
+# Needed when running mpiexec. Be sure to run from tests directory.
+if 'PYTHONPATH' not in os.environ:
 
+    base_path = os.path.abspath('..')
+
+    sys.path.insert(0, base_path)
+
+from MLMCPy.input import RandomInput
 
 @pytest.fixture
 def uniform_distribution_input():
 
     return RandomInput(np.random.uniform)
+
+
+@pytest.fixture
+def beta_distribution_input():
+
+    np.random.seed(1)
+
+    def beta_distribution(shift, scale, alpha, beta, size):
+        return shift + scale * np.random.beta(alpha, beta, size)
+
+    return RandomInput(distribution_function=beta_distribution,
+                       shift=1.0, scale=2.5, alpha=3., beta=2.)
 
 
 @pytest.fixture
@@ -67,3 +88,34 @@ def test_distribution_exception_if_size_parameter_not_accepted():
 
     with pytest.raises(TypeError):
         invalid_input.draw_samples(10)
+
+
+@pytest.mark.parametrize('random_input', [uniform_distribution_input(),
+                                          beta_distribution_input()],
+                         ids=['uniform', 'beta'])
+def test_multi_cpu_sampling(random_input):
+
+    imp.find_module('mpi4py')
+
+    from mpi4py import MPI
+    comm = MPI.COMM_WORLD
+
+    # Get per process samples, then aggregate them to compare to single cpu
+    # sampling.
+    np.random.seed(1)
+    this_test_sample = random_input.draw_samples(10)
+
+    test_sample_list = comm.allgather(this_test_sample)
+
+    test_samples = np.zeros((10 * comm.size, 1))
+    for i, sample in enumerate(test_sample_list):
+        test_samples[i::comm.size] = sample
+
+    # Get samples that would be returned in single cpu environment.
+    random_input._num_cpus = 1
+    random_input._cpu_rank = 0
+
+    np.random.seed(1)
+    baseline_samples = random_input.draw_samples(10 * comm.size)
+
+    assert np.array_equal(test_samples, baseline_samples)

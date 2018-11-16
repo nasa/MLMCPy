@@ -135,7 +135,7 @@ class MLMCSimulator:
         if self._verbose:
             self._show_summary_data(estimates, variances, end_time - start_time)
 
-        return estimates, self._sample_sizes, variances
+        return estimates, self._all_sample_sizes, variances
 
     def _run_simulation_loop(self):
         """
@@ -154,7 +154,11 @@ class MLMCSimulator:
                 continue
 
             samples = self._data.draw_samples(self._sample_sizes[level])
-            self._sample_sizes[level] = samples.shape[0]
+
+            # If we've run short on samples, update sample sizes accordingly.
+            sample_shortage = self._sample_sizes[level] - samples.shape[0]
+            self._sample_sizes[level] -= sample_shortage
+            self._all_sample_sizes[level] -= sample_shortage
 
             # Input is out of samples; conclude loop.
             if self._sample_sizes[level] == 0:
@@ -166,14 +170,15 @@ class MLMCSimulator:
             for i, sample in enumerate(samples):
                 output_differences[i] = self._evaluate_sample(i, sample, level)
 
-            estimates += np.sum(output_differences, axis=0) \
-                / self._sample_sizes[level]
+            all_output_differences = \
+                self._gather_arrays_over_all_cpus(output_differences,
+                                                  axis=0)
 
-            variances += np.var(output_differences, axis=0) \
-                / self._sample_sizes[level]
+            estimates += np.sum(all_output_differences, axis=0) \
+                / self._all_sample_sizes[level]
 
-        estimates = self._mean_over_all_cpus(estimates)
-        variances = self._mean_over_all_cpus(variances)
+            variances += np.var(all_output_differences, axis=0) \
+                / self._all_sample_sizes[level]
 
         return estimates, variances
 
@@ -196,20 +201,24 @@ class MLMCSimulator:
         # If we have the output for this sample cached, use it.
         # Otherwise, compute the output via the model.
 
-        # Absolute index of current sample.
-        sample_index = np.sum(self._sample_sizes[:level]) + i
+        if self._initial_sample_size > 0:  # Avoid warnings in unit tests.
 
-        # Level in cache that a sample with above index would be at.
-        # This must match the current level.
-        cached_level = sample_index // self._initial_sample_size
+            # Absolute index of current sample.
+            sample_index = np.sum(self._sample_sizes[:level]) + i
 
-        # Index within cached level for sample output.
-        cached_index = sample_index - level * self._initial_sample_size
+            # Level in cache that a sample with above index would be at.
+            # This must match the current level.
+            cached_level = sample_index // self._initial_sample_size
 
-        # Level and index within cache must be correct for the
-        # appropriate cached value to be found.
-        can_use_cache = cached_index < self._initial_sample_size and \
-            cached_level == level
+            # Index within cached level for sample output.
+            cached_index = sample_index - level * self._initial_sample_size
+
+            # Level and index within cache must be correct for the
+            # appropriate cached value to be found.
+            can_use_cache = cached_index < self._initial_sample_size and \
+                cached_level == level
+        else:
+            can_use_cache = False
 
         if can_use_cache:
             return self._cache[level, cached_index]
@@ -289,10 +298,10 @@ class MLMCSimulator:
             self._cache[level] -= lower_level_outputs
 
         # Get outputs across all CPUs before computing variances.
-        all_outputs = self._concatenate_arrays_over_all_cpus(self._cache,
-                                                             axis=1)
-        variances = np.var(all_outputs, axis=1)
+        all_outputs = self._gather_arrays_over_all_cpus(self._cache,
+                                                        axis=1)
 
+        variances = np.var(all_outputs, axis=1)
         costs = self._compute_costs(compute_times)
 
         if self._verbose and self._cpu_rank == 0:
@@ -379,12 +388,15 @@ class MLMCSimulator:
         if self._target_cost is not None:
             self._fit_samples_sizes_to_target_cost(np.squeeze(costs))
 
+        # Set sample sizes to ints.
+        self._sample_sizes = self._sample_sizes.astype(int)
+
+        # Keep a copy of sample sizes across all CPUs for use in simulation.
+        self._all_sample_sizes = np.copy(self._sample_sizes)
+
         # Divide sampling evenly across cpus.
         split_samples = np.vectorize(self._determine_num_cpu_samples)
         self._sample_sizes = split_samples(self._sample_sizes)
-
-        # Set sample sizes to ints.
-        self._sample_sizes = self._sample_sizes.astype(int)
 
         if self._verbose:
 
@@ -537,8 +549,14 @@ class MLMCSimulator:
 
         return np.mean(all_values, 0)
 
-    def _concatenate_arrays_over_all_cpus(self, arrays, axis=0):
-
+    def _gather_arrays_over_all_cpus(self, arrays, axis=0):
+        """
+        Collects an array from all processes and combines them so that single
+        processor ordering is preserved.
+        :param arrays: Arrays to be combined.
+        :param axis: Axis to concatenate the arrays on.
+        :return: ndarray
+        """
         if self._num_cpus == 1:
             return arrays
 

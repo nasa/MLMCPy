@@ -3,7 +3,15 @@ import numpy as np
 import timeit
 import imp
 import os
+import sys
 import warnings
+
+# Needed when running mpiexec. Be sure to run from tests directory.
+if 'PYTHONPATH' not in os.environ:
+
+    base_path = os.path.abspath('..')
+
+    sys.path.insert(0, base_path)
 
 from MLMCPy.mlmc import MLMCSimulator
 from MLMCPy.model import ModelFromData
@@ -117,8 +125,16 @@ def test_spring_model(beta_distribution_input, spring_models):
 
 def test_for_verbose_exceptions(beta_distribution_input, spring_models):
 
-    sim = MLMCSimulator(models=spring_models, data=beta_distribution_input)
-    sim.simulate(1., initial_sample_size=20, verbose=True)
+    # Redirect the verbose out to null.
+    stdout = sys.stdout
+    with open(os.devnull, 'w') as f:
+        sys.stdout = f
+
+        sim = MLMCSimulator(models=spring_models, data=beta_distribution_input)
+        sim.simulate(1., initial_sample_size=20, verbose=True)
+
+    # Put stdout back in place.
+    sys.stdout = stdout
 
 
 def test_simulate_exception_for_invalid_parameters(data_input,
@@ -154,64 +170,34 @@ def test_simulate_expected_output_types(data_input, models_from_data):
     assert isinstance(variances, np.ndarray)
 
 
-def test_compute_optimal_sample_sizes_expected_outputs(data_input,
-                                                       models_from_data):
+@pytest.mark.parametrize("num_qoi, variances, epsilons",
+                         [[1, [[4.], [1.]], [.1]],
+                         [2, [[4., 4.], [1, 1.]], [.1, .01]],
+                         [3, [[4., 4., 4.], [1, 1., 1.]], [.1, 1., .01]]])
+def test_optimal_sample_sizes_expected_outputs(num_qoi, variances, epsilons,
+                                               data_input, models_from_data):
 
     # Set up simulator with values that should produce predictable results
     # from computation of optimal sample sizes.
     test_mlmc = MLMCSimulator(models=models_from_data[:2], data=data_input)
 
-    test_mlmc._epsilons = np.array([.1])
+    data_input._data = np.broadcast_to(data_input._data,
+                                       (data_input._data.shape[0], num_qoi))
 
-    variances = np.array([[4.], [1.]])
+    test_mlmc._epsilons = epsilons
     costs = np.array([1., 4.])
 
-    test_mlmc._compute_optimal_sample_sizes(costs, variances)
+    test_mlmc._compute_optimal_sample_sizes(costs, np.array(variances))
 
     # Check results.
-    sample_sizes = test_mlmc._sample_sizes
+    sample_sizes = test_mlmc._all_sample_sizes
 
-    assert np.all(np.isclose(sample_sizes, [800, 200], atol=1))
+    if num_qoi == 1:
+        expected_sample_size = [800, 200]
+    else:
+        expected_sample_size = [80000, 20000]
 
-
-def test_optimal_sample_sizes_expected_outputs_2_qoi(data_input,
-                                                     models_from_data):
-
-    # Set up simulator with values that should produce predictable results
-    # from computation of optimal sample sizes.
-    test_mlmc = MLMCSimulator(models=models_from_data[:2], data=data_input)
-
-    test_mlmc._epsilons = np.array([.1, .01])
-
-    variances = np.array([[4., 4.], [1, 1.]])
-    costs = np.array([1., 4.])
-
-    test_mlmc._compute_optimal_sample_sizes(costs, variances)
-
-    # Check results.
-    sample_sizes = test_mlmc._sample_sizes
-
-    assert np.array_equal(sample_sizes, [80000, 20000])
-
-
-def test_compute_optimal_sample_sizes_expected_outputs_3_qoi(data_input,
-                                                             models_from_data):
-
-    # Set up simulator with values that should produce predictable results
-    # from computation of optimal sample sizes.
-    test_mlmc = MLMCSimulator(models=models_from_data[:2], data=data_input)
-
-    test_mlmc._epsilons = np.array([.1, 1., .01])
-
-    variances = np.array([[4., 4., 4.], [1, 1., 1.]])
-    costs = np.array([1., 4.])
-
-    test_mlmc._compute_optimal_sample_sizes(costs, variances)
-
-    # Check results.
-    sample_sizes = test_mlmc._sample_sizes
-
-    assert np.array_equal(sample_sizes, [80000, 20000])
+    assert np.all(np.isclose(sample_sizes, expected_sample_size, atol=1))
 
 
 def test_costs_and_variances_beta_distribution_models(beta_distribution_input,
@@ -220,7 +206,7 @@ def test_costs_and_variances_beta_distribution_models(beta_distribution_input,
     sim = MLMCSimulator(models=spring_models, data=beta_distribution_input)
 
     np.random.seed(1)
-    sim._initial_sample_size = 100 // sim._num_cpus
+    sim._initial_sample_size = 100
 
     costs, variances = sim._compute_costs_and_variances()
 
@@ -230,15 +216,15 @@ def test_costs_and_variances_beta_distribution_models(beta_distribution_input,
 
     true_costs = np.array([1., 11., 110.])
 
-    assert np.isclose(true_variances, variances).all()
-    assert np.isclose(true_costs, costs).all()
+    assert np.all(np.isclose(true_variances, variances))
+    assert np.all(np.isclose(true_costs, costs))
 
 
 def test_costs_and_variances_models_from_data(data_input, models_from_data):
 
     sim = MLMCSimulator(models=models_from_data, data=data_input)
     
-    sim._initial_sample_size = 100
+    sim._initial_sample_size = 50
     costs, variances = sim._compute_costs_and_variances()
 
     true_variances = np.array([[9.262628271266264],
@@ -247,8 +233,8 @@ def test_costs_and_variances_models_from_data(data_input, models_from_data):
 
     true_costs = np.array([1.0, 5.0, 20.0])
 
-    assert np.isclose(true_costs, costs).all()
-    assert np.isclose(true_variances, variances, rtol=.1).all()
+    assert np.all(np.isclose(true_costs, costs))
+    assert np.all(np.isclose(true_variances, variances))
 
 
 def test_calculate_estimate_for_springmass_random_input(beta_distribution_input,
@@ -262,13 +248,13 @@ def test_calculate_estimate_for_springmass_random_input(beta_distribution_input,
     sim = MLMCSimulator(models=spring_models,
                         data=beta_distribution_input)
 
-    estimate, sample_sizes, variances = sim.simulate(.1, 100)
+    estimate, sample_sizes, variances = sim.simulate(0.1, 100)
 
     assert np.isclose(estimate[0], mc_20000_output_sample_mean, atol=.25)
 
 
-def test_estimate_and_variance_improved_by_lower_epsilon(
-        data_input, models_from_data):
+def test_estimate_and_variance_improved_by_lower_epsilon(data_input,
+                                                         models_from_data):
 
     np.random.seed(1)
 
@@ -284,7 +270,7 @@ def test_estimate_and_variance_improved_by_lower_epsilon(
 
         estimates[i], sample_sizes, variances[i] = \
             sim.simulate(epsilon=epsilon,
-                         initial_sample_size=200)
+                         initial_sample_size=50)
 
     error = np.abs(estimates - mc_20000_output_sample_mean)
     assert error[0] > error[1] > error[2]
@@ -292,8 +278,8 @@ def test_estimate_and_variance_improved_by_lower_epsilon(
     assert variances[0] > variances[1] > variances[2]
 
 
-def test_estimate_and_variance_improved_by_higher_target_cost(
-        data_input, models_from_data):
+def test_estimate_and_variance_improved_by_higher_target_cost(data_input,
+                                                              models_from_data):
 
     np.random.seed(1)
 
@@ -305,11 +291,11 @@ def test_estimate_and_variance_improved_by_higher_target_cost(
 
     estimates = np.zeros(3)
     variances = np.zeros_like(estimates)
-    for i, target_cost in enumerate([5, 25, 125]):
+    for i, target_cost in enumerate([5, 25, 500]):
 
         estimates[i], sample_sizes, variances[i] = \
-            sim.simulate(epsilon=1.,
-                         initial_sample_size=200,
+            sim.simulate(epsilon=.5,
+                         initial_sample_size=100,
                          target_cost=target_cost)
 
     error = np.abs(estimates - mc_20000_output_sample_mean)
@@ -325,8 +311,9 @@ def test_final_variances_less_than_epsilon_goal(data_input,
 
     sim = MLMCSimulator(models=models_from_data, data=data_input)
 
-    estimate, sample_sizes, variances = sim.simulate(epsilon=epsilon,
-                                                     initial_sample_size=100)
+    estimate, sample_sizes, variances = \
+        sim.simulate(epsilon=epsilon,
+                     initial_sample_size=50)
 
     assert np.sqrt(variances[0]) < epsilon
     assert not np.isclose(variances[0], 0.)
@@ -337,19 +324,25 @@ def test_final_variances_less_than_epsilon_goal(data_input,
 def test_outputs_for_small_sample_sizes(data_input, models_from_data,
                                         sample_sizes):
 
+    imp.find_module('mpi4py')
+
+    from mpi4py import MPI
+    comm = MPI.COMM_WORLD
+
     output1_filepath = os.path.join(data_path, "spring_mass_1D_outputs_1.0.txt")
     output2_filepath = os.path.join(data_path, "spring_mass_1D_outputs_0.1.txt")
     output3_filepath = os.path.join(data_path,
                                     "spring_mass_1D_outputs_0.01.txt")
 
     outputs = list()
-    outputs.append(np.genfromtxt(output1_filepath))
-    outputs.append(np.genfromtxt(output2_filepath))
-    outputs.append(np.genfromtxt(output3_filepath))
+    outputs.append(np.genfromtxt(output1_filepath)[comm.rank::comm.size])
+    outputs.append(np.genfromtxt(output2_filepath)[comm.rank::comm.size])
+    outputs.append(np.genfromtxt(output3_filepath)[comm.rank::comm.size])
 
     sim = MLMCSimulator(models=models_from_data, data=data_input)
 
     sim._sample_sizes = sample_sizes
+    sim._all_sample_sizes = sample_sizes * comm.size
     est, ss, sim_variance = sim._run_simulation()
 
     # Acquire samples in same sequence simulator would.
@@ -364,7 +357,10 @@ def test_outputs_for_small_sample_sizes(data_input, models_from_data,
         else:
             lower_output = np.zeros_like(output)
 
-        samples.append(output - lower_output)
+        diff = output - lower_output
+        all_diff = np.concatenate(comm.allgather(diff))
+
+        samples.append(all_diff)
         sample_index += s
 
     # Compute mean and variances.
@@ -372,7 +368,7 @@ def test_outputs_for_small_sample_sizes(data_input, models_from_data,
     sample_variance = 0.
     for i, sample in enumerate(samples):
 
-        if sample.size > 0:
+        if sample_sizes[i] > 0:
             sample_mean += np.sum(sample) / sample_sizes[i]
             sample_variance += np.var(sample) / sample_sizes[i]
 
@@ -526,8 +522,8 @@ def test_hard_coded_test_2_level(data_input, models_from_data):
     hard_coded_estimate = np.array([11.639166038233583])
 
     assert np.all(np.isclose(sim_variances, hard_coded_variances))
-    assert np.all(np.isclose(sim._sample_sizes, hard_coded_sample_sizes))
     assert np.all(np.isclose(sim_estimate, hard_coded_estimate))
+    assert np.all(np.isclose(sim._all_sample_sizes, hard_coded_sample_sizes))
 
 
 def test_hard_coded_test_3_level(data_input, models_from_data):
@@ -547,20 +543,24 @@ def test_hard_coded_test_3_level(data_input, models_from_data):
     hard_coded_estimate = np.array([11.639166038233583])
 
     assert np.all(np.isclose(sim_variances, hard_coded_variances))
-    assert np.all(np.isclose(sim._sample_sizes, hard_coded_sample_sizes))
     assert np.all(np.isclose(sim_estimate, hard_coded_estimate))
+    assert np.all(np.isclose(sim._all_sample_sizes, hard_coded_sample_sizes))
 
 
 def test_graceful_handling_of_insufficient_samples(data_input_2d,
                                                    models_from_2d_data):
 
-    # Test when sampling with too large initial sample size.
-    sim = MLMCSimulator(models=models_from_2d_data, data=data_input_2d)
-    sim.simulate(epsilon=1., initial_sample_size=10)
+    # Warnings will be triggered; avoid displaying them during testing.
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
 
-    # Test when sampling with too large computed sample sizes.
-    sim = MLMCSimulator(models=models_from_2d_data, data=data_input_2d)
-    sim.simulate(epsilon=.01, initial_sample_size=10)
+        # Test when sampling with too large initial sample size.
+        sim = MLMCSimulator(models=models_from_2d_data, data=data_input_2d)
+        sim.simulate(epsilon=1., initial_sample_size=10)
+
+        # Test when sampling with too large computed sample sizes.
+        sim = MLMCSimulator(models=models_from_2d_data, data=data_input_2d)
+        sim.simulate(epsilon=.01, initial_sample_size=5)
 
 
 def test_can_run_simulation_multiple_times_without_exception(data_input,
@@ -648,13 +648,14 @@ def test_multiple_cpu(data_input, models_from_data):
         comm = MPI.COMM_WORLD
 
     except ImportError:
-
         return
 
     # Set up baseline simulation like single processor run.
     data_filename = os.path.join(data_path, "spring_mass_1D_inputs.txt")
     full_data_input = InputFromData(data_filename)
     full_data_input._data = np.genfromtxt(data_filename)
+    full_data_input._data = \
+        full_data_input._data.reshape(full_data_input._data.shape[0], -1)
 
     base_sim = MLMCSimulator(models=models_from_data, data=full_data_input)
     base_sim._num_cpus = 1
@@ -663,19 +664,24 @@ def test_multiple_cpu(data_input, models_from_data):
     base_estimate, base_sample_sizes, base_variances = \
         base_sim.simulate(.1, 200)
 
+    full_data_input.reset_sampling()
     base_costs, base_initial_variances = base_sim._compute_costs_and_variances()
 
     sim = MLMCSimulator(models=models_from_data, data=data_input)
     estimates, sample_sizes, variances = sim.simulate(.1, 200)
 
+    data_input.reset_sampling()
     sim_costs, initial_variances = sim._compute_costs_and_variances()
 
-    assert np.array_equal(base_initial_variances, initial_variances)
-    assert np.array_equal(base_costs, sim_costs)
+    assert np.all(np.isclose(base_initial_variances, initial_variances))
+    assert np.all(np.isclose(base_costs, sim_costs))
 
     all_estimates = comm.allgather(estimates)
     all_sample_sizes = comm.allgather(sample_sizes)
     all_variances = comm.allgather(variances)
+
+    assert np.all(estimates[0] == estimates)
+    assert np.all(variances[0] == variances)
 
     for estimate in all_estimates:
         assert np.all(np.isclose(estimate, base_estimate))
@@ -683,8 +689,5 @@ def test_multiple_cpu(data_input, models_from_data):
     for variance in all_variances:
         assert np.all(np.isclose(variance, base_variances))
 
-    every_sample_size = np.zeros((comm.size, 3))
     for i, sample_size in enumerate(all_sample_sizes):
-        every_sample_size[i] = sample_size
-
-    assert np.array_equal(np.sum(every_sample_size, axis=0), base_sample_sizes)
+        assert np.array_equal(base_sample_sizes, sample_size)
