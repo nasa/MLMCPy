@@ -527,6 +527,7 @@ class MLMCSimulator:
 
             self._num_cpus = comm.size
             self._cpu_rank = comm.rank
+            self._comm = comm
 
         except ImportError:
 
@@ -542,10 +543,7 @@ class MLMCSimulator:
         if self._num_cpus == 1:
             return values
 
-        from mpi4py import MPI
-        comm = MPI.COMM_WORLD
-
-        all_values = comm.allgather(values)
+        all_values = self._comm.allgather(values)
 
         return np.mean(all_values, 0)
 
@@ -560,12 +558,33 @@ class MLMCSimulator:
         if self._num_cpus == 1:
             return arrays
 
-        from mpi4py import MPI
-        comm = MPI.COMM_WORLD
+        all_arrays = self._comm.allgather(arrays)
+        block_ordered_array = np.concatenate(all_arrays, axis=axis)
 
-        all_arrays = comm.allgather(arrays)
+        block_ordered_array = np.swapaxes(block_ordered_array, axis, 0)
 
-        return np.concatenate(all_arrays, axis=axis)
+        result = np.zeros_like(block_ordered_array)
+        num_rows = result.shape[0]
+        block_size = num_rows // self._num_cpus
+
+        i = 0
+        for r in range(0, block_size):
+            for o in range(0, self._num_cpus):
+                result[i, ...] = block_ordered_array[r + o * block_size, ...]
+                i += 1
+
+        print r + o * block_size
+        residual = num_rows - block_size * self._num_cpus
+        for r in range(residual):
+            result[i, ...] = block_ordered_array[block_size + r * block_size]
+            i += 1
+
+        print i-1
+        print block_size
+        # print block_size + r * block_size
+        result = np.swapaxes(result, 0, axis)
+
+        return result
 
     def _determine_num_cpu_samples(self, total_num_samples):
         """Determines number of samples to be run on current cpu based on

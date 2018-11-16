@@ -40,6 +40,13 @@ def data_input():
 
 
 @pytest.fixture
+def data_input_no_mpi_slice():
+
+    return InputFromData(os.path.join(data_path, "spring_mass_1D_inputs.txt"),
+                         shuffle_data=False, mpi_slice=False)
+
+
+@pytest.fixture
 def data_input_2d():
 
     return InputFromData(os.path.join(data_path, "2D_test_data.csv"),
@@ -668,6 +675,22 @@ def test_multi_cpu_sample_splitting(data_input, models_from_data, num_cpus):
     # Test that there is never more than a difference of one sample
     # between processes.
     assert np.max(sample_sizes) - np.min(sample_sizes) <= 1
+
+
+def test_multiple_cpu_gather_arrays_over_all_cpus(data_input,
+                                                  data_input_no_mpi_slice,
+                                                  models_from_data):
+
+    sim = MLMCSimulator(data=data_input, models=models_from_data)
+
+    expected_result = data_input_no_mpi_slice._data
+
+    test_result = sim._gather_arrays_over_all_cpus(data_input._data)
+    print test_result[-4:, ...]
+    print expected_result[-4:, ...]
+
+    print np.sum(test_result == expected_result)
+    assert np.array_equal(expected_result, test_result)
 
 
 def test_multiple_cpu(data_input, models_from_data, comm):

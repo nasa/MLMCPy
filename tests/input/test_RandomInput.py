@@ -13,6 +13,7 @@ if 'PYTHONPATH' not in os.environ:
 
 from MLMCPy.input import RandomInput
 
+
 @pytest.fixture
 def uniform_distribution_input():
 
@@ -38,6 +39,14 @@ def invalid_distribution_function():
         return [1, 2, 3]
 
     return invalid_function
+
+
+@pytest.fixture
+def comm():
+    imp.find_module('mpi4py')
+
+    from mpi4py import MPI
+    return MPI.COMM_WORLD
 
 
 def test_init_invalid_input():
@@ -90,15 +99,12 @@ def test_distribution_exception_if_size_parameter_not_accepted():
         invalid_input.draw_samples(10)
 
 
-@pytest.mark.parametrize('random_input', [uniform_distribution_input(),
-                                          beta_distribution_input()],
+@pytest.mark.parametrize('distribution', [uniform_distribution_input,
+                                          beta_distribution_input],
                          ids=['uniform', 'beta'])
-def test_multi_cpu_sampling(random_input):
+def test_multi_cpu_sampling(distribution, comm):
 
-    imp.find_module('mpi4py')
-
-    from mpi4py import MPI
-    comm = MPI.COMM_WORLD
+    random_input = distribution()
 
     # Get per process samples, then aggregate them to compare to single cpu
     # sampling.
