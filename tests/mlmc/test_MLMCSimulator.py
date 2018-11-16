@@ -106,6 +106,14 @@ def filename_2d_5_column_data():
 
 
 @pytest.fixture
+def comm():
+    imp.find_module('mpi4py')
+
+    from mpi4py import MPI
+    return MPI.COMM_WORLD
+
+
+@pytest.fixture
 def filename_2d_3_column_data():
 
     return os.path.join(data_path, "2D_test_data_output_3_col.csv")
@@ -253,6 +261,34 @@ def test_calculate_estimate_for_springmass_random_input(beta_distribution_input,
     assert np.isclose(estimate[0], mc_20000_output_sample_mean, atol=.25)
 
 
+def test_hard_coded_springmass_random_input(beta_distribution_input,
+                                            spring_models, comm):
+
+    np.random.seed(1)
+
+    # Result from 20,000 sample monte carlo spring mass simulation.
+    mlmc_hard_coded_mean = [12.274674424393805]
+    mlmc_hard_coded_variance = [0.01078008]
+
+    sim = MLMCSimulator(models=spring_models,
+                        data=beta_distribution_input)
+
+    all_sample_sizes = np.array([1113, 34, 0])
+    sample_sizes = []
+    for i, sample_size in enumerate(all_sample_sizes):
+        sample_sizes.append(sim._determine_num_cpu_samples(sample_size))
+    sample_sizes = np.array(sample_sizes)
+
+    sim._initial_sample_size = 0
+    sim._sample_sizes = sample_sizes
+    sim._all_sample_sizes = all_sample_sizes
+    np.random.seed(1)
+    estimate, sample_sizes, variances = sim._run_simulation()
+
+    assert np.all(np.isclose(estimate, mlmc_hard_coded_mean))
+    assert np.all(np.isclose(variances, mlmc_hard_coded_variance))
+
+
 def test_estimate_and_variance_improved_by_lower_epsilon(data_input,
                                                          models_from_data):
 
@@ -322,12 +358,7 @@ def test_final_variances_less_than_epsilon_goal(data_input,
 @pytest.mark.parametrize('sample_sizes', [[1, 0, 0], [1, 0, 1], [1, 1, 0],
                          [1, 1, 1], [1, 2, 1], [10, 5, 2]])
 def test_outputs_for_small_sample_sizes(data_input, models_from_data,
-                                        sample_sizes):
-
-    imp.find_module('mpi4py')
-
-    from mpi4py import MPI
-    comm = MPI.COMM_WORLD
+                                        sample_sizes, comm):
 
     output1_filepath = os.path.join(data_path, "spring_mass_1D_outputs_1.0.txt")
     output2_filepath = os.path.join(data_path, "spring_mass_1D_outputs_0.1.txt")
@@ -639,16 +670,7 @@ def test_multi_cpu_sample_splitting(data_input, models_from_data, num_cpus):
     assert np.max(sample_sizes) - np.min(sample_sizes) <= 1
 
 
-def test_multiple_cpu(data_input, models_from_data):
-
-    try:
-        imp.find_module('mpi4py')
-
-        from mpi4py import MPI
-        comm = MPI.COMM_WORLD
-
-    except ImportError:
-        return
+def test_multiple_cpu(data_input, models_from_data, comm):
 
     # Set up baseline simulation like single processor run.
     data_filename = os.path.join(data_path, "spring_mass_1D_inputs.txt")
