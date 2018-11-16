@@ -1,7 +1,15 @@
 import pytest
 import numpy as np
 import os
+import sys
 import timeit
+
+# Needed when running mpiexec. Be sure to run from tests directory.
+if 'PYTHONPATH' not in os.environ:
+
+    base_path = os.path.abspath('..')
+
+    sys.path.insert(0, base_path)
 
 from MLMCPy.model import ModelFromData
 

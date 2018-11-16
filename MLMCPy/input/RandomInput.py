@@ -28,6 +28,9 @@ class RandomInput(Input):
         self._distribution = distribution_function
         self._args = distribution_function_args
 
+        self._num_cpus = 1
+        self._cpu_rank = 0
+
         # Set random seed based on cpu rank.
         self.__detect_parallelization()
 
@@ -46,8 +49,10 @@ class RandomInput(Input):
         if num_samples <= 0:
             raise ValueError("num_samples must be a positive integer.")
 
-        self._args['size'] = num_samples
+        self._args['size'] = num_samples * self._num_cpus
+
         sample = self._distribution(**self._args)
+        sample = sample[self._cpu_rank::self._num_cpus]
 
         # Output should be shape (num_samples, sample_size), so reshape
         # one dimensional data to a 2d array with one column.
@@ -58,8 +63,7 @@ class RandomInput(Input):
     def reset_sampling(self):
         pass
 
-    @staticmethod
-    def __detect_parallelization():
+    def __detect_parallelization(self):
 
         try:
             imp.find_module('mpi4py')
@@ -67,10 +71,11 @@ class RandomInput(Input):
             from mpi4py import MPI
             comm = MPI.COMM_WORLD
 
-            cpu_rank = comm.rank
+            self._cpu_rank = comm.rank
+            self._num_cpus = comm.size
+            self._comm = comm
 
         except ImportError:
-            cpu_rank = 0
 
-        finally:
-            np.random.seed(cpu_rank)
+            self.cpu_rank = 0
+            self._num_cpus = 1

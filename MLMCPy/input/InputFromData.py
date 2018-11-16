@@ -11,7 +11,7 @@ class InputFromData(Input):
     Used to draw random samples from a data file.
     """
     def __init__(self, input_filename, delimiter=" ", skip_header=0,
-                 shuffle_data=True):
+                 shuffle_data=True, mpi_slice=True):
         """
         :param input_filename: path of file containing data to be sampled.
         :type input_filename: string
@@ -23,6 +23,11 @@ class InputFromData(Input):
         :param shuffle_data: Whether or not to randomly shuffle data during
                              initialization.
         :type shuffle_data: bool
+        :param mpi_slice: Whether to prevent slicing of data across cpus.
+            Setting this to False will allow all sample data to be the same
+            on every node, which will cause inconsistency with single node
+            results.
+        :type mpi_slice: bool
         """
         if not os.path.isfile(input_filename):
             raise IOError("input_filename must refer to a file.")
@@ -40,8 +45,9 @@ class InputFromData(Input):
         if len(self._data .shape) == 1:
             self._data = self._data.reshape(self._data.shape[0], -1)
 
-        # Use subset of data if we are in multiprocessor environment.
-        self.__detect_parallelization()
+        # Slice data if we are in multiprocessor environment.
+        if mpi_slice:
+            self._detect_parallelization()
 
         if shuffle_data:
             np.random.shuffle(self._data)
@@ -87,7 +93,7 @@ class InputFromData(Input):
         """
         self._index = 0
 
-    def __detect_parallelization(self):
+    def _detect_parallelization(self):
         """
         If multiple cpus detected, split the data across cpus so that
         each will have a unique subset of sample data.
@@ -105,12 +111,10 @@ class InputFromData(Input):
             num_cpus = comm.size
 
         except ImportError:
+
             num_cpus = 1
             cpu_rank = 0
 
         finally:
-            slice_size = self._data.shape[0] // num_cpus
 
-            slice_start_index = slice_size * cpu_rank
-            self._data = self._data[slice_start_index:
-                                    slice_start_index + slice_size]
+            self._data = self._data[cpu_rank::num_cpus]
