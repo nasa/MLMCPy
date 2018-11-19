@@ -99,17 +99,12 @@ def test_distribution_exception_if_size_parameter_not_accepted():
         invalid_input.draw_samples(10)
 
 
-@pytest.mark.parametrize('distribution', [uniform_distribution_input,
-                                          beta_distribution_input],
-                         ids=['uniform', 'beta'])
-def test_multi_cpu_sampling(distribution, comm):
-
-    random_input = distribution()
+def test_multi_cpu_sampling_uniform(uniform_distribution_input, comm):
 
     # Get per process samples, then aggregate them to compare to single cpu
     # sampling.
     np.random.seed(1)
-    this_test_sample = random_input.draw_samples(10)
+    this_test_sample = uniform_distribution_input.draw_samples(10)
 
     test_sample_list = comm.allgather(this_test_sample)
 
@@ -118,10 +113,33 @@ def test_multi_cpu_sampling(distribution, comm):
         test_samples[i::comm.size] = sample
 
     # Get samples that would be returned in single cpu environment.
-    random_input._num_cpus = 1
-    random_input._cpu_rank = 0
+    uniform_distribution_input._num_cpus = 1
+    uniform_distribution_input._cpu_rank = 0
 
     np.random.seed(1)
-    baseline_samples = random_input.draw_samples(10 * comm.size)
+    baseline_samples = uniform_distribution_input.draw_samples(10 * comm.size)
+
+    assert np.array_equal(test_samples, baseline_samples)
+
+
+def test_multi_cpu_sampling_beta(beta_distribution_input, comm):
+
+    # Get per process samples, then aggregate them to compare to single cpu
+    # sampling.
+    np.random.seed(1)
+    this_test_sample = beta_distribution_input.draw_samples(10)
+
+    test_sample_list = comm.allgather(this_test_sample)
+
+    test_samples = np.zeros((10 * comm.size, 1))
+    for i, sample in enumerate(test_sample_list):
+        test_samples[i::comm.size] = sample
+
+    # Get samples that would be returned in single cpu environment.
+    beta_distribution_input._num_cpus = 1
+    beta_distribution_input._cpu_rank = 0
+
+    np.random.seed(1)
+    baseline_samples = beta_distribution_input.draw_samples(10 * comm.size)
 
     assert np.array_equal(test_samples, baseline_samples)
