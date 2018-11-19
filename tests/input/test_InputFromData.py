@@ -48,6 +48,20 @@ def get_data_file_size(file_path):
 
 
 @pytest.fixture
+def spring_data_input():
+
+    return InputFromData(os.path.join(data_path, "spring_mass_1D_inputs.txt"),
+                         shuffle_data=False)
+
+
+@pytest.fixture
+def spring_data_input_no_mpi_slice():
+
+    return InputFromData(os.path.join(data_path, "spring_mass_1D_inputs.txt"),
+                         shuffle_data=False, mpi_slice=False)
+
+
+@pytest.fixture
 def data_filename_2d():
 
     return os.path.join(data_path, "2D_test_data.csv")
@@ -70,6 +84,14 @@ def test_init_fails_on_invalid_input_file():
 def test_init_does_not_fail_on_valid_input_file(data_filename):
 
     InputFromData(data_filename)
+
+
+@pytest.fixture
+def comm():
+    imp.find_module('mpi4py')
+
+    from mpi4py import MPI
+    return MPI.COMM_WORLD
 
 
 @pytest.mark.parametrize("delimiter, filename",
@@ -171,18 +193,10 @@ def test_draw_sample_warning_issued_for_insufficient_data(data_filename_2d):
         small_input.draw_samples(1000)
 
 
-@pytest.mark.parametrize("data_filename", data_file_paths, ids=data_file_names)
-def test_multi_cpu_input_sample_slicing(data_filename):
+def test_multi_cpu_input_sample_slicing(spring_data_input,
+                                        spring_data_input_no_mpi_slice, comm):
 
-    imp.find_module('mpi4py')
-
-    from mpi4py import MPI
-    comm = MPI.COMM_WORLD
-
-    all_data_size = get_data_file_size(data_filename)
-
-    # Force data_input to slice as if in MPI environment.
-    data_input = InputFromData(data_filename)
+    all_data_size = spring_data_input_no_mpi_slice._data.shape[0]
 
     # Get expected slice size.
     expected_slice_size = all_data_size // comm.size
@@ -191,11 +205,10 @@ def test_multi_cpu_input_sample_slicing(data_filename):
     if comm.rank < num_residual_samples:
         expected_slice_size += 1
 
-    # Ensure InputFromData sliced the data in the same way.
-    assert np.array_equal(expected_slice_size, data_input._data.shape[0])
+    # Ensure slice is expected size.
+    assert expected_slice_size == spring_data_input._data.shape[0]
 
-    all_slices_list = comm.allgather(data_input._data)
+    all_slices_list = comm.allgather(spring_data_input._data)
     all_slices = np.concatenate(all_slices_list, axis=0)
 
-    assert all_slices.shape[0] == all_data_size
-
+    assert np.sum(all_slices) == np.sum(spring_data_input_no_mpi_slice._data)

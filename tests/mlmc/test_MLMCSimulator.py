@@ -215,13 +215,13 @@ def test_optimal_sample_sizes_expected_outputs(num_qoi, variances, epsilons,
     assert np.all(np.isclose(sample_sizes, expected_sample_size, atol=1))
 
 
-def test_costs_and_variances_beta_distribution_models(beta_distribution_input,
-                                                      spring_models):
+def test_costs_and_initial_variances_spring_models(beta_distribution_input,
+                                                   spring_models):
 
     sim = MLMCSimulator(models=spring_models, data=beta_distribution_input)
 
     np.random.seed(1)
-    sim._initial_sample_size = 100
+    sim._initial_sample_size = sim._determine_num_cpu_samples(100)
 
     costs, variances = sim._compute_costs_and_variances()
 
@@ -231,15 +231,17 @@ def test_costs_and_variances_beta_distribution_models(beta_distribution_input,
 
     true_costs = np.array([1., 11., 110.])
 
-    assert np.all(np.isclose(true_variances, variances))
     assert np.all(np.isclose(true_costs, costs))
+    assert np.all(np.isclose(true_variances, variances, rtol=.1))
 
 
-def test_costs_and_variances_models_from_data(data_input, models_from_data):
+def test_costs_and_initial_variances_models_from_data(data_input,
+                                                      models_from_data):
 
+    np.random.seed(1)
     sim = MLMCSimulator(models=models_from_data, data=data_input)
     
-    sim._initial_sample_size = 50
+    sim._initial_sample_size = sim._determine_num_cpu_samples(100)
     costs, variances = sim._compute_costs_and_variances()
 
     true_variances = np.array([[9.262628271266264],
@@ -249,7 +251,7 @@ def test_costs_and_variances_models_from_data(data_input, models_from_data):
     true_costs = np.array([1.0, 5.0, 20.0])
 
     assert np.all(np.isclose(true_costs, costs))
-    assert np.all(np.isclose(true_variances, variances))
+    assert np.all(np.isclose(true_variances, variances, rtol=.1))
 
 
 def test_calculate_estimate_for_springmass_random_input(beta_distribution_input,
@@ -626,7 +628,7 @@ def test_fixed_cost(beta_distribution_input, spring_models, target_cost):
 
     # Multiply sample sizes times costs and take the sum; verify that this is
     # close to the target cost.
-    sim._initial_sample_size = 100 // sim._num_cpus
+    sim._initial_sample_size = sim._determine_num_cpu_samples(100)
     sim._target_cost = float(target_cost)
 
     costs, variances = sim._compute_costs_and_variances()
@@ -677,7 +679,7 @@ def test_multi_cpu_sample_splitting(data_input, models_from_data, num_cpus):
     assert np.max(sample_sizes) - np.min(sample_sizes) <= 1
 
 
-def test_multiple_cpu_gather_arrays_over_all_cpus(data_input,
+def test_gather_arrays_over_all_cpus(data_input,
                                                   data_input_no_mpi_slice,
                                                   models_from_data):
 
@@ -713,7 +715,59 @@ def test_multiple_cpu_gather_arrays_over_all_cpus(data_input,
     sim._run_simulation()
 
 
-def test_multiple_cpu(data_input, models_from_data, comm):
+def test_multiple_cpu_compute_costs_and_variances(data_input,
+                                                  data_input_no_mpi_slice,
+                                                  models_from_data):
+
+    sim = MLMCSimulator(data=data_input, models=models_from_data)
+
+    num_samples = sim._determine_num_cpu_samples(100)
+
+    cache = np.zeros((3, num_samples, 1))
+    test_input_samples = np.zeros_like(cache)
+
+    for level in range(3):
+
+        test_input_samples[level] = sim._data.draw_samples(num_samples)
+        lower_level_outputs = np.zeros((num_samples, 1))
+
+        for i, sample in enumerate(test_input_samples[level]):
+
+            cache[level, i] = models_from_data[level].evaluate(sample)
+
+            if level > 0:
+                lower_level_outputs[i] = models_from_data[level - 1].evaluate(sample)
+
+        cache[level] -= lower_level_outputs
+
+    gathered_test_inputs = sim._gather_arrays_over_all_cpus(test_input_samples, axis=1)
+
+    # Get outputs across all CPUs before computing variances.
+    gathered_test_outputs = sim._gather_arrays_over_all_cpus(cache, axis=1)
+
+    expected_outputs = np.zeros_like(cache)
+    expected_input_samples = np.zeros((3, 100, 1))
+
+    for level in range(3):
+
+        expected_input_samples[level] = data_input_no_mpi_slice.draw_samples(100)
+        lower_level_outputs = np.zeros((num_samples, 1))
+
+        for i, sample in enumerate(expected_input_samples[level]):
+
+            expected_outputs[level, i] = models_from_data[level].evaluate(sample)
+
+            if level > 0:
+                lower_level_outputs[i] = models_from_data[level-1].evaluate(sample)
+
+        expected_outputs -= lower_level_outputs
+
+    assert np.array_equal(gathered_test_inputs, expected_input_samples)
+    print np.sum(np.abs(gathered_test_outputs - expected_outputs))
+    assert np.array_equal(gathered_test_outputs, expected_outputs)
+
+
+def test_multiple_cpu_simulation(data_input, models_from_data, comm):
 
     # Set up baseline simulation like single processor run.
     data_filename = os.path.join(data_path, "spring_mass_1D_inputs.txt")

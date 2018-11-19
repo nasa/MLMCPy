@@ -223,21 +223,19 @@ class MLMCSimulator:
             # appropriate cached value to be found.
             can_use_cache = cached_index < self._initial_sample_size and \
                 cached_level == level
+
+            if can_use_cache:
+                return self._cache[level, cached_index]
+
+        # Compute output via the model.
+        output = self._models[level].evaluate(sample)
+
+        if level > 0:
+            lower_level_output = self._models[level-1].evaluate(sample)
         else:
-            can_use_cache = False
+            lower_level_output = np.zeros_like(output)
 
-        if can_use_cache:
-            return self._cache[level, cached_index]
-        else:
-
-            output = self._models[level].evaluate(sample)
-
-            if level > 0:
-                lower_level_output = self._models[level-1].evaluate(sample)
-            else:
-                lower_level_output = np.zeros_like(output)
-
-            return output - lower_level_output
+        return output - lower_level_output
 
     def _show_summary_data(self, estimates, variances, run_time):
         """
@@ -304,8 +302,7 @@ class MLMCSimulator:
             self._cache[level] -= lower_level_outputs
 
         # Get outputs across all CPUs before computing variances.
-        all_outputs = self._gather_arrays_over_all_cpus(self._cache,
-                                                        axis=1)
+        all_outputs = self._gather_arrays_over_all_cpus(self._cache, axis=1)
 
         variances = np.var(all_outputs, axis=1)
         costs = self._compute_costs(compute_times)
@@ -557,7 +554,7 @@ class MLMCSimulator:
         """
         Collects an array from all processes and combines them so that single
         processor ordering is preserved.
-        :param array: Arrays to be combined.
+        :param this_cpu_array: Arrays to be combined.
         :param axis: Axis to concatenate the arrays on.
         :return: ndarray
         """
