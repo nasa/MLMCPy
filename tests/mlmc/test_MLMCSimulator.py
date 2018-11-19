@@ -681,16 +681,36 @@ def test_multiple_cpu_gather_arrays_over_all_cpus(data_input,
                                                   data_input_no_mpi_slice,
                                                   models_from_data):
 
+    # Basic test that does not require axis swapping for reordering.
     sim = MLMCSimulator(data=data_input, models=models_from_data)
 
     expected_result = data_input_no_mpi_slice._data
 
     test_result = sim._gather_arrays_over_all_cpus(data_input._data)
-    print test_result[-4:, ...]
-    print expected_result[-4:, ...]
 
-    print np.sum(test_result == expected_result)
     assert np.array_equal(expected_result, test_result)
+
+    # Advanced test that requires axis swapping for reordering.
+    test2 = np.ones((2, 10)) * sim._cpu_rank
+
+    expected_result2 = np.repeat([np.arange(sim._num_cpus)], 2, axis=0)
+    expected_result2 = np.tile(expected_result2, 10).astype(float)
+
+    test2_result = sim._gather_arrays_over_all_cpus(test2, axis=1)
+
+    assert np.array_equal(expected_result2, test2_result)
+
+    # Test for cross-sync failure issue that could occur if some processes
+    # run samples for a particular level while others don't.
+    if sim._cpu_rank % 2 == 0:
+        sim._sample_sizes = np.array([2, 1, 0])
+    else:
+        sim._sample_sizes = np.array([2, 0, 0])
+
+    sim._all_sample_sizes = sim._sample_sizes * sim._num_cpus
+
+    # An exception will occur if the problem is present.
+    sim._run_simulation()
 
 
 def test_multiple_cpu(data_input, models_from_data, comm):

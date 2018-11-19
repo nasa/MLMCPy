@@ -151,6 +151,13 @@ class MLMCSimulator:
         for level in range(self._num_levels):
 
             if self._sample_sizes[level] == 0:
+
+                # Even if we aren't taking any samples at this level,
+                # it's possible that in an MPI environment the other processes
+                # will, so we need to send an empty array so that communications
+                # between processes stay synchronized.
+                sync_array = np.zeros((0, self._output_size))
+                self._gather_arrays_over_all_cpus(sync_array)
                 continue
 
             samples = self._data.draw_samples(self._sample_sizes[level])
@@ -171,8 +178,7 @@ class MLMCSimulator:
                 output_differences[i] = self._evaluate_sample(i, sample, level)
 
             all_output_differences = \
-                self._gather_arrays_over_all_cpus(output_differences,
-                                                  axis=0)
+                self._gather_arrays_over_all_cpus(output_differences, axis=0)
 
             estimates += np.sum(all_output_differences, axis=0) \
                 / self._all_sample_sizes[level]
@@ -534,54 +540,62 @@ class MLMCSimulator:
             self._num_cpus = 1
             self._cpu_rank = 0
 
-    def _mean_over_all_cpus(self, values):
+    def _mean_over_all_cpus(self, this_cpu_values):
         """
         Finds the mean of ndarray of values across cpus and returns result.
-        :param values: ndarray of any shape.
+        :param this_cpu_values: ndarray of any shape.
         :return: ndarray of same shape as values with mean from all cpus.
         """
         if self._num_cpus == 1:
-            return values
+            return this_cpu_values
 
-        all_values = self._comm.allgather(values)
+        all_values = self._comm.allgather(this_cpu_values)
 
         return np.mean(all_values, 0)
 
-    def _gather_arrays_over_all_cpus(self, arrays, axis=0):
+    def _gather_arrays_over_all_cpus(self, this_cpu_array, axis=0):
         """
         Collects an array from all processes and combines them so that single
         processor ordering is preserved.
-        :param arrays: Arrays to be combined.
+        :param array: Arrays to be combined.
         :param axis: Axis to concatenate the arrays on.
         :return: ndarray
         """
         if self._num_cpus == 1:
-            return arrays
+            return this_cpu_array
 
-        all_arrays = self._comm.allgather(arrays)
+        gathered_arrays = self._comm.allgather(this_cpu_array)
+
+        # Remove arrays with no data (sent to prevent sync issues).
+        all_arrays = list()
+        for array in gathered_arrays:
+            if array.shape[axis] > 0:
+                all_arrays.append(array)
+
+        if len(all_arrays) == 0:
+            return this_cpu_array
+
         block_ordered_array = np.concatenate(all_arrays, axis=axis)
 
+        # Swap concatenated axis with 0 for reordering.
         block_ordered_array = np.swapaxes(block_ordered_array, axis, 0)
-
         result = np.zeros_like(block_ordered_array)
-        num_rows = result.shape[0]
-        block_size = num_rows // self._num_cpus
 
-        i = 0
-        for r in range(0, block_size):
-            for o in range(0, self._num_cpus):
-                result[i, ...] = block_ordered_array[r + o * block_size, ...]
-                i += 1
+        # Find indices of boundaries of each array in block_ordered_array.
+        pos = 0
+        block_edges = [0]
+        for array in all_arrays:
 
-        print r + o * block_size
-        residual = num_rows - block_size * self._num_cpus
-        for r in range(residual):
-            result[i, ...] = block_ordered_array[block_size + r * block_size]
-            i += 1
+            pos += array.shape[axis]
+            block_edges.append(pos)
 
-        print i-1
-        print block_size
-        # print block_size + r * block_size
+        # Fill result with reordered data to match single cpu ordering.
+        for i in range(len(all_arrays)):
+
+            result[i:: self._num_cpus, ...] = \
+                block_ordered_array[block_edges[i]: block_edges[i+1], ...]
+
+        # Swap axis 0 back to original place.
         result = np.swapaxes(result, 0, axis)
 
         return result
