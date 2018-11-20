@@ -680,8 +680,8 @@ def test_multi_cpu_sample_splitting(data_input, models_from_data, num_cpus):
 
 
 def test_gather_arrays_over_all_cpus(data_input,
-                                                  data_input_no_mpi_slice,
-                                                  models_from_data):
+                                     data_input_no_mpi_slice,
+                                     models_from_data):
 
     # Basic test that does not require axis swapping for reordering.
     sim = MLMCSimulator(data=data_input, models=models_from_data)
@@ -721,7 +721,7 @@ def test_multiple_cpu_compute_costs_and_variances(data_input,
 
     sim = MLMCSimulator(data=data_input, models=models_from_data)
 
-    num_samples = sim._determine_num_cpu_samples(100)
+    num_samples = sim._determine_num_cpu_samples(10)
 
     cache = np.zeros((3, num_samples, 1))
     test_input_samples = np.zeros_like(cache)
@@ -740,18 +740,19 @@ def test_multiple_cpu_compute_costs_and_variances(data_input,
 
         cache[level] -= lower_level_outputs
 
+    # print 'CPU: %s, samples: %s' % (sim._cpu_rank, str(test_input_samples))
     gathered_test_input_samples = sim._gather_arrays_over_all_cpus(test_input_samples, axis=1)
 
     # Get outputs across all CPUs before computing variances.
     gathered_test_outputs = sim._gather_arrays_over_all_cpus(cache, axis=1)
 
-    expected_outputs = np.zeros((3, 100, 1))
-    expected_input_samples = np.zeros((3, 100, 1))
+    expected_outputs = np.zeros((3, 10, 1))
+    expected_input_samples = np.zeros((3, 10, 1))
 
     for level in range(3):
 
-        expected_input_samples[level] = data_input_no_mpi_slice.draw_samples(100)
-        lower_level_outputs = np.zeros((100, 1))
+        expected_input_samples[level] = data_input_no_mpi_slice.draw_samples(10)
+        lower_level_outputs = np.zeros((10, 1))
 
         for i, sample in enumerate(expected_input_samples[level]):
 
@@ -761,6 +762,12 @@ def test_multiple_cpu_compute_costs_and_variances(data_input,
                 lower_level_outputs[i] = models_from_data[level-1].evaluate(sample)
 
         expected_outputs[level] -= lower_level_outputs
+
+    # assert np.array_equal(gathered_test_input_samples[1], expected_input_samples[1])
+
+    if sim._cpu_rank == 0:
+        print gathered_test_input_samples[1]
+        print expected_input_samples[1]
 
     assert gathered_test_input_samples.shape == expected_input_samples.shape
     assert np.array_equal(gathered_test_input_samples, expected_input_samples)
