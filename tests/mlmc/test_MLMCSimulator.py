@@ -410,7 +410,7 @@ def test_outputs_for_small_sample_sizes(data_input, models_from_data,
     assert np.isclose(sim_variance, sample_variance, atol=10e-15)
 
 
-@pytest.mark.parametrize("cache_size", [20])#, 200, 2000])
+@pytest.mark.parametrize("cache_size", [20])#, 7, 200])
 def test_output_caching(data_input, models_from_data, cache_size):
 
     sim = MLMCSimulator(models=models_from_data, data=data_input)
@@ -434,10 +434,15 @@ def test_output_caching(data_input, models_from_data, cache_size):
             continue
 
         samples = sim._draw_samples(num_samples)
+        print 'CPU: %s' % sim._cpu_rank
+        print samples
         for i, sample in enumerate(samples):
 
             outputs_with_caching[level, i] = \
                 sim._evaluate_sample(i, sample, level)
+
+    if sim._cpu_rank == 0:
+        assert False
 
     # Set initial_sample_size to 0 so that it will not use cached values.
     sim._initial_sample_size = 0

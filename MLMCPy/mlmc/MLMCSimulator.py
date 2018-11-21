@@ -219,12 +219,10 @@ class MLMCSimulator:
                 cached_level == level
 
             if can_use_cache:
-                print 'Cached output for sample %s: %s' % (sample, self._cache[level, cached_index])
                 return self._cache[level, cached_index]
 
         # Compute output via the model.
         output = self._models[level].evaluate(sample)
-        print 'Output for sample %s: %s' % (sample, output)
 
         if level > 0:
             return output - self._models[level-1].evaluate(sample)
