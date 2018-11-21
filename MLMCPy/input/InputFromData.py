@@ -1,7 +1,6 @@
 import numpy as np
 import os
 import warnings
-import imp
 
 from Input import Input
 
@@ -11,7 +10,7 @@ class InputFromData(Input):
     Used to draw random samples from a data file.
     """
     def __init__(self, input_filename, delimiter=" ", skip_header=0,
-                 shuffle_data=True, mpi_slice=True):
+                 shuffle_data=True):
         """
         :param input_filename: path of file containing data to be sampled.
         :type input_filename: string
@@ -23,11 +22,6 @@ class InputFromData(Input):
         :param shuffle_data: Whether or not to randomly shuffle data during
                              initialization.
         :type shuffle_data: bool
-        :param mpi_slice: Whether to prevent slicing of data across cpus.
-            Setting this to False will allow all sample data to be the same
-            on every node, which will cause inconsistency with single node
-            results.
-        :type mpi_slice: bool
         """
         if not os.path.isfile(input_filename):
             raise IOError("input_filename must refer to a file.")
@@ -44,9 +38,6 @@ class InputFromData(Input):
         # one dimensional data to a 2d array with one column.
         if len(self._data .shape) == 1:
             self._data = self._data.reshape(self._data.shape[0], -1)
-
-        self._detect_parallelization()
-        self._mpi_slice = mpi_slice
 
         if shuffle_data:
             np.random.shuffle(self._data)
@@ -84,26 +75,6 @@ class InputFromData(Input):
             warning = UserWarning(error_message)
             warnings.warn(warning)
 
-        # Take subsample of data in MPI environments.
-        if self._num_cpus > 1 and self._mpi_slice:
-
-            # Determine subsample sizes for all cpus.
-            subsample_size = sample_size // self._num_cpus
-            remainder = sample_size - subsample_size * self._num_cpus
-            subsample_sizes = np.ones(self._num_cpus+1).astype(int) * \
-                subsample_size
-
-            subsample_sizes[:remainder+1] += 1
-            subsample_sizes[0] = 0
-
-            # Determine starting index of subsample.
-            subsample_index = int(np.sum(subsample_sizes[:self._cpu_rank+1]))
-
-            # Take subsample.
-            sample = sample[subsample_index:
-                            subsample_index + subsample_sizes[self._cpu_rank+1],
-                            :]
-
         return np.copy(sample)
 
     def reset_sampling(self):
@@ -111,26 +82,3 @@ class InputFromData(Input):
         Used to restart sampling from beginning of data set.
         """
         self._index = 0
-
-    def _detect_parallelization(self):
-        """
-        If multiple cpus detected, split the data across cpus so that
-        each will have a unique subset of sample data.
-        """
-        self._num_cpus = 1
-        self._cpu_rank = 0
-
-        try:
-            imp.find_module('mpi4py')
-
-            from mpi4py import MPI
-            comm = MPI.COMM_WORLD
-
-            self._cpu_rank = comm.rank
-            self._num_cpus = comm.size
-
-        except ImportError:
-
-            self._num_cpus = 1
-            self._cpu_rank = 0
-

@@ -40,13 +40,6 @@ def data_input():
 
 
 @pytest.fixture
-def data_input_no_mpi_slice():
-
-    return InputFromData(os.path.join(data_path, "spring_mass_1D_inputs.txt"),
-                         shuffle_data=False, mpi_slice=False)
-
-
-@pytest.fixture
 def data_input_2d():
 
     return InputFromData(os.path.join(data_path, "2D_test_data.csv"),
@@ -283,16 +276,16 @@ def test_hard_coded_springmass_random_input(beta_distribution_input,
                         data=beta_distribution_input)
 
     all_sample_sizes = np.array([1113, 34, 0])
-    sample_sizes = []
+    cpu_sample_sizes = []
     for i, sample_size in enumerate(all_sample_sizes):
-        sample_sizes.append(sim._determine_num_cpu_samples(sample_size))
-    sample_sizes = np.array(sample_sizes)
+        cpu_sample_sizes.append(sim._determine_num_cpu_samples(sample_size))
+    sim._cpu_sample_sizes = np.array(cpu_sample_sizes)
 
     sim._initial_sample_size = 0
-    sim._sample_sizes = sample_sizes
     sim._sample_sizes = all_sample_sizes
+
     np.random.seed(1)
-    estimate, sample_sizes, variances = sim._run_simulation()
+    estimate, cpu_sample_sizes, variances = sim._run_simulation()
 
     assert np.all(np.isclose(estimate, mlmc_hard_coded_mean))
     assert np.all(np.isclose(variances, mlmc_hard_coded_variance))
@@ -381,7 +374,7 @@ def test_outputs_for_small_sample_sizes(data_input, models_from_data,
 
     sim = MLMCSimulator(models=models_from_data, data=data_input)
 
-    sim._sample_sizes = sample_sizes
+    sim._cpu_sample_sizes = sample_sizes
     sim._sample_sizes = sample_sizes * comm.size
     est, ss, sim_variance = sim._run_simulation()
 
@@ -440,7 +433,7 @@ def test_output_caching(data_input, models_from_data, cache_size):
         if num_samples == 0:
             continue
 
-        samples = data_input.draw_samples(num_samples)
+        samples = sim._draw_samples(num_samples)
         for i, sample in enumerate(samples):
 
             outputs_with_caching[level, i] = \
@@ -456,13 +449,13 @@ def test_output_caching(data_input, models_from_data, cache_size):
         if num_samples == 0:
             continue
 
-        samples = data_input.draw_samples(num_samples)
+        samples = sim._draw_samples(num_samples)
         for i, sample in enumerate(samples):
 
             outputs_without_caching[level, i] = \
                 sim._evaluate_sample(i, sample, level)
 
-    # print outputs_with_caching
+    # print outputs_without_caching[0]
 
     assert np.all(np.isclose(outputs_without_caching, outputs_with_caching))
 
@@ -680,24 +673,33 @@ def test_multi_cpu_sample_splitting(data_input, models_from_data, num_cpus):
     assert np.max(sample_sizes) - np.min(sample_sizes) <= 1
 
 
-def test_gather_arrays_over_all_cpus(data_input,
-                                     data_input_no_mpi_slice,
-                                     models_from_data):
+def test_gather_arrays_over_all_cpus(data_input, models_from_data, comm):
 
-    # Basic test that does not require axis swapping for reordering.
     sim = MLMCSimulator(data=data_input, models=models_from_data)
 
-    expected_result = data_input_no_mpi_slice._data
+    # Axis 0 test.
+    test = np.ones((2, 2)) * comm.rank
 
-    test_result = sim._gather_arrays_over_all_cpus(data_input._data)
+    expected_result = np.zeros((2, 2))
+
+    for i in range(1, comm.size):
+        new_block = np.ones((2, 2)) * i
+        expected_result = np.concatenate((expected_result, new_block), axis=0)
+
+    print expected_result
+    test_result = sim._gather_arrays_over_all_cpus(test, axis=0)
+    print test_result
 
     assert np.array_equal(expected_result, test_result)
 
-    # Advanced test that requires axis swapping for reordering.
-    test2 = np.ones((2, 10)) * sim._cpu_rank
+    # Axis 1 test.
+    test2 = np.ones((2, 2)) * comm.rank
 
-    expected_result2 = np.repeat([np.arange(sim._num_cpus)], 2, axis=0)
-    expected_result2 = np.tile(expected_result2, 10).astype(float)
+    expected_result2 = np.zeros((2, 2))
+
+    for i in range(1, comm.size):
+        new_block = np.ones((2, 2)) * i
+        expected_result2 = np.concatenate((expected_result2, new_block), axis=1)
 
     test2_result = sim._gather_arrays_over_all_cpus(test2, axis=1)
 
@@ -705,20 +707,19 @@ def test_gather_arrays_over_all_cpus(data_input,
 
     # Test for cross-sync failure issue that could occur if some processes
     # run samples for a particular level while others don't.
-    if sim._cpu_rank % 2 == 0:
-        sim._sample_sizes = np.array([2, 1, 0])
+    if comm.rank % 2 == 0:
+        sim._cpu_sample_sizes = np.array([2, 1, 0])
     else:
-        sim._sample_sizes = np.array([2, 0, 0])
+        sim._cpu_sample_sizes = np.array([2, 0, 0])
 
-    sim._sample_sizes = sim._sample_sizes * sim._num_cpus
+    sim._sample_sizes = sim._sample_sizes * comm.size
 
-    # An exception will occur if the problem is present.
+    # An exception will occur here if the problem is present.
     sim._run_simulation()
 
 
 @pytest.mark.parametrize('num_samples', [2, 3, 5, 7, 11, 23, 101])
 def test_multiple_cpu_compute_costs_and_variances(data_input, num_samples,
-                                                  data_input_no_mpi_slice,
                                                   models_from_data):
 
     sim = MLMCSimulator(data=data_input, models=models_from_data)
@@ -730,7 +731,7 @@ def test_multiple_cpu_compute_costs_and_variances(data_input, num_samples,
 
     for level in range(3):
 
-        test_input_samples[level] = data_input.draw_samples(num_samples)
+        test_input_samples[level] = sim._draw_samples(num_samples)
         lower_level_outputs = np.zeros((num_cpu_samples, 1))
 
         for i, sample in enumerate(test_input_samples[level]):
@@ -738,11 +739,11 @@ def test_multiple_cpu_compute_costs_and_variances(data_input, num_samples,
             cache[level, i] = models_from_data[level].evaluate(sample)
 
             if level > 0:
-                lower_level_outputs[i] = models_from_data[level - 1].evaluate(sample)
+                lower_level_outputs[i] = \
+                    models_from_data[level - 1].evaluate(sample)
 
         cache[level] -= lower_level_outputs
 
-    # print 'CPU: %s, samples: %s' % (sim._cpu_rank, str(test_input_samples))
     gathered_test_input_samples = \
         sim._gather_arrays_over_all_cpus(test_input_samples, axis=1)
 
@@ -751,11 +752,13 @@ def test_multiple_cpu_compute_costs_and_variances(data_input, num_samples,
 
     expected_outputs = np.zeros((3, num_samples, 1))
     expected_input_samples = np.zeros((3, num_samples, 1))
+    data_input.reset_sampling()
 
+    # Get samples/outputs for single processor for comparison.
     for level in range(3):
 
         expected_input_samples[level] = \
-            data_input_no_mpi_slice.draw_samples(num_samples)
+            data_input.draw_samples(num_samples)
         lower_level_outputs = np.zeros((num_samples, 1))
 
         for i, sample in enumerate(expected_input_samples[level]):
@@ -768,10 +771,6 @@ def test_multiple_cpu_compute_costs_and_variances(data_input, num_samples,
                     models_from_data[level-1].evaluate(sample)
 
         expected_outputs[level] -= lower_level_outputs
-
-    if sim._cpu_rank == 0:
-        print gathered_test_input_samples[1]
-        print expected_input_samples[1]
 
     assert gathered_test_input_samples.shape == expected_input_samples.shape
     assert np.array_equal(gathered_test_input_samples, expected_input_samples)

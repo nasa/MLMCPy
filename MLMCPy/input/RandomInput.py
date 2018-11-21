@@ -10,7 +10,7 @@ class RandomInput(Input):
     function provided must accept a "size" parameter that determines the
     sample size.
     """
-    def __init__(self, distribution_function, mpi_slice=True, random_seed=1,
+    def __init__(self, distribution_function, random_seed=None,
                  **distribution_function_args):
         """
         :param distribution_function: Returns a sample of a distribution
@@ -30,13 +30,11 @@ class RandomInput(Input):
 
         self._num_cpus = 1
         self._cpu_rank = 0
-        self._mpi_slice = mpi_slice
 
         self._random_seed = random_seed
-        np.random.seed(random_seed)
 
-        # Set random seed based on cpu rank.
-        self.__detect_parallelization()
+        if random_seed is not None:
+            np.random.seed(random_seed)
 
     def draw_samples(self, num_samples):
         """
@@ -86,21 +84,6 @@ class RandomInput(Input):
         return samples
 
     def reset_sampling(self):
-        np.random.seed(self._random_seed)
 
-    def __detect_parallelization(self):
-
-        try:
-            imp.find_module('mpi4py')
-
-            from mpi4py import MPI
-            comm = MPI.COMM_WORLD
-
-            self._cpu_rank = comm.rank
-            self._num_cpus = comm.size
-            self._comm = comm
-
-        except ImportError:
-
-            self.cpu_rank = 0
-            self._num_cpus = 1
+        if self._random_seed is not None:
+            np.random.seed(self._random_seed)

@@ -219,10 +219,12 @@ class MLMCSimulator:
                 cached_level == level
 
             if can_use_cache:
+                print 'Cached output for sample %s: %s' % (sample, self._cache[level, cached_index])
                 return self._cache[level, cached_index]
 
         # Compute output via the model.
         output = self._models[level].evaluate(sample)
+        print 'Output for sample %s: %s' % (sample, output)
 
         if level > 0:
             return output - self._models[level-1].evaluate(sample)
@@ -280,7 +282,7 @@ class MLMCSimulator:
 
         for level in range(self._num_levels):
 
-            input_samples = self._data.draw_samples(self._initial_sample_size)
+            input_samples = self._draw_samples(self._initial_sample_size)
             lower_level_outputs = np.zeros((self._cpu_initial_sample_size,
                                             self._output_size))
 
@@ -352,7 +354,7 @@ class MLMCSimulator:
         Runs model on a small test sample to determine shape of output.
         """
         self._data.reset_sampling()
-        test_sample = self._data.draw_samples(self._num_cpus)[0]
+        test_sample = self._draw_samples(self._num_cpus)[0]
         self._data.reset_sampling()
 
         test_output = self._models[0].evaluate(test_sample)
@@ -393,10 +395,6 @@ class MLMCSimulator:
         # Divide sampling evenly across cpus.
         split_samples = np.vectorize(self._determine_num_cpu_samples)
         self._cpu_sample_sizes = split_samples(self._sample_sizes)
-
-        print 'Sampling on %s:' % self._cpu_rank
-        print self._sample_sizes
-        print self._cpu_sample_sizes
 
         if self._verbose:
 
@@ -479,7 +477,7 @@ class MLMCSimulator:
 
         # Ensure all models have the same output dimensions.
         output_sizes = []
-        test_sample = data.draw_samples(self._num_cpus)[0]
+        test_sample = data.draw_samples(1)[0]
         data.reset_sampling()
 
         for model in models:
@@ -512,6 +510,37 @@ class MLMCSimulator:
 
             if target_cost <= 0:
                 raise ValueError("maximum cost must be greater than zero.")
+
+    def _draw_samples(self, num_samples):
+        """
+        Draw samples from data source.
+        :param num_samples: Total number of samples to draw over all CPUs.
+        :return: ndarray of samples sliced according to number of CPUs.
+        """
+        samples = self._data.draw_samples(num_samples)
+        if self._num_cpus == 1:
+            return samples
+
+        sample_size = samples.shape[0]
+
+        # Determine subsample sizes for all cpus.
+        subsample_size = sample_size // self._num_cpus
+        remainder = sample_size - subsample_size * self._num_cpus
+        subsample_sizes = np.ones(self._num_cpus + 1).astype(int)*subsample_size
+
+        # Adjust for sampling that does not divide evenly among CPUs.
+        subsample_sizes[:remainder + 1] += 1
+        subsample_sizes[0] = 0
+
+        # Determine starting index of subsample.
+        subsample_index = int(np.sum(subsample_sizes[:self._cpu_rank + 1]))
+
+        # Take subsample.
+        samples = samples[subsample_index:
+                          subsample_index + subsample_sizes[self._cpu_rank + 1],
+                          :]
+
+        return samples
 
     def __detect_parallelization(self):
         """

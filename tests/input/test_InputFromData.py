@@ -35,7 +35,7 @@ def sample_entire_data_set(file_path):
     filename = os.path.basename(file_path)
     file_length = data_file_lengths[filename]
 
-    data_sampler = InputFromData(file_path, mpi_slice=False)
+    data_sampler = InputFromData(file_path)
     full_data_set = data_sampler.draw_samples(file_length)
 
     return full_data_set
@@ -52,13 +52,6 @@ def spring_data_input():
 
     return InputFromData(os.path.join(data_path, "spring_mass_1D_inputs.txt"),
                          shuffle_data=False)
-
-
-@pytest.fixture
-def spring_data_input_no_mpi_slice():
-
-    return InputFromData(os.path.join(data_path, "spring_mass_1D_inputs.txt"),
-                         shuffle_data=False, mpi_slice=False)
 
 
 @pytest.fixture
@@ -102,7 +95,7 @@ def comm():
 def test_can_load_alternatively_delimited_files(delimiter, filename):
 
     file_path = os.path.join(data_path, filename)
-    sampler = InputFromData(file_path, delimiter=delimiter, mpi_slice=False)
+    sampler = InputFromData(file_path, delimiter=delimiter)
     sample = sampler.draw_samples(5)
 
     assert np.sum(sample) == 125.
@@ -111,7 +104,7 @@ def test_can_load_alternatively_delimited_files(delimiter, filename):
 @pytest.mark.parametrize("data_filename", data_file_paths, ids=data_file_names)
 def test_draw_samples_returns_expected_output(data_filename):
 
-    data_sampler = InputFromData(data_filename, mpi_slice=False)
+    data_sampler = InputFromData(data_filename)
 
     for num_samples in range(1, 4):
 
@@ -145,7 +138,7 @@ def test_sample_data_is_scrambled(data_filename):
     all_file_data = sample_entire_data_set(data_filename)
     file_length = all_file_data.shape[0]
 
-    data_sampler = InputFromData(data_filename, mpi_slice=False)
+    data_sampler = InputFromData(data_filename)
     sample_data = data_sampler.draw_samples(file_length)
 
     assert not np.array_equal(all_file_data, sample_data)
@@ -173,12 +166,11 @@ def test_fail_on_nan_data(bad_data_file):
 @pytest.mark.parametrize("rows_to_skip", [1, 2, 3])
 def test_skip_rows(data_filename_2d, rows_to_skip):
 
-    normal_input = InputFromData(data_filename_2d, mpi_slice=False)
+    normal_input = InputFromData(data_filename_2d)
     normal_row_count = normal_input._data.shape[0]
 
     skipped_row_input = InputFromData(data_filename_2d,
-                                      skip_header=rows_to_skip,
-                                      mpi_slice=False)
+                                      skip_header=rows_to_skip)
 
     skipped_row_count = skipped_row_input._data.shape[0]
 
@@ -191,49 +183,3 @@ def test_draw_sample_warning_issued_for_insufficient_data(data_filename_2d):
 
     with pytest.warns(UserWarning):
         small_input.draw_samples(1000)
-
-
-@pytest.mark.parametrize('num_samples', [1, 2, 3, 5, 11, 20, 23, 101])
-def test_multi_cpu_input_sample_slicing(num_samples, spring_data_input,
-                                        spring_data_input_no_mpi_slice, comm):
-
-    all_data_samples = spring_data_input_no_mpi_slice.draw_samples(num_samples)
-    all_data_size = all_data_samples.shape[0]
-
-    # Get expected slice size.
-    expected_slice_size = all_data_size // comm.size
-    num_residual_samples = all_data_size - expected_slice_size * comm.size
-
-    if comm.rank < num_residual_samples:
-        expected_slice_size += 1
-
-    # Ensure slice is expected size.
-    test_samples = spring_data_input.draw_samples(num_samples)
-    assert expected_slice_size == test_samples.shape[0]
-
-    all_slices_list = comm.allgather(test_samples)
-
-    all_slices = np.concatenate(all_slices_list, axis=0)
-
-    assert np.array_equal(all_slices, all_data_samples)
-
-    # Re-sample to ensure consistency.
-    all_data_samples = spring_data_input_no_mpi_slice.draw_samples(num_samples)
-    all_data_size = all_data_samples.shape[0]
-
-    # Get expected slice size.
-    expected_slice_size = all_data_size // comm.size
-    num_residual_samples = all_data_size - expected_slice_size * comm.size
-
-    if comm.rank < num_residual_samples:
-        expected_slice_size += 1
-
-    # Ensure slice is expected size.
-    test_samples = spring_data_input.draw_samples(num_samples)
-    assert expected_slice_size == test_samples.shape[0]
-
-    all_slices_list = comm.allgather(test_samples)
-
-    all_slices = np.concatenate(all_slices_list, axis=0)
-
-    assert np.array_equal(all_slices, all_data_samples)
