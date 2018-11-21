@@ -143,3 +143,42 @@ def test_multi_cpu_sampling_beta(beta_distribution_input, comm):
     baseline_samples = beta_distribution_input.draw_samples(10 * comm.size)
 
     assert np.array_equal(test_samples, baseline_samples)
+
+
+def test_back_to_back_parallel_sampling(beta_distribution_input, comm):
+    '''
+    Draw N0 samples, then N1 samples in parallel and verify that the means
+    match reference values from serial sampling
+    '''
+    np.random.seed(1)
+    mean_ref_0 = 2.6737292217016666
+    mean_ref_1 = 2.528881234826408
+
+    # Draw samples on each proc
+    num_samples_0 = 19
+    samples_0 = np.array(beta_distribution_input.draw_samples(num_samples_0))
+
+    num_samples_1 = 17
+    samples_1 = np.array(beta_distribution_input.draw_samples(num_samples_1))
+
+    # Collect samples on the root process.
+    samples_recv_0 = None
+    samples_recv_1 = None
+
+    send_counts = np.array(comm.gather(len(samples_0), 0))
+    if comm.rank == 0:
+        samples_recv_0 = np.empty(sum(send_counts), dtype=float)
+    comm.Gatherv(sendbuf=samples_0, recvbuf=(samples_recv_0, send_counts),
+                 root=0)
+
+    send_counts = np.array(comm.gather(len(samples_1), 0))
+    if comm.rank == 0:
+        samples_recv_1 = np.empty(sum(send_counts), dtype=float)
+    comm.Gatherv(sendbuf=samples_1, recvbuf=(samples_recv_1, send_counts),
+                 root=0)
+
+    # Check means vs reference:
+    if comm.rank == 0:
+        assert np.mean(samples_recv_0) == mean_ref_0
+
+        assert np.mean(samples_recv_1) == mean_ref_1

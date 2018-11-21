@@ -193,10 +193,12 @@ def test_draw_sample_warning_issued_for_insufficient_data(data_filename_2d):
         small_input.draw_samples(1000)
 
 
-def test_multi_cpu_input_sample_slicing(spring_data_input,
+@pytest.mark.parametrize('num_samples', [1, 2, 3, 5, 11, 20, 23, 101])
+def test_multi_cpu_input_sample_slicing(num_samples, spring_data_input,
                                         spring_data_input_no_mpi_slice, comm):
 
-    all_data_size = spring_data_input_no_mpi_slice._data.shape[0]
+    all_data_samples = spring_data_input_no_mpi_slice.draw_samples(num_samples)
+    all_data_size = all_data_samples.shape[0]
 
     # Get expected slice size.
     expected_slice_size = all_data_size // comm.size
@@ -206,9 +208,32 @@ def test_multi_cpu_input_sample_slicing(spring_data_input,
         expected_slice_size += 1
 
     # Ensure slice is expected size.
-    assert expected_slice_size == spring_data_input._data.shape[0]
+    test_samples = spring_data_input.draw_samples(num_samples)
+    assert expected_slice_size == test_samples.shape[0]
 
-    all_slices_list = comm.allgather(spring_data_input._data)
+    all_slices_list = comm.allgather(test_samples)
+
     all_slices = np.concatenate(all_slices_list, axis=0)
 
-    assert np.sum(all_slices) == np.sum(spring_data_input_no_mpi_slice._data)
+    assert np.array_equal(all_slices, all_data_samples)
+
+    # Re-sample to ensure consistency.
+    all_data_samples = spring_data_input_no_mpi_slice.draw_samples(num_samples)
+    all_data_size = all_data_samples.shape[0]
+
+    # Get expected slice size.
+    expected_slice_size = all_data_size // comm.size
+    num_residual_samples = all_data_size - expected_slice_size * comm.size
+
+    if comm.rank < num_residual_samples:
+        expected_slice_size += 1
+
+    # Ensure slice is expected size.
+    test_samples = spring_data_input.draw_samples(num_samples)
+    assert expected_slice_size == test_samples.shape[0]
+
+    all_slices_list = comm.allgather(test_samples)
+
+    all_slices = np.concatenate(all_slices_list, axis=0)
+
+    assert np.array_equal(all_slices, all_data_samples)

@@ -22,6 +22,9 @@ class MLMCSimulator:
         :param models: Each model Produces outputs from sample data input.
         :type models: list(Model)
         """
+        # Detect whether we have access to multiple cpus.
+        self.__detect_parallelization()
+
         self.__check_init_parameters(data, models)
 
         self._data = data
@@ -48,9 +51,6 @@ class MLMCSimulator:
 
         # Enabled diagnostic text output.
         self._verbose = False
-
-        # Detect whether we have access to multiple cpus.
-        self.__detect_parallelization()
 
     def simulate(self, epsilon, initial_sample_size=1000, target_cost=None,
                  verbose=False):
@@ -96,13 +96,7 @@ class MLMCSimulator:
         :param initial_sample_size: Sample size used when computing sample sizes
             for each level in simulation.
         """
-        self._initial_sample_size = \
-            self._determine_num_cpu_samples(initial_sample_size)
-
-        if self._verbose and self._num_cpus > 1:
-
-            print "Running %s initial samples per core." % \
-                  self._initial_sample_size
+        self._initial_sample_size = initial_sample_size
 
         # Epsilon should be array that matches output width.
         self._epsilons = self._process_epsilon(epsilon)
@@ -135,7 +129,9 @@ class MLMCSimulator:
         if self._verbose:
             self._show_summary_data(estimates, variances, end_time - start_time)
 
-        return estimates, self._all_sample_sizes, variances
+        self._sample_sizes = self._sum_over_all_cpus(self._cpu_sample_sizes)
+
+        return estimates, self._sample_sizes, variances
 
     def _run_simulation_loop(self):
         """
@@ -161,18 +157,16 @@ class MLMCSimulator:
                 continue
 
             samples = self._data.draw_samples(self._sample_sizes[level])
+            num_samples = samples.shape[0]
 
             # If we've run short on samples, update sample sizes accordingly.
-            sample_shortage = self._sample_sizes[level] - samples.shape[0]
-            self._sample_sizes[level] -= sample_shortage
-            self._all_sample_sizes[level] -= sample_shortage
+            self._cpu_sample_sizes[level] = num_samples
 
-            # Input is out of samples; conclude loop.
-            if self._sample_sizes[level] == 0:
-                break
+            # Input is out of samples or this cpu was not allocated any.
+            if num_samples == 0:
+                continue
 
-            output_differences = np.zeros((self._sample_sizes[level],
-                                           self._output_size))
+            output_differences = np.zeros((num_samples, self._output_size))
 
             for i, sample in enumerate(samples):
                 output_differences[i] = self._evaluate_sample(i, sample, level)
@@ -180,11 +174,9 @@ class MLMCSimulator:
             all_output_differences = \
                 self._gather_arrays_over_all_cpus(output_differences, axis=0)
 
-            estimates += np.sum(all_output_differences, axis=0) \
-                / self._all_sample_sizes[level]
+            estimates += np.sum(all_output_differences, axis=0) / num_samples
 
-            variances += np.var(all_output_differences, axis=0) \
-                / self._all_sample_sizes[level]
+            variances += np.var(all_output_differences, axis=0) / num_samples
 
         return estimates, variances
 
@@ -199,7 +191,7 @@ class MLMCSimulator:
         :param level: model level
         :return: result of evaluation
         """
-        if self._verbose:
+        if self._verbose and self._cpu_rank == 0:
             progress = str((float(i) / self._sample_sizes[level]) * 100)[:5]
             sys.stdout.write("\r                                              ")
             sys.stdout.write("\rLevel %s progress: %s%%" % (level, progress))
@@ -210,18 +202,20 @@ class MLMCSimulator:
         if self._initial_sample_size > 0:  # Avoid warnings in unit tests.
 
             # Absolute index of current sample.
-            sample_index = np.sum(self._sample_sizes[:level]) + i
+            sample_index = np.sum(self._cpu_sample_sizes[:level]) + i
 
             # Level in cache that a sample with above index would be at.
             # This must match the current level.
-            cached_level = sample_index // self._initial_sample_size
+            cpu_initial_sample_size = \
+                self._determine_num_cpu_samples(self._initial_sample_size)
+            cached_level = sample_index // cpu_initial_sample_size
 
             # Index within cached level for sample output.
-            cached_index = sample_index - level * self._initial_sample_size
+            cached_index = sample_index - level * cpu_initial_sample_size
 
             # Level and index within cache must be correct for the
             # appropriate cached value to be found.
-            can_use_cache = cached_index < self._initial_sample_size and \
+            can_use_cache = cached_index < cpu_initial_sample_size and \
                 cached_level == level
 
             if can_use_cache:
@@ -231,11 +225,9 @@ class MLMCSimulator:
         output = self._models[level].evaluate(sample)
 
         if level > 0:
-            lower_level_output = self._models[level-1].evaluate(sample)
+            return output - self._models[level-1].evaluate(sample)
         else:
-            lower_level_output = np.zeros_like(output)
-
-        return output - lower_level_output
+            return output
 
     def _show_summary_data(self, estimates, variances, run_time):
         """
@@ -271,10 +263,14 @@ class MLMCSimulator:
         if self._verbose:
             sys.stdout.write("Determining costs: ")
 
+        # Determine number of samples to be taken on this processor.
+        self._cpu_initial_sample_size = \
+            self._determine_num_cpu_samples(self._initial_sample_size)
+
         # Cache model outputs computed here so that they can be reused
         # in the simulation.
         self._cache = np.zeros((self._num_levels,
-                                self._initial_sample_size,
+                                self._cpu_initial_sample_size,
                                 self._output_size))
 
         # Process samples in model. Gather compute times for each level.
@@ -285,7 +281,7 @@ class MLMCSimulator:
         for level in range(self._num_levels):
 
             input_samples = self._data.draw_samples(self._initial_sample_size)
-            lower_level_outputs = np.zeros((self._initial_sample_size,
+            lower_level_outputs = np.zeros((self._cpu_initial_sample_size,
                                             self._output_size))
 
             start_time = timeit.default_timer()
@@ -335,7 +331,7 @@ class MLMCSimulator:
 
         else:
             # Compute costs based on compute time differences between levels.
-            costs = compute_times / self._initial_sample_size
+            costs = compute_times / self._cpu_initial_sample_size
 
             # If costs are determined by time, we also need to multiply them
             # by the number of cpus so that they are based on total cost.
@@ -356,7 +352,7 @@ class MLMCSimulator:
         Runs model on a small test sample to determine shape of output.
         """
         self._data.reset_sampling()
-        test_sample = self._data.draw_samples(1)[0]
+        test_sample = self._data.draw_samples(self._num_cpus)[0]
         self._data.reset_sampling()
 
         test_output = self._models[0].evaluate(test_sample)
@@ -394,18 +390,19 @@ class MLMCSimulator:
         # Set sample sizes to ints.
         self._sample_sizes = self._sample_sizes.astype(int)
 
-        # Keep a copy of sample sizes across all CPUs for use in simulation.
-        self._all_sample_sizes = np.copy(self._sample_sizes)
-
         # Divide sampling evenly across cpus.
         split_samples = np.vectorize(self._determine_num_cpu_samples)
-        self._sample_sizes = split_samples(self._sample_sizes)
+        self._cpu_sample_sizes = split_samples(self._sample_sizes)
+
+        print 'Sampling on %s:' % self._cpu_rank
+        print self._sample_sizes
+        print self._cpu_sample_sizes
 
         if self._verbose:
 
             print np.array2string(self._sample_sizes)
 
-            estimated_runtime = np.sum(self._sample_sizes * np.squeeze(costs))
+            estimated_runtime = np.dot(self._sample_sizes, np.squeeze(costs))
 
             self._show_time_estimate(estimated_runtime)
 
@@ -414,7 +411,7 @@ class MLMCSimulator:
         Adjust sample sizes to be as close to the target cost as possible.
         """
         # Find difference between projected total cost and target.
-        total_cost = np.sum(costs * self._sample_sizes)
+        total_cost = np.dot(costs, self._sample_sizes)
         difference = self._target_cost - total_cost
 
         # If the difference is greater than the lowest cost model, adjust
@@ -469,8 +466,7 @@ class MLMCSimulator:
 
         return epsilon
 
-    @staticmethod
-    def __check_init_parameters(data, models):
+    def __check_init_parameters(self, data, models):
 
         if not isinstance(data, Input):
             TypeError("data must inherit from Input class.")
@@ -483,7 +479,7 @@ class MLMCSimulator:
 
         # Ensure all models have the same output dimensions.
         output_sizes = []
-        test_sample = data.draw_samples(1)[0]
+        test_sample = data.draw_samples(self._num_cpus)[0]
         data.reset_sampling()
 
         for model in models:
@@ -537,7 +533,7 @@ class MLMCSimulator:
             self._num_cpus = 1
             self._cpu_rank = 0
 
-    def _mean_over_all_cpus(self, this_cpu_values):
+    def _mean_over_all_cpus(self, this_cpu_values, axis=0):
         """
         Finds the mean of ndarray of values across cpus and returns result.
         :param this_cpu_values: ndarray of any shape.
@@ -548,7 +544,16 @@ class MLMCSimulator:
 
         all_values = self._comm.allgather(this_cpu_values)
 
-        return np.mean(all_values, 0)
+        return np.mean(all_values, axis)
+
+    def _sum_over_all_cpus(self, this_cpu_values, axis=0):
+
+        if self._num_cpus == 1:
+            return this_cpu_values
+
+        all_values = self._comm.allgather(this_cpu_values)
+
+        return np.sum(all_values, axis)
 
     def _gather_arrays_over_all_cpus(self, this_cpu_array, axis=0):
         """
@@ -572,30 +577,7 @@ class MLMCSimulator:
         if len(all_arrays) == 0:
             return this_cpu_array
 
-        block_ordered_array = np.concatenate(all_arrays, axis=axis)
-
-        # Swap concatenated axis with 0 for reordering.
-        block_ordered_array = np.swapaxes(block_ordered_array, axis, 0)
-        result = np.zeros_like(block_ordered_array)
-
-        # Find indices of boundaries of each array in block_ordered_array.
-        pos = 0
-        block_edges = [0]
-        for array in all_arrays:
-
-            pos += array.shape[axis]
-            block_edges.append(pos)
-
-        # Fill result with reordered data to match single cpu ordering.
-        for i in range(len(all_arrays)):
-
-            result[i:: self._num_cpus, ...] = \
-                block_ordered_array[block_edges[i]: block_edges[i+1], ...]
-
-        # Swap axis 0 back to original place.
-        result = np.swapaxes(result, 0, axis)
-
-        return result
+        return np.concatenate(all_arrays, axis=axis)
 
     def _determine_num_cpu_samples(self, total_num_samples):
         """Determines number of samples to be run on current cpu based on
@@ -604,6 +586,7 @@ class MLMCSimulator:
             :return: Samples to be taken by this cpu.
         """
         num_cpu_samples = total_num_samples // self._num_cpus
+
         num_residual_samples = total_num_samples - \
             num_cpu_samples * self._num_cpus
 

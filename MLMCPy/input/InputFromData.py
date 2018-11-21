@@ -45,9 +45,8 @@ class InputFromData(Input):
         if len(self._data .shape) == 1:
             self._data = self._data.reshape(self._data.shape[0], -1)
 
-        # Slice data if we are in multiprocessor environment.
-        if mpi_slice:
-            self._detect_parallelization()
+        self._detect_parallelization()
+        self._mpi_slice = mpi_slice
 
         if shuffle_data:
             np.random.shuffle(self._data)
@@ -85,6 +84,26 @@ class InputFromData(Input):
             warning = UserWarning(error_message)
             warnings.warn(warning)
 
+        # Take subsample of data in MPI environments.
+        if self._num_cpus > 1 and self._mpi_slice:
+
+            # Determine subsample sizes for all cpus.
+            subsample_size = sample_size // self._num_cpus
+            remainder = sample_size - subsample_size * self._num_cpus
+            subsample_sizes = np.ones(self._num_cpus+1).astype(int) * \
+                subsample_size
+
+            subsample_sizes[:remainder+1] += 1
+            subsample_sizes[0] = 0
+
+            # Determine starting index of subsample.
+            subsample_index = int(np.sum(subsample_sizes[:self._cpu_rank+1]))
+
+            # Take subsample.
+            sample = sample[subsample_index:
+                            subsample_index + subsample_sizes[self._cpu_rank+1],
+                            :]
+
         return np.copy(sample)
 
     def reset_sampling(self):
@@ -98,8 +117,8 @@ class InputFromData(Input):
         If multiple cpus detected, split the data across cpus so that
         each will have a unique subset of sample data.
         """
-        num_cpus = 1
-        cpu_rank = 0
+        self._num_cpus = 1
+        self._cpu_rank = 0
 
         try:
             imp.find_module('mpi4py')
@@ -107,14 +126,11 @@ class InputFromData(Input):
             from mpi4py import MPI
             comm = MPI.COMM_WORLD
 
-            cpu_rank = comm.rank
-            num_cpus = comm.size
+            self._cpu_rank = comm.rank
+            self._num_cpus = comm.size
 
         except ImportError:
 
-            num_cpus = 1
-            cpu_rank = 0
+            self._num_cpus = 1
+            self._cpu_rank = 0
 
-        finally:
-
-            self._data = self._data[cpu_rank::num_cpus]
