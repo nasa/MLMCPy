@@ -67,6 +67,14 @@ def bad_data_file():
     return data_file_with_bad_data
 
 
+@pytest.fixture
+def comm():
+    imp.find_module('mpi4py')
+
+    from mpi4py import MPI
+    return MPI.COMM_WORLD
+
+
 def test_init_fails_on_invalid_input_file():
 
     with pytest.raises(IOError):
@@ -77,14 +85,6 @@ def test_init_fails_on_invalid_input_file():
 def test_init_does_not_fail_on_valid_input_file(data_filename):
 
     InputFromData(data_filename)
-
-
-@pytest.fixture
-def comm():
-    imp.find_module('mpi4py')
-
-    from mpi4py import MPI
-    return MPI.COMM_WORLD
 
 
 @pytest.mark.parametrize("delimiter, filename",

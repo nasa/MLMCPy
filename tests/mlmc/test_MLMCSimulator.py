@@ -125,7 +125,7 @@ def test_model_from_data(data_input, models_from_data):
     sim.simulate(1., initial_sample_size=20)
 
 
-def test_spring_model(beta_distribution_input, spring_models):
+def test_model_with_random_input(beta_distribution_input, spring_models):
 
     sim = MLMCSimulator(models=spring_models, data=beta_distribution_input)
     sim.simulate(1., initial_sample_size=20)
@@ -214,7 +214,7 @@ def test_costs_and_initial_variances_spring_models(beta_distribution_input,
     sim = MLMCSimulator(models=spring_models, data=beta_distribution_input)
 
     np.random.seed(1)
-    sim._initial_sample_size = sim._determine_num_cpu_samples(100)
+    sim._initial_sample_size = 100
 
     costs, variances = sim._compute_costs_and_variances()
 
@@ -234,7 +234,7 @@ def test_costs_and_initial_variances_models_from_data(data_input,
     np.random.seed(1)
     sim = MLMCSimulator(models=models_from_data, data=data_input)
     
-    sim._initial_sample_size = sim._determine_num_cpu_samples(100)
+    sim._initial_sample_size = 100
     costs, variances = sim._compute_costs_and_variances()
 
     true_variances = np.array([[9.262628271266264],
@@ -281,7 +281,7 @@ def test_hard_coded_springmass_random_input(beta_distribution_input,
         cpu_sample_sizes.append(sim._determine_num_cpu_samples(sample_size))
     sim._cpu_sample_sizes = np.array(cpu_sample_sizes)
 
-    sim._initial_sample_size = 0
+    sim._caching_enabled = False
     sim._sample_sizes = all_sample_sizes
 
     np.random.seed(1)
@@ -357,10 +357,10 @@ def test_final_variances_less_than_epsilon_goal(data_input,
     assert not np.isclose(variances[0], 0.)
 
 
-@pytest.mark.parametrize('sample_sizes', [[1, 0, 0], [1, 0, 1], [1, 1, 0],
+@pytest.mark.parametrize('cpu_sample_sizes', [[1, 0, 0], [1, 0, 1], [1, 1, 0],
                          [1, 1, 1], [1, 2, 1], [10, 5, 2]])
 def test_outputs_for_small_sample_sizes(data_input, models_from_data,
-                                        sample_sizes, comm):
+                                        cpu_sample_sizes, comm):
 
     output1_filepath = os.path.join(data_path, "spring_mass_1D_outputs_1.0.txt")
     output2_filepath = os.path.join(data_path, "spring_mass_1D_outputs_0.1.txt")
@@ -372,16 +372,19 @@ def test_outputs_for_small_sample_sizes(data_input, models_from_data,
     outputs.append(np.genfromtxt(output2_filepath)[comm.rank::comm.size])
     outputs.append(np.genfromtxt(output3_filepath)[comm.rank::comm.size])
 
+    all_sample_sizes = np.array(cpu_sample_sizes) * comm.size
+
     sim = MLMCSimulator(models=models_from_data, data=data_input)
 
-    sim._cpu_sample_sizes = sample_sizes
-    sim._sample_sizes = sample_sizes * comm.size
-    est, ss, sim_variance = sim._run_simulation()
+    sim._caching_enabled = False
+    sim._cpu_sample_sizes = np.array(cpu_sample_sizes)
+    sim._sample_sizes = np.copy(all_sample_sizes)
+    sim_estimate, ss, sim_variance = sim._run_simulation()
 
     # Acquire samples in same sequence simulator would.
     samples = []
     sample_index = 0
-    for i, s in enumerate(sample_sizes):
+    for i, s in enumerate(cpu_sample_sizes):
 
         output = outputs[i][sample_index:sample_index + s]
 
@@ -401,16 +404,16 @@ def test_outputs_for_small_sample_sizes(data_input, models_from_data,
     sample_variance = 0.
     for i, sample in enumerate(samples):
 
-        if sample_sizes[i] > 0:
-            sample_mean += np.sum(sample) / sample_sizes[i]
-            sample_variance += np.var(sample) / sample_sizes[i]
+        if all_sample_sizes[i] > 0:
+            sample_mean += np.sum(sample, axis=0) / all_sample_sizes[i]
+            sample_variance += np.var(sample, axis=0) / all_sample_sizes[i]
 
     # Test sample computations vs simulator.
-    assert np.isclose(est, sample_mean, atol=10e-15)
+    assert np.isclose(sim_estimate, sample_mean, atol=10e-15)
     assert np.isclose(sim_variance, sample_variance, atol=10e-15)
 
 
-@pytest.mark.parametrize("cache_size", [20])#, 7, 200])
+@pytest.mark.parametrize("cache_size", [10, 7, 200])
 def test_output_caching(data_input, models_from_data, cache_size):
 
     sim = MLMCSimulator(models=models_from_data, data=data_input)
@@ -434,18 +437,14 @@ def test_output_caching(data_input, models_from_data, cache_size):
             continue
 
         samples = sim._draw_samples(num_samples)
-        print 'CPU: %s' % sim._cpu_rank
-        print samples
+
         for i, sample in enumerate(samples):
 
             outputs_with_caching[level, i] = \
-                sim._evaluate_sample(i, sample, level)
+                sim._evaluate_sample(sample, level)
 
-    if sim._cpu_rank == 0:
-        assert False
-
-    # Set initial_sample_size to 0 so that it will not use cached values.
-    sim._initial_sample_size = 0
+    # Collect same data with caching disabled.
+    sim._caching_enabled = False
     sim._data.reset_sampling()
 
     for level in range(num_levels):
@@ -458,9 +457,7 @@ def test_output_caching(data_input, models_from_data, cache_size):
         for i, sample in enumerate(samples):
 
             outputs_without_caching[level, i] = \
-                sim._evaluate_sample(i, sample, level)
-
-    # print outputs_without_caching[0]
+                sim._evaluate_sample(sample, level)
 
     assert np.all(np.isclose(outputs_without_caching, outputs_with_caching))
 
@@ -613,7 +610,7 @@ def test_can_run_simulation_multiple_times_without_exception(data_input,
     sim.simulate(epsilon=2., initial_sample_size=20)
 
 
-@pytest.mark.parametrize('target_cost', [3, 1, .1, .001])
+@pytest.mark.parametrize('target_cost', [3, 1, .1, .01])
 def test_fixed_cost(beta_distribution_input, spring_models, target_cost):
 
     np.random.seed(1)
@@ -627,19 +624,18 @@ def test_fixed_cost(beta_distribution_input, spring_models, target_cost):
 
     # Multiply sample sizes times costs and take the sum; verify that this is
     # close to the target cost.
-    sim._initial_sample_size = sim._determine_num_cpu_samples(100)
+    sim._initial_sample_size = 100
     sim._target_cost = float(target_cost)
 
     costs, variances = sim._compute_costs_and_variances()
     sim._compute_optimal_sample_sizes(costs, variances)
-    sample_sizes = sim._sample_sizes
 
-    expected_cost = np.sum(costs * sample_sizes)
+    expected_cost = np.dot(costs, sim._cpu_sample_sizes)
 
-    assert expected_cost <= target_cost
+    assert expected_cost <= target_cost and expected_cost * .9 < target_cost
 
     # Disable caching to ensure accuracy of compute time measurement.
-    sim._initial_sample_size = 0
+    sim._caching_enabled = False
 
     # Ignore divide by zero warning caused by 0 initial_sample_size.
     with warnings.catch_warnings():
@@ -650,7 +646,6 @@ def test_fixed_cost(beta_distribution_input, spring_models, target_cost):
         compute_time = timeit.default_timer() - start_time
 
     # We should be less than or at least very close to the target.
-    # TODO: Try to reduce this overrun with profiling/refactoring.
     assert compute_time < target_cost * 1.2
 
 
@@ -678,7 +673,7 @@ def test_multi_cpu_sample_splitting(data_input, models_from_data, num_cpus):
     assert np.max(sample_sizes) - np.min(sample_sizes) <= 1
 
 
-def test_gather_arrays_over_all_cpus(data_input, models_from_data, comm):
+def test_gather_arrays(data_input, models_from_data, comm):
 
     sim = MLMCSimulator(data=data_input, models=models_from_data)
 
@@ -692,7 +687,7 @@ def test_gather_arrays_over_all_cpus(data_input, models_from_data, comm):
         expected_result = np.concatenate((expected_result, new_block), axis=0)
 
     print expected_result
-    test_result = sim._gather_arrays_over_all_cpus(test, axis=0)
+    test_result = sim._gather_arrays(test, axis=0)
     print test_result
 
     assert np.array_equal(expected_result, test_result)
@@ -706,7 +701,7 @@ def test_gather_arrays_over_all_cpus(data_input, models_from_data, comm):
         new_block = np.ones((2, 2)) * i
         expected_result2 = np.concatenate((expected_result2, new_block), axis=1)
 
-    test2_result = sim._gather_arrays_over_all_cpus(test2, axis=1)
+    test2_result = sim._gather_arrays(test2, axis=1)
 
     assert np.array_equal(expected_result2, test2_result)
 
@@ -750,10 +745,10 @@ def test_multiple_cpu_compute_costs_and_variances(data_input, num_samples,
         cache[level] -= lower_level_outputs
 
     gathered_test_input_samples = \
-        sim._gather_arrays_over_all_cpus(test_input_samples, axis=1)
+        sim._gather_arrays(test_input_samples, axis=1)
 
     # Get outputs across all CPUs before computing variances.
-    gathered_test_outputs = sim._gather_arrays_over_all_cpus(cache, axis=1)
+    gathered_test_outputs = sim._gather_arrays(cache, axis=1)
 
     expected_outputs = np.zeros((3, num_samples, 1))
     expected_input_samples = np.zeros((3, num_samples, 1))
