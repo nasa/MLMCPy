@@ -18,7 +18,7 @@ from MLMCPy.model import ModelFromData
 from MLMCPy.input import RandomInput
 from MLMCPy.input import InputFromData
 
-from tests.testing_tools.spring_mass import SpringMassModel
+from tests.testing_scripts.spring_mass import SpringMassModel
 
 # Create list of paths for each data file.
 # Used to parametrize tests.

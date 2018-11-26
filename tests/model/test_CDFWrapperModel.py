@@ -5,9 +5,9 @@ import os
 from MLMCPy.model import CDFWrapperModel
 from MLMCPy.input import RandomInput
 from MLMCPy.mlmc import MLMCSimulator
-from tests.testing_tools import SpringMassModel
-from tests.testing_tools import TestingModel
-from tests.testing_tools import TestingInput
+from tests.testing_scripts import SpringMassModel
+from tests.testing_scripts import TestingModel
+from tests.testing_scripts import TestingInput
 
 # Access spring mass data:
 my_path = os.path.dirname(os.path.abspath(__file__))
