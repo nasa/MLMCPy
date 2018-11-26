@@ -11,7 +11,7 @@ class ModelFromData(Model):
     Used to produce outputs from inputs based on data provided in text files.
     """
     def __init__(self, input_filename, output_filename, cost, delimiter=None,
-                 skip_header=0):
+                 skip_header=0, wait_cost_duration=False):
         """
         :param input_filename: Path to file containing input data.
         :type input_filename: string
@@ -24,6 +24,9 @@ class ModelFromData(Model):
         :param delimiter: Delimiter used to separate data in data files, or
             size of each entry in the case of fixed width data.
         :type delimiter: string, int, list(int)
+        :param wait_cost_duration: Whether to sleep for the duration of the
+            cost in order to simulate real time model evaluation.
+        :type wait_cost_duration: bool
         """
         self.__check_parameters(output_filename, input_filename, cost)
 
@@ -34,6 +37,8 @@ class ModelFromData(Model):
         self._outputs = np.genfromtxt(output_filename,
                                       delimiter=delimiter,
                                       skip_header=skip_header)
+
+        self._wait_full_cost_duration_on_evaluate = wait_cost_duration
 
         # Data should not contain NaN.
         if np.isnan(self._inputs).any():
@@ -55,7 +60,7 @@ class ModelFromData(Model):
                 raise ValueError("Size of array of costs must match number of" +
                                  " quantities of interest in sample data.")
 
-    def evaluate(self, input_data, wait_cost_duration=False):
+    def evaluate(self, input_data):
         """
         Returns outputs corresponding to provided input_data. input_data will
         be searched for within the stored input data and the index of the match
@@ -63,9 +68,6 @@ class ModelFromData(Model):
 
         :param input_data: Scalar or vector to be searched for in input data.
         :type input_data: ndarray
-        :param wait_cost_duration: Whether to sleep for the duration of the
-            cost in order to simulate real time model evaluation.
-        :type wait_cost_duration: bool
         :return: A ndarray of matched output_data.
         """
         # input_data should be an ndarray.
@@ -80,7 +82,13 @@ class ModelFromData(Model):
 
         # input_data should not have more than one dimension.
         if len(input_data.shape) > 1:
-            raise ValueError("input_data should be zero or one dimensional.")
+
+            # If we received one row of data in two dimensions (1xN), adjust the
+            # data to be one dimensional.
+            if input_data.shape[0] == 1 and len(input_data.shape) == 2:
+                input_data = np.squeeze(input_data)
+            else:
+                raise ValueError("input_data must be zero or one dimensional.")
 
         # Get outputs that matched the input data.
         matches = np.equal(input_data, self._inputs)
@@ -99,7 +107,8 @@ class ModelFromData(Model):
         if np.sum(matches.astype(int)) > 1:
             raise ValueError("Input data contains duplicate information.")
 
-        if wait_cost_duration:
+        # Simulate cost if specified.
+        if self._wait_full_cost_duration_on_evaluate:
             time.sleep(self.cost)
 
         return np.squeeze(output_data)
