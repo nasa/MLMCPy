@@ -408,15 +408,19 @@ def test_estimate_and_variance_improved_by_higher_target_cost(data_input,
 
     estimates = np.zeros(3)
     variances = np.zeros_like(estimates)
+    sample_sizes = np.zeros((3, 3))
     for i, target_cost in enumerate([5, 25, 500]):
 
-        estimates[i], sample_sizes, variances[i] = \
+        estimates[i], sample_sizes[i], variances[i] = \
             sim.simulate(epsilon=.5,
                          initial_sample_size=100,
                          target_cost=target_cost)
 
     error = np.abs(estimates - mc_20000_output_sample_mean)
     assert error[0] > error[1] > error[2]
+
+    assert np.sum(sample_sizes[0]) < np.sum(sample_sizes[1]) < \
+           np.sum(sample_sizes[2])
 
     assert variances[0] > variances[1] > variances[2]
 
@@ -650,7 +654,7 @@ def test_hard_coded_test_3_level(data_input, models_from_data):
     assert np.all(np.isclose(sim._sample_sizes, hard_coded_sample_sizes))
 
 
-def test_graceful_handling_of_insufficient_samples(data_input_2d,
+def test_graceful_handling_of_insufficient_samples(data_input_2d, comm,
                                                    models_from_2d_data):
     """
     Ensure that the simulator does not throw an exception when insufficient
@@ -659,6 +663,11 @@ def test_graceful_handling_of_insufficient_samples(data_input_2d,
     # Warnings will be triggered; avoid displaying them during testing.
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
+
+        # We only have five rows of data, so ignore cpus of rank > 4.
+        # An intentional exception would be thrown by the simulator.
+        if comm.rank > 4:
+            return
 
         # Test when sampling with too large initial sample size.
         sim = MLMCSimulator(models=models_from_2d_data, data=data_input_2d)

@@ -184,6 +184,12 @@ class MLMCSimulator:
             variances += np.var(all_output_differences, axis=0) / \
                 self._sample_sizes[level]
 
+            print 'Target: %s' % self._target_cost
+            print 'CPU: %s, Level %s: samples: %s, var: %s' % \
+                  (self._num_cpus, level,
+                   all_output_differences.shape[0],
+                   np.var(all_output_differences, axis=0))
+
         return estimates, variances
 
     def _evaluate_sample(self, sample, level):
@@ -349,7 +355,15 @@ class MLMCSimulator:
         Runs model on a small test sample to determine shape of output.
         """
         self._data.reset_sampling()
-        test_sample = self._draw_samples(self._num_cpus)[0]
+        test_sample = self._draw_samples(self._num_cpus)
+
+        if test_sample.shape[0] == 0:
+            message = "The environment has more cpus than data samples! " + \
+                "Please provide more data or specify fewer cpus."
+
+            raise ValueError(message)
+
+        test_sample = test_sample[0]
         self._data.reset_sampling()
 
         test_output = self._models[0].evaluate(test_sample)
