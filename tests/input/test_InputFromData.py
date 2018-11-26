@@ -35,7 +35,7 @@ def sample_entire_data_set(file_path):
     filename = os.path.basename(file_path)
     file_length = data_file_lengths[filename]
 
-    data_sampler = InputFromData(file_path, mpi_slice=False)
+    data_sampler = InputFromData(file_path)
     full_data_set = data_sampler.draw_samples(file_length)
 
     return full_data_set
@@ -48,27 +48,59 @@ def get_data_file_size(file_path):
 
 
 @pytest.fixture
-def data_filename_2d():
+def spring_data_input():
+    """
+    Creates an InputFromData object that produces samples from a file
+    containing spring mass input data.
+    """
+    return InputFromData(os.path.join(data_path, "spring_mass_1D_inputs.txt"),
+                         shuffle_data=False)
 
+
+@pytest.fixture
+def data_filename_2d():
+    """
+    Creates an InputFromData object that produces samples from a file
+    containing two dimensional data.
+    """
     return os.path.join(data_path, "2D_test_data.csv")
 
 
 @pytest.fixture
 def bad_data_file():
-
+    """
+    Creates an InputFromData object that produces samples from a file
+    containing bad (non-numeric) data.
+    """
     data_file_with_bad_data = os.path.join(data_path, "bad_data.txt")
     return data_file_with_bad_data
 
 
-def test_init_fails_on_invalid_input_file():
+@pytest.fixture
+def comm():
+    """
+    Creates a MPI.COMM_WORLD object for working with multi-process information.
+    """
+    imp.find_module('mpi4py')
 
+    from mpi4py import MPI
+    return MPI.COMM_WORLD
+
+
+def test_init_fails_on_invalid_input_file():
+    """
+    Ensure an exception occurs if a non-extant file is specified.
+    """
     with pytest.raises(IOError):
         InputFromData("not_a_real_file.txt")
 
 
 @pytest.mark.parametrize("data_filename", data_file_paths, ids=data_file_names)
 def test_init_does_not_fail_on_valid_input_file(data_filename):
-
+    """
+    Ensure no exceptions occur when instantiating InputFromData with valid
+    files.
+    """
     InputFromData(data_filename)
 
 
@@ -78,9 +110,11 @@ def test_init_does_not_fail_on_valid_input_file(data_filename):
                           (1, "2D_test_data_length_delimited.csv")],
                          ids=["comma", "semicolon", "length"])
 def test_can_load_alternatively_delimited_files(delimiter, filename):
-
+    """
+    Test ability of InputFromData to load files with different data
+    """
     file_path = os.path.join(data_path, filename)
-    sampler = InputFromData(file_path, delimiter=delimiter, mpi_slice=False)
+    sampler = InputFromData(file_path, delimiter=delimiter)
     sample = sampler.draw_samples(5)
 
     assert np.sum(sample) == 125.
@@ -88,8 +122,11 @@ def test_can_load_alternatively_delimited_files(delimiter, filename):
 
 @pytest.mark.parametrize("data_filename", data_file_paths, ids=data_file_names)
 def test_draw_samples_returns_expected_output(data_filename):
-
-    data_sampler = InputFromData(data_filename, mpi_slice=False)
+    """
+    Ensure draw_samples() returns expected output type, shape, and number of
+    samples.
+    """
+    data_sampler = InputFromData(data_filename)
 
     for num_samples in range(1, 4):
 
@@ -108,7 +145,9 @@ def test_draw_samples_returns_expected_output(data_filename):
 
 @pytest.mark.parametrize("data_filename", data_file_paths, ids=data_file_names)
 def test_draw_samples_pulls_all_input_data(data_filename):
-
+    """
+    Ensure that all sample data can be sampled.
+    """
     all_sampled_data = sample_entire_data_set(data_filename)
 
     file_data = np.genfromtxt(data_filename)
@@ -119,11 +158,13 @@ def test_draw_samples_pulls_all_input_data(data_filename):
 
 @pytest.mark.parametrize("data_filename", data_file_paths, ids=data_file_names)
 def test_sample_data_is_scrambled(data_filename):
-
+    """
+    Ensure that sample data is reordered.
+    """
     all_file_data = sample_entire_data_set(data_filename)
     file_length = all_file_data.shape[0]
 
-    data_sampler = InputFromData(data_filename, mpi_slice=False)
+    data_sampler = InputFromData(data_filename)
     sample_data = data_sampler.draw_samples(file_length)
 
     assert not np.array_equal(all_file_data, sample_data)
@@ -132,7 +173,9 @@ def test_sample_data_is_scrambled(data_filename):
 
 @pytest.mark.parametrize("data_filename", data_file_paths, ids=data_file_names)
 def test_draw_samples_invalid_parameters_fails(data_filename):
-
+    """
+    Ensure expected exceptions occur when invalid parameters are given.
+    """
     data_sampler = InputFromData(data_filename)
 
     with pytest.raises(TypeError):
@@ -143,20 +186,23 @@ def test_draw_samples_invalid_parameters_fails(data_filename):
 
 
 def test_fail_on_nan_data(bad_data_file):
-
+    """
+    Ensure exceptions occur when bad data is provided.
+    """
     with pytest.raises(ValueError):
         InputFromData(bad_data_file)
 
 
 @pytest.mark.parametrize("rows_to_skip", [1, 2, 3])
 def test_skip_rows(data_filename_2d, rows_to_skip):
-
-    normal_input = InputFromData(data_filename_2d, mpi_slice=False)
+    """
+    Test ability to skip head and footer rows as specified.
+    """
+    normal_input = InputFromData(data_filename_2d)
     normal_row_count = normal_input._data.shape[0]
 
     skipped_row_input = InputFromData(data_filename_2d,
-                                      skip_header=rows_to_skip,
-                                      mpi_slice=False)
+                                      skip_header=rows_to_skip)
 
     skipped_row_count = skipped_row_input._data.shape[0]
 
@@ -164,38 +210,11 @@ def test_skip_rows(data_filename_2d, rows_to_skip):
 
 
 def test_draw_sample_warning_issued_for_insufficient_data(data_filename_2d):
-
+    """
+    Ensure that a warning (but not an exception) is triggered when the specified
+    number of samples cannot be provided.
+    """
     small_input = InputFromData(data_filename_2d)
 
     with pytest.warns(UserWarning):
         small_input.draw_samples(1000)
-
-
-@pytest.mark.parametrize("data_filename", data_file_paths, ids=data_file_names)
-def test_multi_cpu_input_sample_slicing(data_filename):
-
-    imp.find_module('mpi4py')
-
-    from mpi4py import MPI
-    comm = MPI.COMM_WORLD
-
-    all_data_size = get_data_file_size(data_filename)
-
-    # Force data_input to slice as if in MPI environment.
-    data_input = InputFromData(data_filename)
-
-    # Get expected slice size.
-    expected_slice_size = all_data_size // comm.size
-    num_residual_samples = all_data_size - expected_slice_size * comm.size
-
-    if comm.rank < num_residual_samples:
-        expected_slice_size += 1
-
-    # Ensure InputFromData sliced the data in the same way.
-    assert np.array_equal(expected_slice_size, data_input._data.shape[0])
-
-    all_slices_list = comm.allgather(data_input._data)
-    all_slices = np.concatenate(all_slices_list, axis=0)
-
-    assert all_slices.shape[0] == all_data_size
-
