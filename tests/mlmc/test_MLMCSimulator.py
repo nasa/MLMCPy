@@ -403,8 +403,7 @@ def test_estimate_and_variance_improved_by_higher_target_cost(data_input,
     # Result from 20,000 sample monte carlo spring mass simulation.
     mc_20000_output_sample_mean = 12.3186216602
 
-    sim = MLMCSimulator(models=models_from_data,
-                        data=data_input)
+    sim = MLMCSimulator(models=models_from_data, data=data_input)
 
     estimates = np.zeros(3)
     variances = np.zeros_like(estimates)
