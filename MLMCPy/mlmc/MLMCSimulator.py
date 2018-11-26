@@ -152,26 +152,23 @@ class MLMCSimulator:
         for level in range(self._num_levels):
 
             if self._sample_sizes[level] == 0:
-                self._sync_gather_arrays()
-                self._sample_sizes[level] = self._sum_over_all_cpus(0)
                 continue
 
             samples = self._draw_samples(self._sample_sizes[level])
             num_samples = samples.shape[0]
 
-            # If we've run short on samples, update sample sizes accordingly.
+            # Update sample sizes in case we've run short on samples.
             self._cpu_sample_sizes[level] = num_samples
 
-            # Input is out of samples or this cpu was not allocated any.
-            if num_samples == 0:
-                self._sync_gather_arrays()
-                self._sample_sizes[level] = self._sum_over_all_cpus(0)
-                continue
+            if num_samples > 0:
 
-            output_differences = np.zeros((num_samples, self._output_size))
+                output_differences = np.zeros((num_samples, self._output_size))
 
-            for i, sample in enumerate(samples):
-                output_differences[i] = self._evaluate_sample(sample, level)
+                for i, sample in enumerate(samples):
+                    output_differences[i] = self._evaluate_sample(sample, level)
+
+            else:
+                output_differences = np.zeros((1, self._output_size))
 
             all_output_differences = \
                 self._gather_arrays(output_differences, axis=0)
@@ -349,7 +346,15 @@ class MLMCSimulator:
         Runs model on a small test sample to determine shape of output.
         """
         self._data.reset_sampling()
-        test_sample = self._draw_samples(self._num_cpus)[0]
+        test_sample = self._draw_samples(self._num_cpus)
+
+        if test_sample.shape[0] == 0:
+            message = "The environment has more cpus than data samples! " + \
+                "Please provide more data or specify fewer cpus."
+
+            raise ValueError(message)
+
+        test_sample = test_sample[0]
         self._data.reset_sampling()
 
         test_output = self._models[0].evaluate(test_sample)
@@ -595,23 +600,7 @@ class MLMCSimulator:
 
         gathered_arrays = self._comm.allgather(this_cpu_array)
 
-        # Remove arrays with no data (sent to prevent sync issues).
-        all_arrays = list()
-        for array in gathered_arrays:
-            if array.shape[axis] > 0:
-                all_arrays.append(array)
-
-        if len(all_arrays) == 0:
-            return this_cpu_array
-
-        return np.concatenate(all_arrays, axis=axis)
-
-    def _sync_gather_arrays(self):
-        """
-        Used to ensure that MPI calls do not fall out of sync between CPUs.
-        """
-        sync_array = np.zeros((0, self._output_size))
-        self._gather_arrays(sync_array)
+        return np.concatenate(gathered_arrays, axis=axis)
 
     def _determine_num_cpu_samples(self, total_num_samples):
         """Determines number of samples to be run on current cpu based on
