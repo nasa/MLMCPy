@@ -4,6 +4,8 @@ import os
 
 from MLMCPy.model import CDFWrapperModel
 from MLMCPy.input import RandomInput
+from MLMCPy.input import InputFromData
+from MLMCPy.model import ModelFromData
 from MLMCPy.mlmc import MLMCSimulator
 from tests.testing_scripts import SpringMassModel
 from tests.testing_scripts import ModelForTesting
@@ -126,6 +128,9 @@ def test_sim_evaluate_returns_expected_results(num_data_points):
     cdf, sample_counts, variances = \
         sim.simulate(epsilon=.05, initial_sample_size=100)
 
+    # Verify that no negative values exist.
+    assert np.all(cdf >= 0.)
+
     # Verify that cdf is monotonic.
     for i in range(1, len(cdf)):
 
@@ -172,3 +177,49 @@ def test_compare_cdf_sim_cached_uncached_results(num_data_points):
     assert np.all(cached_sample_counts == uncached_sample_counts)
     assert np.all(cached_variances == uncached_variances)
     assert np.all(cached_cdf == uncached_cdf)
+
+
+def test_sim_cdf_from_data():
+
+    # Define I/O files
+    inputfile = os.path.join(data_path, "spring_mass_1D_inputs.txt")
+
+    outputfile_level1 = os.path.join(data_path,
+                                     "spring_mass_1D_outputs_1.0.txt")
+    outputfile_level2 = os.path.join(data_path,
+                                     "spring_mass_1D_outputs_0.1.txt")
+    outputfile_level3 = os.path.join(data_path,
+                                     "spring_mass_1D_outputs_0.01.txt")
+
+    # Initialize random input & model objects
+    data_input = InputFromData(inputfile, shuffle_data=False)
+
+    model_level1 = ModelFromData(inputfile, outputfile_level1, cost=1.0)
+    model_level2 = ModelFromData(inputfile, outputfile_level2, cost=10.0)
+    model_level3 = ModelFromData(inputfile, outputfile_level3, cost=100.0)
+
+    grid = np.linspace(8, 25, 100)
+
+    cdf_level1 = CDFWrapperModel(model_level1, grid)
+    cdf_level2 = CDFWrapperModel(model_level2, grid)
+    cdf_level3 = CDFWrapperModel(model_level3, grid)
+
+    cdfs = [cdf_level1, cdf_level2, cdf_level3]
+
+    mlmc_simulator = MLMCSimulator(data_input, cdfs)
+    mlmc_simulator._caching_enabled = False
+    [estimates, sample_sizes, variances] = \
+        mlmc_simulator.simulate(epsilon=2.5e-2, initial_sample_size=500)
+
+    # Verify that no negative values exist.
+    assert np.all(estimates >= 0.)
+
+    # Verify that cdf is monotonic.
+    for i in range(1, len(estimates)):
+
+        if estimates[i] < estimates[i-1]:
+            assert False
+
+    # Verify that area under function sums to one.
+    cdf_sum = np.sum(estimates[1:-1] - estimates[:-2])
+    assert np.isclose(cdf_sum, 1., atol=.05)
