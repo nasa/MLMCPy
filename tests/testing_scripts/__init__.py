@@ -1,3 +1,3 @@
-from TestingInput import TestingInput
-from TestingModel import TestingModel
+from InputForTesting import InputForTesting
+from ModelForTesting import ModelForTesting
 from spring_mass import SpringMassModel
