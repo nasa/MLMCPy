@@ -6,8 +6,8 @@ from MLMCPy.model import CDFWrapperModel
 from MLMCPy.input import RandomInput
 from MLMCPy.mlmc import MLMCSimulator
 from tests.testing_scripts import SpringMassModel
-from tests.testing_scripts import TestingModel
-from tests.testing_scripts import TestingInput
+from tests.testing_scripts import ModelForTesting
+from tests.testing_scripts import InputForTesting
 
 # Access spring mass data:
 my_path = os.path.dirname(os.path.abspath(__file__))
@@ -79,7 +79,7 @@ def test_init_fails_on_bad_parameters(spring_model, grid):
 @pytest.mark.parametrize('sample', [0, -1, .5, 2.])
 def test_single_indicator(grid, sample):
 
-    inner_model = TestingModel('repeat')
+    inner_model = ModelForTesting('repeat')
     distribution_function = CDFWrapperModel(inner_model, grid)
 
     output = distribution_function.evaluate(sample)
@@ -91,7 +91,7 @@ def test_single_indicator(grid, sample):
 
 def test_evaluate_returns_expected_results(grid):
 
-    inner_model = TestingModel('repeat')
+    inner_model = ModelForTesting('repeat')
 
     num_samples = 10
 
@@ -109,21 +109,22 @@ def test_evaluate_returns_expected_results(grid):
     assert np.array_equal(estimate, expected_result)
 
 
-def test_sim_evaluate_returns_expected_results():
+@pytest.mark.parametrize('num_data_points', [100, 250, 1000])
+def test_sim_evaluate_returns_expected_results(num_data_points):
 
     grid = np.arange(0, 100)
 
-    inner_model = TestingModel('repeat')
+    inner_model = ModelForTesting('repeat')
     distribution_function1 = CDFWrapperModel(inner_model, grid)
     distribution_function2 = CDFWrapperModel(inner_model, grid)
     models = [distribution_function1, distribution_function2]
 
-    data = np.arange(0, 100)
-    data_input = TestingInput(data)
+    data = np.arange(0, num_data_points)
+    data_input = InputForTesting(data)
 
-    simulator = MLMCSimulator(data_input, models)
+    sim = MLMCSimulator(data_input, models)
     cdf, sample_counts, variances = \
-        simulator.simulate(epsilon=.05, initial_sample_size=100)
+        sim.simulate(epsilon=.05, initial_sample_size=100)
 
     # Verify that cdf is monotonic.
     for i in range(1, len(cdf)):
@@ -132,29 +133,42 @@ def test_sim_evaluate_returns_expected_results():
             assert False
 
     # Verify that area under function sums to one.
-    assert np.isclose(np.sum(cdf[1:-1] - cdf[:-2]), 1., atol=.05)
+    cdf_sum = np.sum(cdf[1:-1] - cdf[:-2])
+    assert np.isclose(cdf_sum, 1., atol=.05)
 
 
-def test_monte_carlo_sim_evaluate_returns_expected_results():
+@pytest.mark.parametrize('num_data_points', [100, 250, 1000])
+def test_compare_cdf_sim_cached_uncached_results(num_data_points):
 
+    # Set up CDF model.
     grid = np.arange(0, 100)
 
-    inner_model = TestingModel('repeat')
-    distribution_function = CDFWrapperModel(inner_model, grid)
-    models = [distribution_function]
+    inner_model = ModelForTesting('repeat')
+    distribution_function1 = CDFWrapperModel(inner_model, grid)
+    distribution_function2 = CDFWrapperModel(inner_model, grid)
+    models = [distribution_function1, distribution_function2]
 
-    data = np.arange(0, 100)
-    data_input = TestingInput(data)
+    # Hard code costs so that we can expect consistent sample size results.
+    distribution_function1.cost = 1
+    distribution_function2.cost = 10
 
-    simulator = MLMCSimulator(data_input, models)
-    cdf, sample_counts, variances = \
-        simulator.simulate(epsilon=.05, initial_sample_size=100)
+    data = np.arange(0, num_data_points)
+    data_input = InputForTesting(data)
 
-    # Verify that cdf is monotonic.
-    for i in range(1, len(cdf)):
+    # Create and run uncached simulation.
+    uncached_sim = MLMCSimulator(data_input, models)
+    uncached_sim._caching_enabled = False
+    uncached_cdf, uncached_sample_counts, uncached_variances = \
+        uncached_sim.simulate(epsilon=.05, initial_sample_size=100)
 
-        if cdf[i] < cdf[i-1]:
-            assert False
+    # Create and run cached simulation.
+    data_input = InputForTesting(data)
 
-    # Verify that area under function sums to one.
-    assert np.isclose(np.sum(cdf[1:-1] - cdf[:-2]), 1., atol=.05)
+    cached_sim = MLMCSimulator(data_input, models)
+    cached_cdf, cached_sample_counts, cached_variances = \
+        cached_sim.simulate(epsilon=.05, initial_sample_size=100)
+
+    # Test equality of all outputs.
+    assert np.all(cached_sample_counts == uncached_sample_counts)
+    assert np.all(cached_variances == uncached_variances)
+    assert np.all(cached_cdf == uncached_cdf)

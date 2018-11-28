@@ -1,7 +1,7 @@
 from MLMCPy.input.Input import Input
 
 
-class TestingInput(Input):
+class InputForTesting(Input):
 
     def __init__(self, data):
 
