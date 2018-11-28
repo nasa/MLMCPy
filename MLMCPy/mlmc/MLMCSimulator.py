@@ -51,7 +51,7 @@ class MLMCSimulator:
         self._input_size = 1
 
         self._cached_inputs = np.empty(0)
-        self._cached_output = np.empty(0)
+        self._cached_outputs = np.empty(0)
 
         # Whether to allow use of model output caching.
         self._caching_enabled = True
@@ -197,11 +197,12 @@ class MLMCSimulator:
         # If we have the output for this sample cached, use it.
         # Otherwise, compute the output via the model.
 
+        sample_indices = np.empty(0)
         if self._caching_enabled:
             sample_indices = np.argwhere(sample == self._cached_inputs[level])
 
-        if self._caching_enabled and len(sample_indices) == 1:
-            output = self._cached_outputs[level, sample_indices[0, 0]][0]
+        if len(sample_indices) == 1:
+            output = self._cached_outputs[level, sample_indices[0]][0]
         else:
             output = self._models[level].evaluate(sample)
 

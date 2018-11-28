@@ -11,7 +11,7 @@ class TestingModel(Model):
 
         if self._model_type == 'ones':
 
-            return 1
+            return 1.
 
         if self._model_type == 'repeat':
 
