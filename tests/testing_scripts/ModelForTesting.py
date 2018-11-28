@@ -1,7 +1,7 @@
 from MLMCPy.model.Model import Model
 
 
-class TestingModel(Model):
+class ModelForTesting(Model):
 
     def __init__(self, model_type='ones'):
 

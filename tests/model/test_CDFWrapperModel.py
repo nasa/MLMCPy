@@ -6,8 +6,8 @@ from MLMCPy.model import CDFWrapperModel
 from MLMCPy.input import RandomInput
 from MLMCPy.mlmc import MLMCSimulator
 from tests.testing_scripts import SpringMassModel
-from tests.testing_scripts import TestingModel
-from tests.testing_scripts import TestingInput
+from tests.testing_scripts import ModelForTesting
+from tests.testing_scripts import InputForTesting
 
 # Access spring mass data:
 my_path = os.path.dirname(os.path.abspath(__file__))
@@ -79,7 +79,7 @@ def test_init_fails_on_bad_parameters(spring_model, grid):
 @pytest.mark.parametrize('sample', [0, -1, .5, 2.])
 def test_single_indicator(grid, sample):
 
-    inner_model = TestingModel('repeat')
+    inner_model = ModelForTesting('repeat')
     distribution_function = CDFWrapperModel(inner_model, grid)
 
     output = distribution_function.evaluate(sample)
@@ -91,7 +91,7 @@ def test_single_indicator(grid, sample):
 
 def test_evaluate_returns_expected_results(grid):
 
-    inner_model = TestingModel('repeat')
+    inner_model = ModelForTesting('repeat')
 
     num_samples = 10
 
@@ -114,13 +114,13 @@ def test_sim_evaluate_returns_expected_results(num_data_points):
 
     grid = np.arange(0, 100)
 
-    inner_model = TestingModel('repeat')
+    inner_model = ModelForTesting('repeat')
     distribution_function1 = CDFWrapperModel(inner_model, grid)
     distribution_function2 = CDFWrapperModel(inner_model, grid)
     models = [distribution_function1, distribution_function2]
 
     data = np.arange(0, num_data_points)
-    data_input = TestingInput(data)
+    data_input = InputForTesting(data)
 
     sim = MLMCSimulator(data_input, models)
     cdf, sample_counts, variances = \
@@ -143,7 +143,7 @@ def test_compare_cdf_sim_cached_uncached_results(num_data_points):
     # Set up CDF model.
     grid = np.arange(0, 100)
 
-    inner_model = TestingModel('repeat')
+    inner_model = ModelForTesting('repeat')
     distribution_function1 = CDFWrapperModel(inner_model, grid)
     distribution_function2 = CDFWrapperModel(inner_model, grid)
     models = [distribution_function1, distribution_function2]
@@ -153,7 +153,7 @@ def test_compare_cdf_sim_cached_uncached_results(num_data_points):
     distribution_function2.cost = 10
 
     data = np.arange(0, num_data_points)
-    data_input = TestingInput(data)
+    data_input = InputForTesting(data)
 
     # Create and run uncached simulation.
     uncached_sim = MLMCSimulator(data_input, models)
@@ -162,7 +162,7 @@ def test_compare_cdf_sim_cached_uncached_results(num_data_points):
         uncached_sim.simulate(epsilon=.05, initial_sample_size=100)
 
     # Create and run cached simulation.
-    data_input = TestingInput(data)
+    data_input = InputForTesting(data)
 
     cached_sim = MLMCSimulator(data_input, models)
     cached_cdf, cached_sample_counts, cached_variances = \
