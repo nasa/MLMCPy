@@ -1,3 +1,4 @@
 numpy
 scipy = 1.1.0
 pytest
+mpi4py
