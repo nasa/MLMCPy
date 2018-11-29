@@ -164,6 +164,7 @@ def test_sample_data_is_scrambled(data_filename):
     all_file_data = sample_entire_data_set(data_filename)
     file_length = all_file_data.shape[0]
 
+    np.random.seed(1)
     data_sampler = InputFromData(data_filename)
     sample_data = data_sampler.draw_samples(file_length)
 
