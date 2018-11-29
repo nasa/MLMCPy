@@ -8,7 +8,12 @@ before_install:
 install:
   - export PYTHONPATH=$PYTHONPATH:$(pwd)/MLMCPy
   - python setup.py install
+  - pip install pytest pytest-cov
+  - pip install coveralls
 
 script:
-  - pytest tests
+  - pytest tests --cov=MLMCPy
   - mpirun -n 2 pytest tests
+
+after_script:
+  - coveralls
