@@ -11,5 +11,5 @@ install:
 
 script:
   - pytest tests
-  - ./mpich/bin/mpirun -np 2 pytest tests
-  - ./mpich/bin/mpirun -np 3 pytest tests
+  - mpirun -n 2 pytest tests
+  - mpirun -n 3 pytest tests
