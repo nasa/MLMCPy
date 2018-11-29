@@ -4,3 +4,7 @@ python:
 
 script:
   - pytest tests
+
+install:
+  - export PYTHONPATH=$PYTHONPATH:$(pwd)/MLMCPy
+  - python setup.py install
