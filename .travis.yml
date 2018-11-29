@@ -3,7 +3,7 @@ python:
   - "2.7"
 
 before_install:
-- sh ./get_mpich.sh
+- sudo apt-get install -y -q mpich libmpich-dev
 
 install:
   - export PYTHONPATH=$PYTHONPATH:$(pwd)/MLMCPy
