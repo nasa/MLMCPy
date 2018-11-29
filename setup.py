@@ -17,7 +17,7 @@ setuptools.setup(
               "MLMCPy.mlmc",
               "MLMCPy.model"],
     package_dir={'MLMCPy': 'MLMCPy'},
-    install_requires=['numpy', 'scipy=1.1.0'],
+    install_requires=['numpy', 'scipy>=1,<2'],
     classifiers=[
         "Programming Language :: Python :: 2.7",
         "License :: OSI Approved :: Apache Software License",
