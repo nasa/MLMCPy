@@ -12,4 +12,3 @@ install:
 script:
   - pytest tests
   - mpirun -n 2 pytest tests
-  - mpirun -n 3 pytest tests
