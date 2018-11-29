@@ -394,6 +394,11 @@ class MLMCSimulator:
         # Set sample sizes to ints.
         self._sample_sizes = self._sample_sizes.astype(int)
 
+        # If target cost is less than cost of least expensive model, run it
+        # once so we are at least doing something in the simulation.
+        if np.sum(self._sample_sizes) == 0.:
+            self._sample_sizes[0] = 1
+
         # Divide sampling evenly across cpus.
         split_samples = np.vectorize(self._determine_num_cpu_samples)
         self._cpu_sample_sizes = split_samples(self._sample_sizes)
@@ -434,11 +439,6 @@ class MLMCSimulator:
                     # Update difference from target cost.
                     total_cost = np.sum(costs * self._sample_sizes)
                     difference = self._target_cost - total_cost
-
-        # If target cost is less than cost of least expensive model, run it
-        # once so we are at least doing something in the simulation.
-        if np.sum(self._sample_sizes) == 0.:
-            self._sample_sizes[0] = 1
 
     def _process_epsilon(self, epsilon):
         """
