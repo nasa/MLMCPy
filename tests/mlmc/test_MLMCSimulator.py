@@ -392,6 +392,15 @@ def test_estimate_and_variance_improved_by_lower_epsilon(data_input,
     assert variances[0] > variances[1] > variances[2]
 
 
+def test_always_at_least_one_sample_taken(data_input, models_from_data):
+
+    sim = MLMCSimulator(models=models_from_data, data=data_input)
+
+    estimates, sample_sizes, variances = sim.simulate(epsilon=5.)
+
+    assert np.sum(sample_sizes) > 0
+
+
 def test_estimate_and_variance_improved_by_higher_target_cost(data_input,
                                                               models_from_data):
     """
