@@ -126,7 +126,7 @@ def test_sim_evaluate_returns_expected_results(num_data_points):
 
     sim = MLMCSimulator(data_input, models)
     cdf, sample_counts, variances = \
-        sim.simulate(epsilon=.05, initial_sample_size=100)
+        sim.simulate(epsilon=.05, initial_sample_size=500)
 
     # Verify that no negative values exist.
     assert np.all(cdf >= 0.)
@@ -164,14 +164,14 @@ def test_compare_cdf_sim_cached_uncached_results(num_data_points):
     uncached_sim = MLMCSimulator(data_input, models)
     uncached_sim._caching_enabled = False
     uncached_cdf, uncached_sample_counts, uncached_variances = \
-        uncached_sim.simulate(epsilon=.05, initial_sample_size=100)
+        uncached_sim.simulate(epsilon=.05, initial_sample_size=500)
 
     # Create and run cached simulation.
     data_input = InputForTesting(data)
 
     cached_sim = MLMCSimulator(data_input, models)
     cached_cdf, cached_sample_counts, cached_variances = \
-        cached_sim.simulate(epsilon=.05, initial_sample_size=100)
+        cached_sim.simulate(epsilon=.05, initial_sample_size=500)
 
     # Test equality of all outputs.
     assert np.all(cached_sample_counts == uncached_sample_counts)
@@ -179,7 +179,8 @@ def test_compare_cdf_sim_cached_uncached_results(num_data_points):
     assert np.all(cached_cdf == uncached_cdf)
 
 
-def test_sim_cdf_from_data():
+@pytest.mark.parametrize('initial_sample_size', [20, 100, 250, 1000])
+def test_sim_cdf_from_data(initial_sample_size):
 
     # Define I/O files
     inputfile = os.path.join(data_path, "spring_mass_1D_inputs.txt")
@@ -200,26 +201,27 @@ def test_sim_cdf_from_data():
 
     grid = np.linspace(8, 25, 100)
 
-    cdf_level1 = CDFWrapperModel(model_level1, grid)
-    cdf_level2 = CDFWrapperModel(model_level2, grid)
-    cdf_level3 = CDFWrapperModel(model_level3, grid)
+    cdfw_level1 = CDFWrapperModel(model_level1, grid)
+    cdfw_level2 = CDFWrapperModel(model_level2, grid)
+    cdfw_level3 = CDFWrapperModel(model_level3, grid)
 
-    cdfs = [cdf_level1, cdf_level2, cdf_level3]
+    cdfws = [cdfw_level1, cdfw_level2, cdfw_level3]
 
-    mlmc_simulator = MLMCSimulator(data_input, cdfs)
+    mlmc_simulator = MLMCSimulator(data_input, cdfws)
     mlmc_simulator._caching_enabled = False
-    [estimates, sample_sizes, variances] = \
-        mlmc_simulator.simulate(epsilon=2.5e-2, initial_sample_size=500)
+    [cdf, sample_sizes, variances] = \
+        mlmc_simulator.simulate(epsilon=2.5e-2,
+                                initial_sample_size=initial_sample_size)
 
     # Verify that no negative values exist.
-    assert np.all(estimates >= 0.)
+    assert np.all(cdf >= 0.)
 
     # Verify that cdf is monotonic.
-    for i in range(1, len(estimates)):
+    for i in range(1, len(cdf)):
 
-        if estimates[i] < estimates[i-1]:
+        if cdf[i] < cdf[i-1]:
             assert False
 
     # Verify that area under function sums to one.
-    cdf_sum = np.sum(estimates[1:-1] - estimates[:-2])
+    cdf_sum = np.sum(cdf[1:-1] - cdf[:-2])
     assert np.isclose(cdf_sum, 1., atol=.05)
