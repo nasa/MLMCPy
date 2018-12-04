@@ -192,23 +192,21 @@ class MLMCSimulator:
         :param level: model level
         :return: result of evaluation
         """
-        # If we have the output for this sample cached, use it.
-        # Otherwise, compute the output via the model.
-
+        sample_indices = np.empty(0)
         if self._caching_enabled:
             sample_indices = np.argwhere(sample == self._cached_inputs[level])
 
-        if self._caching_enabled and len(sample_indices) == 1:
-            output = self._cached_outputs[level, sample_indices[0, 0]][0]
+        if len(sample_indices) == 1:
+            output = self._cached_outputs[level, sample_indices[0]][0]
         else:
             output = self._models[level].evaluate(sample)
 
-        # If we are at a level greater than 0, compute outputs for lower level
-        # and subtract them from this level's outputs.
-        if level > 0:
-            return output - self._models[level-1].evaluate(sample)
-        else:
-            return output
+            # If we are at a level greater than 0, compute outputs for lower
+            # level and subtract them from this level's outputs.
+            if level > 0:
+                output -= self._models[level-1].evaluate(sample)
+
+        return output
 
     def _show_summary_data(self, estimates, variances, run_time):
         """
