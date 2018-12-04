@@ -502,7 +502,7 @@ def test_outputs_for_small_sample_sizes(data_input, models_from_data,
     assert np.isclose(sim_variance, sample_variance, atol=10e-15)
 
 
-@pytest.mark.parametrize("cache_size", [10, 7, 200])
+@pytest.mark.parametrize("cache_size", [2, 10, 400])
 def test_output_caching(data_input, models_from_data, cache_size):
     """
     Runs simulator's _evaluate_sample() with and without caching enabled
@@ -677,17 +677,30 @@ def test_graceful_handling_of_insufficient_samples(data_input_2d, comm,
         sim.simulate(epsilon=.01, initial_sample_size=5)
 
 
-def test_can_run_simulation_multiple_times_without_exception(data_input,
-                                                             models_from_data):
+def test_multiple_run_consistency(data_input, models_from_data):
     """
-    Ensure that simulator can be run multiple times without exceptions.
+    Ensure that simulator can be run multiple times without exceptions and
+    returns consistent results.
     """
     sim = MLMCSimulator(models=models_from_data, data=data_input)
-    sim.simulate(epsilon=1., initial_sample_size=10)
+    estimate1, sample_sizes1, variances1 = \
+        sim.simulate(epsilon=1., initial_sample_size=100)
 
     sim = MLMCSimulator(models=models_from_data, data=data_input)
-    sim.simulate(epsilon=1., initial_sample_size=10)
-    sim.simulate(epsilon=2., initial_sample_size=20)
+    estimate2, sample_sizes2, variances2 = \
+        sim.simulate(epsilon=1., initial_sample_size=100)
+
+    estimate3, sample_sizes3, variances3 = \
+        sim.simulate(epsilon=1., initial_sample_size=100)
+
+    assert np.all(np.isclose(estimate1, estimate2))
+    assert np.all(np.isclose(estimate2, estimate3))
+
+    assert np.all(np.isclose(sample_sizes1, sample_sizes2))
+    assert np.all(np.isclose(sample_sizes2, sample_sizes3))
+
+    assert np.all(np.isclose(variances1, variances2))
+    assert np.all(np.isclose(variances2, variances3))
 
 
 @pytest.mark.parametrize('target_cost', [3, 1, .1, .01])
