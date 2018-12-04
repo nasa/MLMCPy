@@ -193,7 +193,6 @@ class MLMCSimulator:
         :param level: model level
         :return: result of evaluation
         """
-
         # If we have the output for this sample cached, use it.
         # Otherwise, compute the output via the model.
 
@@ -206,12 +205,12 @@ class MLMCSimulator:
         else:
             output = self._models[level].evaluate(sample)
 
-        # If we are at a level greater than 0, compute outputs for lower level
-        # and subtract them from this level's outputs.
-        if level > 0:
-            return output - self._models[level-1].evaluate(sample)
-        else:
-            return output
+            # If we are at a level greater than 0, compute outputs for lower
+            # level and subtract them from this level's outputs.
+            if level > 0:
+                output -= self._models[level-1].evaluate(sample)
+
+        return output
 
     def _show_summary_data(self, estimates, variances, run_time):
         """
