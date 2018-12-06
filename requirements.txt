@@ -1,4 +1,3 @@
 numpy
-scipy = 1.1.0
-pytest
+scipy
 mpi4py
