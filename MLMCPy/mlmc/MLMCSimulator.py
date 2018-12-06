@@ -483,7 +483,8 @@ class MLMCSimulator:
                     raise TypeError("Initial sample sizes must be numeric.")
 
             self._initial_sample_sizes = \
-                np.ones(self._num_levels).astype(int) * int(initial_sample_sizes)
+                np.ones(self._num_levels).astype(int) * \
+                int(initial_sample_sizes)
 
         if self._initial_sample_sizes.size != self._num_levels:
             raise ValueError("Number of initial sample sizes must match " +
@@ -640,6 +641,9 @@ class MLMCSimulator:
 
     @staticmethod
     def _show_time_estimate(seconds):
+
+        if isinstance(seconds, np.ndarray):
+            seconds = seconds[0]
 
         time_delta = timedelta(seconds=seconds)
 
