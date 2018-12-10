@@ -358,6 +358,7 @@ def test_hard_coded_springmass_random_input(beta_distribution_input,
     all_sample_sizes = np.array([1113, 34, 0])
     get_cpu_samples = np.vectorize(sim._determine_num_cpu_samples)
     sim._cpu_sample_sizes = get_cpu_samples(all_sample_sizes)
+    sim._determine_input_output_size()
 
     sim._caching_enabled = False
     sim._sample_sizes = all_sample_sizes
@@ -482,6 +483,7 @@ def test_outputs_for_small_sample_sizes(data_input, models_from_data,
     sim._caching_enabled = False
     sim._cpu_sample_sizes = np.array(cpu_sample_sizes)
     sim._sample_sizes = np.copy(all_sample_sizes)
+    sim._determine_input_output_size()
     sim_estimate, ss, sim_variance = sim._run_simulation()
 
     # Acquire samples in same sequence simulator would.
@@ -725,6 +727,7 @@ def test_fixed_cost(beta_distribution_input, spring_models, target_cost):
     sim._process_initial_sample_sizes(100)
     sim._target_cost = float(target_cost)
 
+    sim._determine_input_output_size()
     costs, variances = sim._compute_costs_and_variances()
     sim._compute_optimal_sample_sizes(costs, variances)
 
