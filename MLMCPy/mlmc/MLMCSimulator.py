@@ -480,7 +480,7 @@ class MLMCSimulator:
             if not isinstance(initial_sample_sizes, int) and \
                     not isinstance(initial_sample_sizes, float):
 
-                    raise TypeError("Initial sample sizes must be numeric.")
+                raise TypeError("Initial sample sizes must be numeric.")
 
             self._initial_sample_sizes = \
                 np.ones(self._num_levels).astype(int) * \
