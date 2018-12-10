@@ -43,10 +43,26 @@ def comm():
     """
     Creates a MPI.COMM_WORLD object for working with multi-process information.
     """
-    imp.find_module('mpi4py')
+    try:
 
-    from mpi4py import MPI
-    return MPI.COMM_WORLD
+        imp.find_module('mpi4py')
+
+        from mpi4py import MPI
+        return MPI.COMM_WORLD
+
+    except ImportError:
+
+        class FakeCOMM:
+
+            def __init__(self):
+                self.size = 1
+                self.rank = 0
+
+            def allgather(self, thing):
+
+                return np.array([thing])
+
+        return FakeCOMM()
 
 
 def test_init_invalid_input():

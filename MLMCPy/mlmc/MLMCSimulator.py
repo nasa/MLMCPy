@@ -1,7 +1,6 @@
 import numpy as np
 import timeit
 from datetime import timedelta
-import sys
 import imp
 
 from MLMCPy.input import Input
