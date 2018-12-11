@@ -18,7 +18,7 @@ from MLMCPy.model import ModelFromData
 from MLMCPy.input import RandomInput
 from MLMCPy.input import InputFromData
 
-from spring_mass import SpringMassModel
+from tests.testing_scripts.spring_mass import SpringMassModel
 
 # Create list of paths for each data file.
 # Used to parametrize tests.
@@ -709,17 +709,30 @@ def test_graceful_handling_of_insufficient_samples(data_input_2d, comm,
         sim.simulate(epsilon=.01, initial_sample_sizes=5)
 
 
-def test_can_run_simulation_multiple_times_without_exception(data_input,
-                                                             models_from_data):
+def test_multiple_run_consistency(data_input, models_from_data):
     """
-    Ensure that simulator can be run multiple times without exceptions.
+    Ensure that simulator can be run multiple times without exceptions and
+    returns consistent results.
     """
     sim = MLMCSimulator(models=models_from_data, data=data_input)
-    sim.simulate(epsilon=1., initial_sample_sizes=10)
+    estimate1, sample_sizes1, variances1 = \
+        sim.simulate(epsilon=1., initial_sample_sizes=100)
 
     sim = MLMCSimulator(models=models_from_data, data=data_input)
-    sim.simulate(epsilon=1., initial_sample_sizes=10)
-    sim.simulate(epsilon=2., initial_sample_sizes=20)
+    estimate2, sample_sizes2, variances2 = \
+        sim.simulate(epsilon=1., initial_sample_sizes=100)
+
+    estimate3, sample_sizes3, variances3 = \
+        sim.simulate(epsilon=1., initial_sample_sizes=100)
+
+    assert np.all(np.isclose(estimate1, estimate2))
+    assert np.all(np.isclose(estimate2, estimate3))
+
+    assert np.all(np.isclose(sample_sizes1, sample_sizes2))
+    assert np.all(np.isclose(sample_sizes2, sample_sizes3))
+
+    assert np.all(np.isclose(variances1, variances2))
+    assert np.all(np.isclose(variances2, variances3))
 
 
 @pytest.mark.parametrize('target_cost', [3, 1, .1, .01])

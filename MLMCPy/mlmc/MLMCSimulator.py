@@ -50,7 +50,7 @@ class MLMCSimulator:
         self._variances = None
 
         self._cached_inputs = np.empty(0)
-        self._cached_output = np.empty(0)
+        self._cached_outputs = np.empty(0)
 
         # Whether to allow use of model output caching.
         self._caching_enabled = True
@@ -682,7 +682,7 @@ class MLMCSimulator:
         """
         Finds the mean of ndarray of values across CPUs and returns result.
         :param this_cpu_values: ndarray of any shape.
-        :return: ndarray of same shape as values with mean from all CPUs.
+        :return: ndarray of same shape as values with mean from all cpus.
         """
         if self._num_cpus == 1:
             return this_cpu_values
