@@ -157,7 +157,8 @@ def comm():
                 self.size = 1
                 self.rank = 0
 
-            def allgather(self, thing):
+            @staticmethod
+            def allgather(thing):
 
                 return np.array([thing])
 
@@ -200,7 +201,8 @@ def test_for_verbose_exceptions(data_input, models_from_data):
     sys.stdout = stdout
 
 
-def test_simulate_exception_for_invalid_parameters(data_input, models_from_data):
+def test_simulate_exception_for_invalid_parameters(data_input,
+                                                   models_from_data):
     """
     Ensures that expected exceptions occur when running simulate() with invalid
     parameters.
@@ -242,11 +244,16 @@ def test_simulate_expected_output_types(data_input, models_from_data):
     assert isinstance(sample_count, np.ndarray)
     assert isinstance(variances, np.ndarray)
 
+    sample_count = test_mlmc.simulate(epsilon=1., initial_sample_sizes=20,
+                                      only_collect_sample_sizes=True)
+
+    assert isinstance(sample_count, np.ndarray)
+
 
 @pytest.mark.parametrize("num_qoi, variances, epsilons",
                          [[1, [[4.], [1.]], [.1]],
-                         [2, [[4., 4.], [1, 1.]], [.1, .01]],
-                         [3, [[4., 4., 4.], [1, 1., 1.]], [.1, 1., .01]]])
+                          [2, [[4., 4.], [1, 1.]], [.1, .01]],
+                          [3, [[4., 4., 4.], [1, 1., 1.]], [.1, 1., .01]]])
 def test_optimal_sample_sizes_expected_outputs(num_qoi, variances, epsilons,
                                                data_input, models_from_data):
     """
@@ -417,8 +424,9 @@ def test_always_at_least_one_sample_taken(data_input, models_from_data):
 
     sim = MLMCSimulator(models=models_from_data, data=data_input)
 
-    estimates, sample_sizes, variances = sim.simulate(epsilon=5.,
-                                                      initial_sample_sizes=100)
+    sample_sizes = sim.simulate(epsilon=5.,
+                                initial_sample_sizes=100,
+                                only_collect_sample_sizes=True)
 
     assert np.sum(sample_sizes) > 0
 
@@ -449,8 +457,8 @@ def test_estimate_and_variance_improved_by_higher_target_cost(data_input,
     error = np.abs(estimates - mc_20000_output_sample_mean)
     assert error[0] > error[1] > error[2]
 
-    assert np.sum(sample_sizes[0]) < np.sum(sample_sizes[1]) < \
-           np.sum(sample_sizes[2])
+    assert np.sum(sample_sizes[0]) < np.sum(sample_sizes[1])
+    assert np.sum(sample_sizes[1]) < np.sum(sample_sizes[2])
 
     assert variances[0] > variances[1] > variances[2]
 

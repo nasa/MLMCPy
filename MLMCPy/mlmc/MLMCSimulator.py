@@ -59,7 +59,7 @@ class MLMCSimulator:
         self._verbose = False
 
     def simulate(self, epsilon, initial_sample_sizes, target_cost=None,
-                 verbose=False):
+                 verbose=False, only_collect_sample_sizes=False):
         """
         Perform MLMC simulation.
         Computes number of samples per level before running simulations
@@ -76,6 +76,10 @@ class MLMCSimulator:
         :type target_cost: float or int
         :param verbose: Whether to print useful diagnostic information.
         :type verbose: bool
+        :param only_collect_sample_sizes: indicates whether to bypass simulation
+            phase and simply return prescribed number of samples for each model.
+            Return value is changed to one dimensional ndarray.
+        :type only_collect_sample_sizes: bool
         :return: Tuple of ndarrays
             (estimates, sample count per level, variances)
         """
@@ -88,6 +92,9 @@ class MLMCSimulator:
         self._determine_input_output_size()
 
         self._setup_simulation(epsilon, initial_sample_sizes)
+
+        if only_collect_sample_sizes:
+            return self._sample_sizes
 
         # Run models and return estimate, sample sizes, and variances.
         return self._run_simulation()
