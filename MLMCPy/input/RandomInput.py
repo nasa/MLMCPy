@@ -27,9 +27,6 @@ class RandomInput(Input):
         self._distribution = distribution_function
         self._args = distribution_function_args
 
-        self._num_cpus = 1
-        self._cpu_rank = 0
-
         self._random_seed = random_seed
 
         if random_seed is not None:
@@ -59,27 +56,6 @@ class RandomInput(Input):
         # Output should be shape (num_samples, sample_size), so reshape
         # one dimensional data to a 2d array with one column.
         samples = sample.reshape(sample.shape[0], -1)
-
-        # Take subsample of data in MPI environments.
-        if self._num_cpus > 1 and self._mpi_slice:
-
-            # Determine subsample sizes for all cpus.
-            subsample_size = samples.shape[0] // self._num_cpus
-            remainder = samples.shape[0] - subsample_size * self._num_cpus
-            subsample_sizes = np.ones(self._num_cpus+1).astype(int) * \
-                subsample_size
-
-            subsample_sizes[:remainder+1] += 1
-            subsample_sizes[0] = 0
-
-            # Determine starting index of subsample.
-            subsample_index = int(np.sum(subsample_sizes[:self._cpu_rank+1]))
-
-            # Take subsample.
-            samples = samples[subsample_index:
-                              subsample_index +
-                              subsample_sizes[self._cpu_rank+1],
-                              :]
 
         return samples
 
