@@ -1,0 +1,18 @@
+language: python
+python:
+  - "2.7"
+
+before_install:
+- sudo apt-get install -y -q mpich libmpich-dev
+
+install:
+  - export PYTHONPATH=$PYTHONPATH:$(pwd)/MLMCPy
+  - python setup.py install
+  - pip install pytest pytest-cov
+  - pip install coveralls
+
+script:
+  - pytest tests --cov=MLMCPy
+
+after_script:
+  - coveralls
