@@ -108,154 +108,6 @@ class MLMCSimulator:
 
         self._compute_optimal_sample_sizes(costs, variances)
 
-    def _run_simulation(self):
-        """
-        Compute estimate by extracting number of samples from each level
-        determined in the setup phase.
-
-        :return: tuple containing three ndarrays:
-            estimates: Estimates for each quantity of interest.
-            sample_sizes: The sample sizes used at each level.
-            variances: Variance of model outputs at each level.
-        """
-        # Sampling needs to be restarted from beginning due to sampling
-        # having been performed in setup phase.
-        self._data.reset_sampling()
-
-        start_time = timeit.default_timer()
-        estimates, variances = self._run_simulation_loop()
-        run_time = timeit.default_timer() - start_time
-
-        if self._verbose:
-            self._show_summary_data(estimates, variances, run_time)
-
-        return estimates, self._sample_sizes, variances
-
-    def _run_simulation_loop(self):
-        """
-        Main simulation loop where sample sizes determined in setup phase are
-        drawn from the input data and run through the models. Values for
-        computing the estimates and variances are accumulated at each level.
-
-        :return: tuple containing two ndarrays:
-            estimates: Estimates for each quantity of interest.
-            variances: Variance of model outputs at each level.
-        """
-        for level in range(self._num_levels):
-
-            if self._sample_sizes[level] == 0:
-                continue
-
-            samples = self._get_sim_loop_samples(level)
-            output_differences = self._get_sim_loop_outputs(samples, level)
-            self._update_sim_loop_values(output_differences, level)
-
-        return self._estimates, self._variances
-
-    def _get_sim_loop_samples(self, level):
-        """
-        Acquires input samples for designated level.
-
-        :param level: int of level for which samples are to be acquired.
-        :return: ndarray of input samples.
-        """
-        samples = self._draw_samples(self._sample_sizes[level])
-        num_samples = samples.shape[0]
-
-        # Update sample sizes in case we've run short on samples.
-        self._cpu_sample_sizes[level] = num_samples
-
-        return samples
-
-    def _get_sim_loop_outputs(self, samples, level):
-        """
-        Get the output differences for given level and samples.
-
-        :param samples: ndarray of input samples.
-        :param level: int level of model to run.
-
-        :return: ndarray of output differences between samples from
-            designated level and level below (if applicable).
-        """
-        num_samples = samples.shape[0]
-
-        if num_samples == 0:
-            return np.zeros((1, self._output_size))
-
-        output_differences = np.zeros((num_samples, self._output_size))
-
-        for i, sample in enumerate(samples):
-            output_differences[i] = self._evaluate_sample(sample, level)
-
-        return output_differences
-
-    def _update_sim_loop_values(self, outputs, level):
-        """
-        Update running totals for estimates and variances based on the output
-        differences at a particular level.
-
-        :param outputs: ndarray of output differences.
-        :param level: int of level at which differences were computed.
-        """
-        cpu_samples = self._cpu_sample_sizes[level]
-
-        all_output_differences = self._gather_arrays(outputs, axis=0)
-
-        self._sample_sizes[level] = self._sum_over_all_cpus(cpu_samples)
-        num_samples = float(self._sample_sizes[level])
-
-        self._estimates += np.sum(all_output_differences, axis=0) / num_samples
-        self._variances += np.var(all_output_differences, axis=0) / num_samples
-
-    def _evaluate_sample(self, sample, level):
-        """
-        Evaluate output of an input sample, either by running the model or
-        retrieving the output from the cache. For levels > 0, returns
-        difference between current level and lower level outputs.
-
-        :param sample: sample value
-        :param level: model level
-        :return: result of evaluation
-        """
-        sample_indices = np.empty(0)
-        if self._caching_enabled:
-            sample_indices = np.argwhere(sample == self._cached_inputs[level])
-
-        if len(sample_indices) == 1:
-            output = self._cached_outputs[level, sample_indices[0]][0]
-        else:
-            output = self._models[level].evaluate(sample)
-
-            # If we are at a level greater than 0, compute outputs for lower
-            # level and subtract them from this level's outputs.
-            if level > 0:
-                output -= self._models[level-1].evaluate(sample)
-
-        return output
-
-    def _show_summary_data(self, estimates, variances, run_time):
-        """
-        Shows summary of simulation.
-
-        :param estimates: ndarray of estimates for each QoI.
-        :param variances: ndarray of variances for each QoI.
-        """
-        # Compare variance for each quantity of interest to epsilon values.
-        print
-        print 'Total run time: %s' % str(run_time)
-        print
-
-        epsilons_squared = np.square(self._epsilons)
-        for i, variance in enumerate(variances):
-
-            passed = variance < epsilons_squared[i]
-            estimate = estimates[i]
-
-            print 'QOI #%s: estimate: %s, variance: %s, " + "' \
-                  'epsilon^2: %s, met target precision: %s' % \
-                  (i, float(estimate), float(variance),
-                   float(epsilons_squared[i]), passed)
-
     def _compute_costs_and_variances(self):
         """
         Compute costs and variances across levels.
@@ -502,6 +354,154 @@ class MLMCSimulator:
                     # Update difference from target cost.
                     total_cost = np.sum(costs * self._sample_sizes)
                     difference = self._target_cost - total_cost
+
+    def _run_simulation(self):
+        """
+        Compute estimate by extracting number of samples from each level
+        determined in the setup phase.
+
+        :return: tuple containing three ndarrays:
+            estimates: Estimates for each quantity of interest.
+            sample_sizes: The sample sizes used at each level.
+            variances: Variance of model outputs at each level.
+        """
+        # Sampling needs to be restarted from beginning due to sampling
+        # having been performed in setup phase.
+        self._data.reset_sampling()
+
+        start_time = timeit.default_timer()
+        estimates, variances = self._run_simulation_loop()
+        run_time = timeit.default_timer() - start_time
+
+        if self._verbose:
+            self._show_summary_data(estimates, variances, run_time)
+
+        return estimates, self._sample_sizes, variances
+
+    def _run_simulation_loop(self):
+        """
+        Main simulation loop where sample sizes determined in setup phase are
+        drawn from the input data and run through the models. Values for
+        computing the estimates and variances are accumulated at each level.
+
+        :return: tuple containing two ndarrays:
+            estimates: Estimates for each quantity of interest.
+            variances: Variance of model outputs at each level.
+        """
+        for level in range(self._num_levels):
+
+            if self._sample_sizes[level] == 0:
+                continue
+
+            samples = self._get_sim_loop_samples(level)
+            output_differences = self._get_sim_loop_outputs(samples, level)
+            self._update_sim_loop_values(output_differences, level)
+
+        return self._estimates, self._variances
+
+    def _get_sim_loop_samples(self, level):
+        """
+        Acquires input samples for designated level.
+
+        :param level: int of level for which samples are to be acquired.
+        :return: ndarray of input samples.
+        """
+        samples = self._draw_samples(self._sample_sizes[level])
+        num_samples = samples.shape[0]
+
+        # Update sample sizes in case we've run short on samples.
+        self._cpu_sample_sizes[level] = num_samples
+
+        return samples
+
+    def _get_sim_loop_outputs(self, samples, level):
+        """
+        Get the output differences for given level and samples.
+
+        :param samples: ndarray of input samples.
+        :param level: int level of model to run.
+
+        :return: ndarray of output differences between samples from
+            designated level and level below (if applicable).
+        """
+        num_samples = samples.shape[0]
+
+        if num_samples == 0:
+            return np.zeros((1, self._output_size))
+
+        output_differences = np.zeros((num_samples, self._output_size))
+
+        for i, sample in enumerate(samples):
+            output_differences[i] = self._evaluate_sample(sample, level)
+
+        return output_differences
+
+    def _update_sim_loop_values(self, outputs, level):
+        """
+        Update running totals for estimates and variances based on the output
+        differences at a particular level.
+
+        :param outputs: ndarray of output differences.
+        :param level: int of level at which differences were computed.
+        """
+        cpu_samples = self._cpu_sample_sizes[level]
+
+        all_output_differences = self._gather_arrays(outputs, axis=0)
+
+        self._sample_sizes[level] = self._sum_over_all_cpus(cpu_samples)
+        num_samples = float(self._sample_sizes[level])
+
+        self._estimates += np.sum(all_output_differences, axis=0) / num_samples
+        self._variances += np.var(all_output_differences, axis=0) / num_samples
+
+    def _evaluate_sample(self, sample, level):
+        """
+        Evaluate output of an input sample, either by running the model or
+        retrieving the output from the cache. For levels > 0, returns
+        difference between current level and lower level outputs.
+
+        :param sample: sample value
+        :param level: model level
+        :return: result of evaluation
+        """
+        sample_indices = np.empty(0)
+        if self._caching_enabled:
+            sample_indices = np.argwhere(sample == self._cached_inputs[level])
+
+        if len(sample_indices) == 1:
+            output = self._cached_outputs[level, sample_indices[0]][0]
+        else:
+            output = self._models[level].evaluate(sample)
+
+            # If we are at a level greater than 0, compute outputs for lower
+            # level and subtract them from this level's outputs.
+            if level > 0:
+                output -= self._models[level-1].evaluate(sample)
+
+        return output
+
+    def _show_summary_data(self, estimates, variances, run_time):
+        """
+        Shows summary of simulation.
+
+        :param estimates: ndarray of estimates for each QoI.
+        :param variances: ndarray of variances for each QoI.
+        """
+        # Compare variance for each quantity of interest to epsilon values.
+        print
+        print 'Total run time: %s' % str(run_time)
+        print
+
+        epsilons_squared = np.square(self._epsilons)
+        for i, variance in enumerate(variances):
+
+            passed = variance < epsilons_squared[i]
+            estimate = estimates[i]
+
+            print 'QOI #%s: estimate: %s, variance: %s, " + "' \
+                  'epsilon^2: %s, met target precision: %s' % \
+                  (i, float(estimate), float(variance),
+                   float(epsilons_squared[i]), passed)
 
     def _determine_input_output_size(self):
         """
