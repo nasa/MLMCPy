@@ -1,5 +1,4 @@
 import numpy as np
-import imp
 
 from Input import Input
 
@@ -78,7 +77,8 @@ class RandomInput(Input):
 
             # Take subsample.
             samples = samples[subsample_index:
-                              subsample_index + subsample_sizes[self._cpu_rank+1],
+                              subsample_index +
+                              subsample_sizes[self._cpu_rank+1],
                               :]
 
         return samples
