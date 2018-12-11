@@ -5,32 +5,50 @@ Implementation of the Multi-Level Monte Carlo (MLMC) method in Python.
 Example usage:
 
 ```python
-from MLMCPy.input import InputFromData
+import numpy as np
+import sys
+
+from MLMCPy.input import RandomInput
 from MLMCPy.mlmc import MLMCSimulator
-from MLMCPy.model import ModelFromData
 
+# Add path for example SpringMassModel to sys path.
+sys.path.append('./examples/spring_mass/from_model/spring_mass')
+import SpringMassModel
 
-# Define I/O files
-inputfile = "data/spring_mass_1D_inputs.txt"
-outputfile_level1 = "data/spring_mass_1D_outputs_1.0.txt"
-outputfile_level2 = "data/spring_mass_1D_outputs_0.1.txt"
-outputfile_level3 = "data/spring_mass_1D_outputs_0.01.txt"
+'''
+This script demonstrates MLMCPy for simulating a spring-mass system with a 
+random spring stiffness to estimate the expected value of the maximum 
+displacement using multi-level Monte Carlo. Here, we use Model and RandomInput
+objects with functional forms as inputs to MLMCPy. See the
+/examples/spring_mass/from_data/ for an example of using precomputed data
+in files as inputs.
+'''
 
-# Initialize random input & model objects
-data_input = InputFromData(inputfile)
+# Step 1 - Define random variable for spring stiffness:
+# Need to provide a sampleable function to create RandomInput instance in MLMCPy
+def beta_distribution(shift, scale, alpha, beta, size):
 
-model_level1 = ModelFromData(inputfile, outputfile_level1, cost=1.0)
-model_level2 = ModelFromData(inputfile, outputfile_level2, cost=10.0)
-model_level3 = ModelFromData(inputfile, outputfile_level3, cost=100.0)
+    return shift + scale*np.random.beta(alpha, beta, size)
+
+stiffness_distribution = RandomInput(distribution_function=beta_distribution,
+                                     shift=1.0, scale=2.5, alpha=3., beta=2.)
+
+# Step 2 - Initialize spring-mass models. Here using three levels with MLMC.
+# defined by different time steps
+model_level1 = SpringMassModel(mass=1.5, time_step=1.0)
+model_level2 = SpringMassModel(mass=1.5, time_step=0.1)
+model_level3 = SpringMassModel(mass=1.5, time_step=0.01)
 
 models = [model_level1, model_level2, model_level3]
 
-mlmc_simulator = MLMCSimulator(data_input, models)
-estimates, sample_sizes, variances = mlmc_simulator.simulate(epsilon=.1)
+# Step 3 - Initialize MLMC & predict max displacement to specified error.
 
-print 'Estimate: %s' % estimates[0]
-print 'Sample sizes used: %s' % sample_sizes
-print 'Variance: %s' % variances[0]
+mlmc_simulator = MLMCSimulator(stiffness_distribution, models)
+
+[estimates, sample_sizes, variances] = \
+    mlmc_simulator.simulate(epsilon=1e-1,
+                            initial_sample_size=100,
+                            verbose=True)
 
 ```
 -------------------------------------------------------------------------------
