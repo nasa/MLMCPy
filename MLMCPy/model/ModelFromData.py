@@ -82,7 +82,13 @@ class ModelFromData(Model):
 
         # input_data should not have more than one dimension.
         if len(input_data.shape) > 1:
-            raise ValueError("input_data should be zero or one dimensional.")
+
+            # If we received one row of data in two dimensions (1xN), adjust the
+            # data to be one dimensional.
+            if input_data.shape[0] == 1 and len(input_data.shape) == 2:
+                input_data = np.squeeze(input_data)
+            else:
+                raise ValueError("input_data must be zero or one dimensional.")
 
         # Get outputs that matched the input data.
         matches = np.equal(input_data, self._inputs)
