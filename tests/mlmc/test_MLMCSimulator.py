@@ -831,9 +831,7 @@ def test_gather_arrays(data_input, models_from_data, comm):
         new_block = np.ones((2, 2)) * i
         expected_result = np.concatenate((expected_result, new_block), axis=0)
 
-    print expected_result
     test_result = sim._gather_arrays(test, axis=0)
-    print test_result
 
     assert np.array_equal(expected_result, test_result)
 
