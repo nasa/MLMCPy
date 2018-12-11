@@ -141,7 +141,7 @@ class MLMCSimulator:
         variances = np.var(all_outputs, axis=1)
         costs = self._compute_costs(compute_times)
 
-        if self._verbose and self._cpu_rank == 0:
+        if self._verbose:
             print 'Initial sample variances: \n%s' % variances
 
         return costs, variances
