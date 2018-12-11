@@ -71,7 +71,8 @@ class MLMCSimulator:
         :param initial_sample_sizes: Sample sizes used when computing cost
             and variance for each model in simulation.
         :type initial_sample_sizes: ndarray, int, list
-        :param target_cost: Target cost to run simulation.
+        :param target_cost: Target cost to run simulation (optional).
+            If specified, overrides any epsilon value provided.
         :type target_cost: float or int
         :param verbose: Whether to print useful diagnostic information.
         :type verbose: bool
@@ -587,7 +588,11 @@ class MLMCSimulator:
 
     @staticmethod
     def __check_init_parameters(data, models):
-
+        """
+        Inspect parameters given to init method.
+        :param data: Input object provided to init().
+        :param models: Model object provided to init().
+        """
         if not isinstance(data, Input):
             TypeError("data must inherit from Input class.")
 
@@ -616,7 +621,10 @@ class MLMCSimulator:
 
     @staticmethod
     def __check_simulate_parameters(target_cost):
-
+        """
+        Inspect parameters to simulate method.
+        :param target_cost: float or int specifying desired simulation cost.
+        """
         if target_cost is not None:
 
             if not (isinstance(target_cost, float) or
@@ -692,7 +700,13 @@ class MLMCSimulator:
         return np.mean(all_values, axis)
 
     def _sum_over_all_cpus(self, this_cpu_values, axis=0):
-
+        """
+        Collect arrays from all CPUs and perform summation over specified
+        axis.
+        :param this_cpu_values: ndarray provided for current CPU.
+        :param axis: int axis to perform summation over.
+        :return: ndarray of summation result
+        """
         if self._num_cpus == 1:
             return this_cpu_values
 
@@ -733,7 +747,10 @@ class MLMCSimulator:
 
     @staticmethod
     def _show_time_estimate(seconds):
-
+        """
+        Used to show theoretical simulation time when verbose is enabled.
+        :param seconds: int seconds to convert to readable time.
+        """
         if isinstance(seconds, np.ndarray):
             seconds = seconds[0]
 
