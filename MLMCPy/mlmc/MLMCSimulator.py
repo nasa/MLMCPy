@@ -506,7 +506,7 @@ class MLMCSimulator:
             passed = variance < epsilons_squared[i]
             estimate = estimates[i]
 
-            print 'QOI #%s: estimate: %s, variance: %s, " + "' \
+            print 'QOI #%s: estimate: %s, variance: %s, ' \
                   'epsilon^2: %s, met target precision: %s' % \
                   (i, float(estimate), float(variance),
                    float(epsilons_squared[i]), passed)

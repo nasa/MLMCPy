@@ -1,8 +1,26 @@
 # MLMCPy - **M**ulti-**L**evel **M**onte **C**arlo with **Py**thon
 
-Implementation of the Multi-Level Monte Carlo (MLMC) method in Python.
+<a href='https://coveralls.io/github/lukemorrill/MLMCPy?branch=master'><img src='https://coveralls.io/repos/github/lukemorrill/MLMCPy/badge.svg?branch=master' alt='Coverage Status' /></a>
 
-Example usage:
+## General
+MLMCPy is an open source implementation of the Multi-Level Monte Carlo (MLMC) method in Python.
+It was developed with ease of use in mind.
+
+## Dependencies
+MLMCPy is intended for use with Python 2.7.
+
+Required packages:
+- numpy
+- scipy
+
+Optional packages:
+- mpi4py (for using with mpirun)
+- pytest (for running unit tests)
+
+## Tests
+Well over one hundred tests are included to thoroughly test MLMCPy. 
+
+## Example usage
 
 ```python
 import numpy as np
@@ -47,20 +65,16 @@ mlmc_simulator = MLMCSimulator(stiffness_distribution, models)
 
 [estimates, sample_sizes, variances] = \
     mlmc_simulator.simulate(epsilon=1e-1,
-                            initial_sample_size=100,
+                            initial_sample_sizes=100,
                             verbose=True)
 
 ```
 -------------------------------------------------------------------------------
 
-**Authors**: <br />
-Luke Morrill <br />
-Georgia Tech 
+## Authors
+Luke Morrill<br />Georgia Tech 
 
-James Warner <br />
-UQ Center of Excellence <br />
-NASA Langley Research Center <br /> 
-james.e.warner@nasa.gov
+James Warner<br />UQ Center of Excellence<br />NASA Langley Research Center<br />james.e.warner@nasa.gov
 
 
 This software was funded by and developed under the High Performance Computing
@@ -68,7 +82,7 @@ Incubator (HPCI) at NASA Langley Research Center.
 
 -------------------------------------------------------------------------------
 
-Notices:
+## Notices
 Copyright 2018 United States Government as represented by the Administrator of the National Aeronautics and Space Administration. No copyright is claimed in the United States under Title 17, U.S. Code. All Other Rights Reserved.
  
 Disclaimers

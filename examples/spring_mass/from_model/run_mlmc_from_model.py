@@ -22,8 +22,10 @@ def beta_distribution(shift, scale, alpha, beta, size):
     return shift + scale*np.random.beta(alpha, beta, size)
 
 
+np.random.seed(1)
 stiffness_distribution = RandomInput(distribution_function=beta_distribution,
-                                     shift=1.0, scale=2.5, alpha=3., beta=2.)
+                                     shift=1.0, scale=2.5, alpha=3., beta=2.,
+                                     random_seed=1)
 
 
 # Step 2 - Initialize spring-mass models. Here using three levels with MLMC.
@@ -42,7 +44,7 @@ start_mlmc = timeit.default_timer()
 
 [estimates, sample_sizes, variances] = \
     mlmc_simulator.simulate(epsilon=1e-1,
-                            initial_sample_size=100,
+                            initial_sample_sizes=100,
                             verbose=True)
 
 mlmc_total_cost = timeit.default_timer() - start_mlmc
@@ -53,14 +55,14 @@ print 'MLMC precision: %s' % variances[0]
 print 'MLMC total cost: %s' % mlmc_total_cost
 
 # Step 4: Run standard Monte Carlo to achieve similar variance for comparison.
-num_samples = 10000
+num_samples = 855
 input_samples = stiffness_distribution.draw_samples(num_samples)
 output_samples = np.zeros(num_samples)
 
 start_mc = timeit.default_timer()
 
 for i, sample in enumerate(input_samples):
-    output_samples[i] = model_level1.evaluate([sample])
+    output_samples[i] = model_level3.evaluate([sample])
 
 mc_total_cost = timeit.default_timer() - start_mc
 
