@@ -70,7 +70,7 @@ The goal of this example will be to approximate :math:`z_{max}`, using the MLMC 
 
     [estimates, sample_sizes, variances] = \
         mlmc_simulator.simulate(epsilon=1e-1,
-                                initial_sample_size=100,
+                                initial_sample_sizes=100,
                                 verbose=True)
 
     mlmc_total_cost = timeit.default_timer() - start_mlmc
@@ -88,7 +88,7 @@ The goal of this example will be to approximate :math:`z_{max}`, using the MLMC 
     start_mc = timeit.default_timer()
 
     for i, sample in enumerate(input_samples):
-        output_samples[i] = model_level1.evaluate([sample])
+        output_samples[i] = model_level3.evaluate([sample])
 
     mc_total_cost = timeit.default_timer() - start_mc
 
@@ -98,14 +98,17 @@ The goal of this example will be to approximate :math:`z_{max}`, using the MLMC 
     print "MC total cost: %s" % mc_total_cost
 
 
-These are the results in a single-core environment, in which the number of Monte Carlo simulations was chosen based on the same epsilon as used for MLMC (:math:`samples = \epsilon^{-2}`).
+These are the results in a single-core environment, in which the number of samples was chosen based on an epsilon of 1e-1, resulting in 855 Monte Carlo runs on the highest cost model and 941, 69, and 0 samples from each model for Multi-Level Monte Carlo.
 
-===============     =====================     =====================
-Description         MLMC Value                MC Value
-===============     =====================     =====================
-Estimate            12.137765021629813        12.089724699689281
-Precision           7.305145762133815e-06     8.261884093306053e-05
-Total cost          0.545931100845            10.6043269634
-===============     =====================     =====================
+====================     =====================     =====================
+Description              MLMC Value                MC Value
+====================     =====================     =====================
+Estimate                 12.2739151773             12.390705590117555
+Error                    0.045171289               0.071619124
+Precision                0.009916230329196151      0.010780941000560835
+Total cost (seconds)     0.63                      1.14
+====================     =====================     =====================
 
-Note the significant discrepancy in cost (measured in seconds) between the two methods.
+The expected value should converge to approximately 12.31908646652595, as determined by a 1e6 sample Monte Carlo simulation.
+
+Note the significant discrepancy in cost between the two methods.

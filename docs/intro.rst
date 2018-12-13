@@ -7,9 +7,9 @@ MLMCPy is an implementation of the Multi-Level Monte Carlo (MLMC) method in Pyth
 
 MLMCPy's primary class, MLMCSimulator, is initialized with an instance of a descendant of the Input abstract base class and a list of instances of descendants of the Model abstract base class.
 
-The Input class provides input data sampling that can be provided to the models. Some of the included Input classes include InputFromData, which loads sampling data from saved data files. Also included is the RandomInput class, which allows sampling from a distribution.
+The Input class provides input data sampling that can be provided to the models. Some of the included Input classes include InputFromData, which loads sample inputs from saved data files. Also included is the RandomInput class, which allows sampling from a distribution.
 
-The Model class receives sample inputs and produces outputs from those samples. The ModelFromData class, for example, is to be provided with precomputed input and output data in data files along with associated model costs. Running the evaluate function will result in the model returning the output associated with the provided input from the data files.
+The Model class receives sample inputs and produces outputs from those samples. The ModelFromData class, for example, is to be provided with precomputed input and output data in data files along with associated model costs. Running the evaluate function with a sample input parameter will return the corresponding output.
 
 .. figure:: images/overview_chart.png
     :alt: Overview of interaction between MLMCPy classes.
