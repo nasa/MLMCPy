@@ -1,3 +1,2 @@
 numpy
 scipy
-mpi4py

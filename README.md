@@ -1,8 +1,24 @@
 # MLMCPy - **M**ulti-**L**evel **M**onte **C**arlo with **Py**thon
 
-Implementation of the Multi-Level Monte Carlo (MLMC) method in Python.
+## General
+MLMCPy is an open source implementation of the Multi-Level Monte Carlo (MLMC) method in Python.
+It was developed with ease of use in mind.
 
-Example usage:
+## Dependencies
+MLMCPy is intended for use with Python 2.7.
+
+Required packages:
+- numpy
+- scipy
+
+Optional packages:
+- mpi4py (for using with mpirun)
+- pytest (for running unit tests)
+
+## Tests
+Well over one hundred tests are included to thoroughly test MLMCPy. 
+
+## Example usage
 
 ```python
 import numpy as np
@@ -47,19 +63,19 @@ mlmc_simulator = MLMCSimulator(stiffness_distribution, models)
 
 [estimates, sample_sizes, variances] = \
     mlmc_simulator.simulate(epsilon=1e-1,
-                            initial_sample_size=100,
+                            initial_sample_sizes=100,
                             verbose=True)
 
 ```
 -------------------------------------------------------------------------------
 
-**Authors**: <br />
-Luke Morrill <br />
+## Authors
+Luke Morrill
 Georgia Tech 
 
-James Warner <br />
-UQ Center of Excellence <br />
-NASA Langley Research Center <br /> 
+James Warner
+UQ Center of Excellence
+NASA Langley Research Center 
 james.e.warner@nasa.gov
 
 
@@ -68,7 +84,7 @@ Incubator (HPCI) at NASA Langley Research Center.
 
 -------------------------------------------------------------------------------
 
-Notices:
+## Notices
 Copyright 2018 United States Government as represented by the Administrator of the National Aeronautics and Space Administration. No copyright is claimed in the United States under Title 17, U.S. Code. All Other Rights Reserved.
  
 Disclaimers
