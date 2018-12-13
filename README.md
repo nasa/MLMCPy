@@ -70,13 +70,9 @@ mlmc_simulator = MLMCSimulator(stiffness_distribution, models)
 -------------------------------------------------------------------------------
 
 ## Authors
-Luke Morrill
-Georgia Tech 
+Luke Morrill<br />Georgia Tech 
 
-James Warner
-UQ Center of Excellence
-NASA Langley Research Center 
-james.e.warner@nasa.gov
+James Warner<br />UQ Center of Excellence<br />NASA Langley Research Center<br />james.e.warner@nasa.gov
 
 
 This software was funded by and developed under the High Performance Computing
