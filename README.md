@@ -1,5 +1,7 @@
 # MLMCPy - **M**ulti-**L**evel **M**onte **C**arlo with **Py**thon
 
+<a href='https://coveralls.io/github/lukemorrill/MLMCPy?branch=master'><img src='https://coveralls.io/repos/github/lukemorrill/MLMCPy/badge.svg?branch=master' alt='Coverage Status' /></a>
+
 ## General
 MLMCPy is an open source implementation of the Multi-Level Monte Carlo (MLMC) method in Python.
 It was developed with ease of use in mind.
