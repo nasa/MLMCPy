@@ -973,3 +973,37 @@ def test_multiple_cpu_simulation(data_input, models_from_data, comm):
 
     for i, sample_size in enumerate(all_sample_sizes):
         assert np.array_equal(base_sample_sizes, sample_size)
+
+
+@pytest.mark.parametrize('num_cpus', [2, 3, 4, 7, 30])
+def test_spoof_multi_cpu_simulation(data_input, models_from_data, comm,
+                                    num_cpus):
+    """
+    Ensure that we can run MPI related sections of MLMCSimulator without
+    throwing exceptions. Results from running simulator in this manner will
+    not be accurate, so we do not test outputs vs a baseline. To perform more
+    rigorous MPI tests, run pytest with mpiexec.
+    """
+    # Run simulator with a modified comm to spoof MPI's allgather function.
+    sim = MLMCSimulator(models=models_from_data, data=data_input)
+    sim._comm = comm
+    sim._num_cpus = num_cpus
+    sim.simulate(epsilon=.1, initial_sample_sizes=50)
+
+
+def test_exception_more_cpus_than_samples(data_input, models_from_data, comm):
+    """
+    Ensure that an exception is thrown if we don't have enough samples to
+    distribute among available processors.
+    """
+    # Avoid showing warnings from InputFromData due to insufficient samples.
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+
+        sim = MLMCSimulator(models=models_from_data, data=data_input)
+        sim._comm = comm
+        sim._num_cpus = 50000
+        sim._cpu_rank = 49999
+
+        with pytest.raises(ValueError):
+            sim.simulate(epsilon=.1, initial_sample_sizes=50)
