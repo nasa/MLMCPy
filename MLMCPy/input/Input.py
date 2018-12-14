@@ -14,7 +14,7 @@ class Input(object):
         :type num_samples: int
         :return: A ndarray with num_samples rows. Can be one or two dimensional.
         """
-        return
+        raise NotImplementedError
 
     @abc.abstractmethod
     def reset_sampling(self):
@@ -24,4 +24,4 @@ class Input(object):
         perform any actions for some data sources, for example random
         distributions as in the RandomInput class.
         """
-        pass
+        raise NotImplementedError
