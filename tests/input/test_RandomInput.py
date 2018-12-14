@@ -74,6 +74,28 @@ def test_init_invalid_input():
         RandomInput(1)
 
 
+def test_setting_random_seed():
+    """
+    Test setting of random seed by taking samples, resetting seed, then drawing
+    again to see if the samples match.
+    """
+    random_input = RandomInput(np.random.uniform, random_seed=1)
+
+    num_samples = 5
+    samples1 = np.zeros(num_samples)
+    samples2 = np.zeros(num_samples)
+
+    for i in range(num_samples):
+        samples1[i] = random_input.draw_samples(1)
+
+    random_input.reset_sampling()
+
+    for i in range(num_samples):
+        samples2[i] = random_input.draw_samples(1)
+
+    assert np.array_equal(samples1, samples2)
+
+
 def test_draw_samples_expected_output(uniform_distribution_input):
     """
     Ensure outputs from draw_samples matches expected type and shape.

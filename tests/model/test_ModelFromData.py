@@ -70,6 +70,18 @@ def test_evaluate_1d_data(input_data_file, output_data_file, index):
     assert np.all(np.isclose(model_output, true_output))
 
 
+def test_single_row_2d_input_data(input_data_file_2d, output_data_file_2d):
+    """
+    Test ability to evaluate one row of input data passed in as 2d array.
+    """
+    # Initialize model from spring-mass example data files:
+    data_model = ModelFromData(input_data_file_2d, output_data_file_2d, 1.)
+
+    # Should be able to do this without an exception.
+    one_row_2d_input = np.array([data_model._inputs[0]])
+    data_model.evaluate(one_row_2d_input)
+
+
 @pytest.mark.parametrize("index", [0, 2, 3])
 def test_evaluate_2d_data(input_data_file_2d, output_data_file_2d, index):
 
@@ -106,6 +118,14 @@ def test_evaluate_fails_on_invalid_input(input_data_file, output_data_file):
 
     with pytest.raises(ValueError):
         data_model.evaluate(bogus_input)
+
+
+def test_fails_on_unmatched_input(input_data_file, output_data_file):
+
+    data_model = ModelFromData(input_data_file, output_data_file, 1.)
+
+    with pytest.raises(ValueError):
+        data_model.evaluate(-1)
 
 
 def test_fails_on_duplicate_input_data(input_data_file_with_duplicates,
