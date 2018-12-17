@@ -208,10 +208,10 @@ def test_sim_result_consistency(data_input, models_from_data,
     sim = MLMCSimulator(data_input, cdfws)
 
     cdf1, ss1, v1 = sim.simulate(epsilon=.05,
-                                 initial_sample_size=initial_sample_size)
+                                 initial_sample_sizes=initial_sample_size)
 
     cdf2, ss2, v2 = sim.simulate(epsilon=.05,
-                                 initial_sample_size=initial_sample_size)
+                                 initial_sample_sizes=initial_sample_size)
 
     assert np.all(np.isclose(ss1, ss2))
     assert np.all(np.isclose(v1, v2))
@@ -239,7 +239,7 @@ def test_output_caching_cdf_wrapper(initial_sample_size, data_input,
     cached_sim = MLMCSimulator(data_input, cdfws)
     cached_cdf, cached_sample_sizes, cached_variances = \
         cached_sim.simulate(epsilon=.05,
-                            initial_sample_size=initial_sample_size)
+                            initial_sample_sizes=initial_sample_size)
 
     cached_inputs_caching = np.copy(cached_sim._cached_inputs)
     cached_outputs_caching = np.copy(cached_sim._cached_outputs)
@@ -249,7 +249,7 @@ def test_output_caching_cdf_wrapper(initial_sample_size, data_input,
     uncached_sim._caching_enabled = False
     uncached_cdf, uncached_sample_sizes, uncached_variances = \
         uncached_sim.simulate(epsilon=.05,
-                              initial_sample_size=initial_sample_size)
+                              initial_sample_sizes=initial_sample_size)
 
     cached_inputs_no_caching = np.copy(uncached_sim._cached_inputs)
     cached_outputs_no_caching = np.copy(uncached_sim._cached_outputs)
@@ -286,7 +286,7 @@ def test_sim_evaluate_returns_expected_results_from_data(initial_sample_size,
     mlmc_simulator._caching_enabled = False
     cdf, sample_sizes, variances = \
         mlmc_simulator.simulate(epsilon=2.5e-2,
-                                initial_sample_size=initial_sample_size)
+                                initial_sample_sizes=initial_sample_size)
 
     # Verify that no negative values exist.
     assert np.all(cdf >= 0.)

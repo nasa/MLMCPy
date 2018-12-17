@@ -81,10 +81,26 @@ def comm():
     """
     Creates a MPI.COMM_WORLD object for working with multi-process information.
     """
-    imp.find_module('mpi4py')
+    try:
 
-    from mpi4py import MPI
-    return MPI.COMM_WORLD
+        imp.find_module('mpi4py')
+
+        from mpi4py import MPI
+        return MPI.COMM_WORLD
+
+    except ImportError:
+
+        class FakeCOMM:
+
+            def __init__(self):
+                self.size = 1
+                self.rank = 0
+
+            def allgather(self, thing):
+
+                return np.array([thing])
+
+        return FakeCOMM()
 
 
 def test_init_fails_on_invalid_input_file():
@@ -164,6 +180,7 @@ def test_sample_data_is_scrambled(data_filename):
     all_file_data = sample_entire_data_set(data_filename)
     file_length = all_file_data.shape[0]
 
+    np.random.seed(1)
     data_sampler = InputFromData(data_filename)
     sample_data = data_sampler.draw_samples(file_length)
 
