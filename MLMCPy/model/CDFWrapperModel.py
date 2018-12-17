@@ -29,6 +29,9 @@ class CDFWrapperModel(Model):
         self._smooth_factor = smooth_factor
         self._inner_model_outputs = list()
 
+        if hasattr(self._model, 'cost'):
+            self.cost = model.cost
+
     def evaluate(self, sample):
         """
         Evaluates the internal model on the given sample and computes the
