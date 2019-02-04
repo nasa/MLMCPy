@@ -1,5 +1,7 @@
 # MLMCPy - **M**ulti-**L**evel **M**onte **C**arlo with **Py**thon
 
+<a href='https://travis-ci.com/nasa/MLMCPy'><img src='https://travis-ci.com/nasa/MLMCPy.svg?branch=master' alt='Build Status' /></a>
+
 <a href='https://coveralls.io/github/lukemorrill/MLMCPy?branch=master'><img src='https://coveralls.io/repos/github/lukemorrill/MLMCPy/badge.svg?branch=master' alt='Coverage Status' /></a>
 
 ## General
