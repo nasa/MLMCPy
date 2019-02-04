@@ -5,7 +5,7 @@ python:
 install:
   - export PYTHONPATH=$PYTHONPATH:$(pwd)/MLMCPy
   - python setup.py install
-  - pip install pytest==3.6 pytest-cov
+  - pip install pytest==4.0 pytest-cov
   - pip install coveralls
 
 script:
