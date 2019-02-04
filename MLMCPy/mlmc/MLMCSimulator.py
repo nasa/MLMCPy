@@ -58,12 +58,15 @@ class MLMCSimulator:
         # Enabled diagnostic text output.
         self._verbose = False
 
-    def simulate(self, epsilon, initial_sample_sizes, target_cost=None,
-                 verbose=False, only_collect_sample_sizes=False):
+    def simulate(self, epsilon, initial_sample_sizes=100, target_cost=None,
+                 sample_sizes=None, verbose=False):
         """
         Perform MLMC simulation.
         Computes number of samples per level before running simulations
         to determine estimates.
+        Can be specified based on target precision to achieve (epsilon), 
+        total target cost (in seconds), or on number of sample to run on each 
+        level directly.
 
         :param epsilon: Desired accuracy to be achieved for each quantity of
             interest.
@@ -74,6 +77,8 @@ class MLMCSimulator:
         :param target_cost: Target cost to run simulation (optional).
             If specified, overrides any epsilon value provided.
         :type target_cost: float or int
+        :param sample_sizes: Number of samples to compute at each level
+        :type sample_sizes: ndarray
         :param verbose: Whether to print useful diagnostic information.
         :type verbose: bool
         :param only_collect_sample_sizes: indicates whether to bypass simulation
@@ -91,15 +96,12 @@ class MLMCSimulator:
 
         self._determine_input_output_size()
 
-        self._setup_simulation(epsilon, initial_sample_sizes)
-
-        if only_collect_sample_sizes:
-            return self._sample_sizes
+        self._setup_simulation(epsilon, initial_sample_sizes, sample_sizes)
 
         # Run models and return estimate, sample sizes, and variances.
         return self._run_simulation()
 
-    def _setup_simulation(self, epsilon, initial_sample_sizes):
+    def _setup_simulation(self, epsilon, initial_sample_sizes, sample_sizes):
         """
         Performs any necessary manipulation of epsilon and initial_sample_sizes.
         Computes variance and cost at each level in order to estimate optimal
@@ -109,12 +111,19 @@ class MLMCSimulator:
         :param initial_sample_sizes: Sample sizes used when computing costs
             and variance for each model in simulation.
         """
-        self._process_epsilon(epsilon)
-        self._process_initial_sample_sizes(initial_sample_sizes)
+        if sample_sizes is None:
+            self._process_epsilon(epsilon)
+            self._initial_sample_sizes = \
+                self._verify_sample_sizes(initial_sample_sizes)
 
-        costs, variances = self._compute_costs_and_variances()
+            costs, variances = self._compute_costs_and_variances()
+            self._compute_optimal_sample_sizes(costs, variances)
 
-        self._compute_optimal_sample_sizes(costs, variances)
+        else:
+            self._target_cost = None
+            self._caching_enabled = False
+            sample_sizes = self._verify_sample_sizes(sample_sizes, False)
+            self._process_sample_sizes(sample_sizes, None)
 
     def _compute_costs_and_variances(self):
         """
@@ -341,7 +350,6 @@ class MLMCSimulator:
         # Find difference between projected total cost and target.
         total_cost = np.dot(costs, self._sample_sizes)
         difference = self._target_cost - total_cost
-
         # If the difference is greater than the lowest cost model, adjust
         # the sample sizes.
         if abs(difference) > costs[0]:
@@ -561,32 +569,36 @@ class MLMCSimulator:
 
         self._epsilons = epsilon
 
-    def _process_initial_sample_sizes(self, initial_sample_sizes):
+    def _verify_sample_sizes(self, sample_sizes, initial_samples=True):
         """
-        Produce an array of initial sample sizes, ensuring that its length
+        Produce an array of sample sizes, ensuring that its length
         matches the number of models.
-        :param initial_sample_sizes: scalar or vector of sample sizes
+        :param sample_sizes: scalar or vector of sample sizes
+
+        returns verified/adjusted sample sizes array
         """
-        if isinstance(initial_sample_sizes, np.ndarray):
-            self._initial_sample_sizes = initial_sample_sizes
-        elif isinstance(initial_sample_sizes, list):
-            self._initial_sample_sizes = np.array(initial_sample_sizes)
+        if isinstance(sample_sizes, np.ndarray):
+            verified_sample_sizes = sample_sizes
+        elif isinstance(sample_sizes, list):
+            verified_sample_sizes = np.array(sample_sizes)
         else:
-            if not isinstance(initial_sample_sizes, int) and \
-                    not isinstance(initial_sample_sizes, float):
+            if not isinstance(sample_sizes, int) and \
+                    not isinstance(sample_sizes, float):
 
                 raise TypeError("Initial sample sizes must be numeric.")
 
-            self._initial_sample_sizes = \
+            verified_sample_sizes = \
                 np.ones(self._num_levels).astype(int) * \
-                int(initial_sample_sizes)
+                int(sample_sizes)
 
-        if self._initial_sample_sizes.size != self._num_levels:
+        if verified_sample_sizes.size != self._num_levels:
             raise ValueError("Number of initial sample sizes must match " +
                              "number of models.")
 
-        if not np.all(self._initial_sample_sizes > 1):
+        if not np.all(verified_sample_sizes > 1) and initial_samples:
             raise ValueError("Each initial sample size must be at least 2.")
+
+        return verified_sample_sizes
 
     def _process_target_cost(self, target_cost):
 

@@ -244,12 +244,6 @@ def test_simulate_expected_output_types(data_input, models_from_data):
     assert isinstance(sample_count, np.ndarray)
     assert isinstance(variances, np.ndarray)
 
-    sample_count = test_mlmc.simulate(epsilon=1., initial_sample_sizes=20,
-                                      only_collect_sample_sizes=True)
-
-    assert isinstance(sample_count, np.ndarray)
-
-
 @pytest.mark.parametrize("num_qoi, variances, epsilons",
                          [[1, [[4.], [1.]], [.1]],
                           [2, [[4., 4.], [1, 1.]], [.1, .01]],
@@ -291,9 +285,11 @@ def test_costs_and_initial_variances_spring_models(beta_distribution_input,
     sim = MLMCSimulator(models=spring_models, data=beta_distribution_input)
 
     np.random.seed(1)
-    sim._process_initial_sample_sizes(100)
 
+    sim._initial_sample_sizes = np.array([100,100,100])
     costs, variances = sim._compute_costs_and_variances()
+
+    
 
     true_variances = np.array([[8.245224951411819],
                                [0.0857219498864355],
@@ -315,7 +311,7 @@ def test_costs_and_initial_variances_models_from_data(data_input,
     np.random.seed(1)
     sim = MLMCSimulator(models=models_from_data, data=data_input)
 
-    sim._process_initial_sample_sizes(100)
+    sim._initial_sample_sizes = np.array([100,100,100])
     costs, variances = sim._compute_costs_and_variances()
 
     true_variances = np.array([[9.262628271266264],
@@ -424,9 +420,8 @@ def test_always_at_least_one_sample_taken(data_input, models_from_data):
 
     sim = MLMCSimulator(models=models_from_data, data=data_input)
 
-    sample_sizes = sim.simulate(epsilon=5.,
-                                initial_sample_sizes=100,
-                                only_collect_sample_sizes=True)
+    estimates, sample_sizes, variances = sim.simulate(epsilon=5.,
+                                                      initial_sample_sizes=100)
 
     assert np.sum(sample_sizes) > 0
 
@@ -761,7 +756,7 @@ def test_fixed_cost(beta_distribution_input, spring_models, target_cost):
 
     # Multiply sample sizes times costs and take the sum; verify that this is
     # close to the target cost.
-    sim._process_initial_sample_sizes(100)
+    sim._initial_sample_sizes = np.array([100, 100, 100])
     sim._target_cost = float(target_cost)
 
     sim._determine_input_output_size()
@@ -974,36 +969,62 @@ def test_multiple_cpu_simulation(data_input, models_from_data, comm):
     for i, sample_size in enumerate(all_sample_sizes):
         assert np.array_equal(base_sample_sizes, sample_size)
 
-
-@pytest.mark.parametrize('num_cpus', [2, 3, 4, 7, 30])
-def test_spoof_multi_cpu_simulation(data_input, models_from_data, comm,
-                                    num_cpus):
+def test_simulate_with_set_sample_sizes(data_input, models_from_data):
     """
-    Ensure that we can run MPI related sections of MLMCSimulator without
-    throwing exceptions. Results from running simulator in this manner will
-    not be accurate, so we do not test outputs vs a baseline. To perform more
-    rigorous MPI tests, run pytest with mpiexec.
+    Tests running MLMC by specifying the number of samples to run on each
+    level rather than computing it. Takes precomputed reference solution from
+    spring-mass data example
     """
-    # Run simulator with a modified comm to spoof MPI's allgather function.
-    sim = MLMCSimulator(models=models_from_data, data=data_input)
-    sim._comm = comm
-    sim._num_cpus = num_cpus
-    sim.simulate(epsilon=.1, initial_sample_sizes=50)
+    test_mlmc = MLMCSimulator(models=models_from_data, data=data_input)
 
+    sample_sizes = [7007, 290, 1]
 
-def test_exception_more_cpus_than_samples(data_input, models_from_data, comm):
+    result, sample_count, variances = \
+        test_mlmc.simulate(epsilon=1., sample_sizes=sample_sizes)
+
+    assert np.array_equal(sample_sizes, sample_count)
+    assert np.isclose(result[0], 12.31220864)
+ 
+@pytest.mark.parametrize('sample_sizes', [[5], [2,2,2,2], [-1,5,5]])
+def test_simulate_with_bad_sample_sizes_input(data_input, models_from_data,
+                                              sample_sizes):
     """
-    Ensure that an exception is thrown if we don't have enough samples to
-    distribute among available processors.
+    Tests running MLMC by specifying the number of samples but providing 
+    bad values for the sample_sizes input. Makes sure exceptions are raised.
     """
-    # Avoid showing warnings from InputFromData due to insufficient samples.
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
 
-        sim = MLMCSimulator(models=models_from_data, data=data_input)
-        sim._comm = comm
-        sim._num_cpus = 50000
-        sim._cpu_rank = 49999
+    test_mlmc = MLMCSimulator(models=models_from_data, data=data_input)
 
-        with pytest.raises(ValueError):
-            sim.simulate(epsilon=.1, initial_sample_sizes=50)
+    with pytest.raises(ValueError):
+        test_mlmc.simulate(epsilon=1., sample_sizes=sample_sizes)
+
+
+@pytest.mark.parametrize('sample_sizes', ['foo', set([1,2,3])])
+def test_simulate_with_bad_type_sample_sizes_input(data_input, models_from_data,
+                                              sample_sizes):
+    """
+    Tests running MLMC by specifying the number of samples but providing 
+    wrong type for sample_sizes input
+    """
+
+    test_mlmc = MLMCSimulator(models=models_from_data, data=data_input)
+
+    with pytest.raises(TypeError):
+        test_mlmc.simulate(epsilon=1., sample_sizes=sample_sizes)
+
+
+def test_simulate_with_scalar_sample_sizes(data_input, models_from_data):
+    """
+    Tests running MLMC by specifying the number of samples to run on each
+    level. Tests providing just a scalar value that mlmc handles this
+    """
+    test_mlmc = MLMCSimulator(models=models_from_data, data=data_input)
+
+    sample_sizes = 5
+
+    result, sample_count, variances = \
+        test_mlmc.simulate(epsilon=1., sample_sizes=sample_sizes)
+
+    assert np.array_equal(sample_count, np.array([5,5,5]))
+
+
