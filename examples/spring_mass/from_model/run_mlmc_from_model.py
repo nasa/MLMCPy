@@ -1,7 +1,7 @@
 import numpy as np
 import timeit
 
-from spring_mass import SpringMassModel
+from spring_mass_model import SpringMassModel
 from MLMCPy.input import RandomInput
 from MLMCPy.mlmc import MLMCSimulator
 
