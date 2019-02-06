@@ -7,6 +7,8 @@ Source Code Documentation
 
 Documentation for the core MLMCPy classes.
 
+.. _mlmc_module_docs:
+
 Multi-Level Monte Carlo Simulator Documentation
 -----------------------------------------------
 
@@ -14,6 +16,8 @@ Multi-Level Monte Carlo Simulator Documentation
 .. autoclass:: MLMCSimulator
     :members:
     :special-members:
+
+.. _input_module_docs:
 
 Input Module Documentation
 --------------------------
