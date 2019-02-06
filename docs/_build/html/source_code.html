@@ -1,0 +1,385 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Source Code Documentation &#8212; MLMCPy 1.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Example - Spring Mass System" href="example.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="example.html" title="Example - Spring Mass System"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">MLMCPy 1.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="source-code-documentation">
+<span id="sourcecode-section"></span><h1>Source Code Documentation<a class="headerlink" href="#source-code-documentation" title="Permalink to this headline">¶</a></h1>
+<p>Documentation for the core MLMCPy classes.</p>
+<div class="section" id="module-MLMCSimulator">
+<span id="multi-level-monte-carlo-simulator-documentation"></span><span id="mlmc-module-docs"></span><h2>Multi-Level Monte Carlo Simulator Documentation<a class="headerlink" href="#module-MLMCSimulator" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="MLMCSimulator.MLMCSimulator">
+<em class="property">class </em><code class="descclassname">MLMCSimulator.</code><code class="descname">MLMCSimulator</code><span class="sig-paren">(</span><em>data</em>, <em>models</em><span class="sig-paren">)</span><a class="headerlink" href="#MLMCSimulator.MLMCSimulator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes an estimate based on the Multi-Level Monte Carlo algorithm.</p>
+<dl class="method">
+<dt id="MLMCSimulator.MLMCSimulator.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>data</em>, <em>models</em><span class="sig-paren">)</span><a class="headerlink" href="#MLMCSimulator.MLMCSimulator.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Requires a data object that provides input samples and a list of models
+of increasing fidelity.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>data</strong> (<a class="reference internal" href="#Input.Input" title="Input.Input"><em>Input</em></a>) – Provides a data sampling function.</li>
+<li><strong>models</strong> (<em>list</em><em>(</em><a class="reference internal" href="#Model.Model" title="Model.Model"><em>Model</em></a><em>)</em>) – Each model Produces outputs from sample data input.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="MLMCSimulator.MLMCSimulator.simulate">
+<code class="descname">simulate</code><span class="sig-paren">(</span><em>epsilon</em>, <em>initial_sample_sizes=100</em>, <em>target_cost=None</em>, <em>sample_sizes=None</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#MLMCSimulator.MLMCSimulator.simulate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform MLMC simulation.
+Computes number of samples per level before running simulations
+to determine estimates.
+Can be specified based on target precision to achieve (epsilon), 
+total target cost (in seconds), or on number of sample to run on each 
+level directly.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>epsilon</strong> (<em>float</em><em>, </em><em>list of floats</em><em>, or </em><em>ndarray.</em>) – Desired accuracy to be achieved for each quantity of
+interest.</li>
+<li><strong>initial_sample_sizes</strong> (<em>ndarray</em><em>, </em><em>int</em><em>, </em><em>list</em>) – Sample sizes used when computing cost
+and variance for each model in simulation.</li>
+<li><strong>target_cost</strong> (<em>float</em><em> or </em><em>int</em>) – Target cost to run simulation (optional).
+If specified, overrides any epsilon value provided.</li>
+<li><strong>sample_sizes</strong> (<em>ndarray</em>) – Number of samples to compute at each level</li>
+<li><strong>verbose</strong> (<em>bool</em>) – Whether to print useful diagnostic information.</li>
+<li><strong>only_collect_sample_sizes</strong> (<em>bool</em>) – indicates whether to bypass simulation
+phase and simply return prescribed number of samples for each model.
+Return value is changed to one dimensional ndarray.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Tuple of ndarrays
+(estimates, sample count per level, variances)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-Input">
+<span id="input-module-documentation"></span><span id="input-module-docs"></span><h2>Input Module Documentation<a class="headerlink" href="#module-Input" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="Input.Input">
+<em class="property">class </em><code class="descclassname">Input.</code><code class="descname">Input</code><a class="headerlink" href="#Input.Input" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract base class defining data inputs from which samples can be drawn.</p>
+<dl class="method">
+<dt id="Input.Input.draw_samples">
+<code class="descname">draw_samples</code><span class="sig-paren">(</span><em>num_samples</em><span class="sig-paren">)</span><a class="headerlink" href="#Input.Input.draw_samples" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draws requested number of samples from a data source.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>num_samples</strong> (<em>int</em>) – Number of sample rows to be returned.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A ndarray with num_samples rows. Can be one or two dimensional.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="Input.Input.reset_sampling">
+<code class="descname">reset_sampling</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Input.Input.reset_sampling" title="Permalink to this definition">¶</a></dt>
+<dd><p>Used to reset the sample index to 0 when drawing from an indexed data
+set such as an ndarray extracted from a data file. Does not need to
+perform any actions for some data sources, for example random
+distributions as in the RandomInput class.</p>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-InputFromData"></span><dl class="class">
+<dt id="InputFromData.InputFromData">
+<em class="property">class </em><code class="descclassname">InputFromData.</code><code class="descname">InputFromData</code><span class="sig-paren">(</span><em>input_filename</em>, <em>delimiter=' '</em>, <em>skip_header=0</em>, <em>shuffle_data=True</em><span class="sig-paren">)</span><a class="headerlink" href="#InputFromData.InputFromData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Used to draw random samples from a data file.</p>
+<dl class="method">
+<dt id="InputFromData.InputFromData.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>input_filename</em>, <em>delimiter=' '</em>, <em>skip_header=0</em>, <em>shuffle_data=True</em><span class="sig-paren">)</span><a class="headerlink" href="#InputFromData.InputFromData.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>input_filename</strong> (<em>string</em>) – path of file containing data to be sampled.</li>
+<li><strong>delimiter</strong> (<em>str</em><em> or </em><em>int</em>) – Character used to separate data in data file.
+Can also be an integer to specify width of each entry.</li>
+<li><strong>skip_header</strong> (<em>int</em>) – Number of header rows to skip in data file.</li>
+<li><strong>shuffle_data</strong> (<em>bool</em>) – Whether or not to randomly shuffle data during
+initialization.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="InputFromData.InputFromData.draw_samples">
+<code class="descname">draw_samples</code><span class="sig-paren">(</span><em>num_samples</em><span class="sig-paren">)</span><a class="headerlink" href="#InputFromData.InputFromData.draw_samples" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an array of samples from the previously loaded file data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>num_samples</strong> (<em>int</em>) – Number of samples to be returned.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">2d ndarray of samples, each row being one sample.
+For one dimensional input data, this will have
+shape (num_samples, 1)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="InputFromData.InputFromData.reset_sampling">
+<code class="descname">reset_sampling</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#InputFromData.InputFromData.reset_sampling" title="Permalink to this definition">¶</a></dt>
+<dd><p>Used to restart sampling from beginning of data set.</p>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-RandomInput"></span><dl class="class">
+<dt id="RandomInput.RandomInput">
+<em class="property">class </em><code class="descclassname">RandomInput.</code><code class="descname">RandomInput</code><span class="sig-paren">(</span><em>distribution_function</em>, <em>random_seed=None</em>, <em>**distribution_function_args</em><span class="sig-paren">)</span><a class="headerlink" href="#RandomInput.RandomInput" title="Permalink to this definition">¶</a></dt>
+<dd><p>Used to draw samples from a specified distribution . Any distribution
+function provided must accept a “size” parameter that determines the
+sample size.</p>
+<dl class="method">
+<dt id="RandomInput.RandomInput.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>distribution_function</em>, <em>random_seed=None</em>, <em>**distribution_function_args</em><span class="sig-paren">)</span><a class="headerlink" href="#RandomInput.RandomInput.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>distribution_function</strong> (<em>function</em>) – Returns a sample of a distribution
+with the sample sized determined by a “size” parameter. Typically,
+a numpy function such as numpy.random.uniform() is used.</li>
+<li><strong>distribution_function_args</strong> – Any arguments required by the
+distribution function, with the exception of “size”, which will be
+provided to the function when draw_samples is called.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="RandomInput.RandomInput.draw_samples">
+<code class="descname">draw_samples</code><span class="sig-paren">(</span><em>num_samples</em><span class="sig-paren">)</span><a class="headerlink" href="#RandomInput.RandomInput.draw_samples" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns num_samples samples from a distribution in the form of a
+numpy array.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>num_samples</strong> (<em>int</em>) – Total number of samples to take across all CPUs.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A ndarray of distribution sample. If multiple CPUs are
+available, will return a subset of sample determined by number
+of CPUs.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="RandomInput.RandomInput.reset_sampling">
+<code class="descname">reset_sampling</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RandomInput.RandomInput.reset_sampling" title="Permalink to this definition">¶</a></dt>
+<dd><p>Used to reset the sample index to 0 when drawing from an indexed data
+set such as an ndarray extracted from a data file. Does not need to
+perform any actions for some data sources, for example random
+distributions as in the RandomInput class.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-Model">
+<span id="model-documentation"></span><h2>Model Documentation<a class="headerlink" href="#module-Model" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="Model.Model">
+<em class="property">class </em><code class="descclassname">Model.</code><code class="descname">Model</code><a class="headerlink" href="#Model.Model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract base class for Models which should evaluate sample inputs to
+produce outputs.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>inputs</strong> – one dimensional ndarray</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">two dimensional ndarray</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<span class="target" id="module-ModelFromData"></span><dl class="class">
+<dt id="ModelFromData.ModelFromData">
+<em class="property">class </em><code class="descclassname">ModelFromData.</code><code class="descname">ModelFromData</code><span class="sig-paren">(</span><em>input_filename</em>, <em>output_filename</em>, <em>cost</em>, <em>delimiter=None</em>, <em>skip_header=0</em>, <em>wait_cost_duration=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ModelFromData.ModelFromData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Used to produce outputs from inputs based on data provided in text files.</p>
+<dl class="method">
+<dt id="ModelFromData.ModelFromData.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>input_filename</em>, <em>output_filename</em>, <em>cost</em>, <em>delimiter=None</em>, <em>skip_header=0</em>, <em>wait_cost_duration=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ModelFromData.ModelFromData.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>input_filename</strong> (<em>string</em>) – Path to file containing input data.</li>
+<li><strong>output_filename</strong> (<em>string</em>) – Path to file containing output data.</li>
+<li><strong>cost</strong> (<em>float</em><em> or </em><em>ndarray</em>) – The average cost of computing a sample output. If multiple
+quantities of interest are provided in the data, an ndarray of costs
+can specify cost for each quantity of interest.</li>
+<li><strong>delimiter</strong> (<em>string</em><em>, </em><em>int</em><em>, </em><em>list</em><em>(</em><em>int</em><em>)</em>) – Delimiter used to separate data in data files, or
+size of each entry in the case of fixed width data.</li>
+<li><strong>wait_cost_duration</strong> (<em>bool</em>) – Whether to sleep for the duration of the
+cost in order to simulate real time model evaluation.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ModelFromData.ModelFromData.evaluate">
+<code class="descname">evaluate</code><span class="sig-paren">(</span><em>input_data</em><span class="sig-paren">)</span><a class="headerlink" href="#ModelFromData.ModelFromData.evaluate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns outputs corresponding to provided input_data. input_data will
+be searched for within the stored input data and the index of the match
+will be used to extract and return output data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>input_data</strong> (<em>ndarray</em>) – Scalar or vector to be searched for in input data.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A ndarray of matched output_data.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Source Code Documentation</a><ul>
+<li><a class="reference internal" href="#module-MLMCSimulator">Multi-Level Monte Carlo Simulator Documentation</a></li>
+<li><a class="reference internal" href="#module-Input">Input Module Documentation</a></li>
+<li><a class="reference internal" href="#module-Model">Model Documentation</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="example.html"
+                        title="previous chapter">Example - Spring Mass System</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/source_code.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="example.html" title="Example - Spring Mass System"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">MLMCPy 1.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, NASA.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.4.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,298 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Example - Spring Mass System &#8212; MLMCPy 1.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Source Code Documentation" href="source_code.html" />
+    <link rel="prev" title="Introduction" href="intro.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="source_code.html" title="Source Code Documentation"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="intro.html" title="Introduction"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">MLMCPy 1.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="example-spring-mass-system">
+<h1>Example - Spring Mass System<a class="headerlink" href="#example-spring-mass-system" title="Permalink to this headline">¶</a></h1>
+<p>This example provides a simple demonstration of MLMCPy functionality. The goal
+is to estimate the maximum displacement of a spring-mass
+system with random stiffness using Multi-Level Monte Carlo (MLMC) and compare to standard Monte Carlo simulation. The example covers all steps for computing MLMC estimators using MLMCPy, including defining a random input parameter
+(spring stiffness) using a MLMCPy random input, creating a user-defined computational model (spring mass numerical integrator) that uses the standardized MLMCPy interface, and running MLMC with a hierarchy of these models (according to time step size) to obtain an estimator for a quantity of interest (max. displacement)  within a prescribed precision. The full source code for this example can be found in the MLMCPy repository: <code class="docutils literal notranslate"><span class="pre">/MLMCPy/examples/spring_mass/from_model/run_mlmc_from_model.py</span></code></p>
+<div class="figure align-center" id="spring-mass">
+<a class="reference internal image-reference" href="_images/spring_mass_diagram.png"><img alt="_images/spring_mass_diagram.png" src="_images/spring_mass_diagram.png" style="width: 2in;" /></a>
+</div>
+<div class="section" id="problem-specification">
+<h2>Problem Specification<a class="headerlink" href="#problem-specification" title="Permalink to this headline">¶</a></h2>
+<p>The governing equation of motion for the system is given by</p>
+<div class="math" id="equation-springmass">
+<p><span class="eqno">(1)<a class="headerlink" href="#equation-springmass" title="Permalink to this equation">¶</a></span><img src="_images/math/b9228c12487f73d548763c61745e3cf8e492cfd2.png" alt="m_s \ddot{z}  = -k_s z + m_s g"/></p>
+</div><p>where <img class="math" src="_images/math/678113eb2ebf18c078cf3e4cff8e8aac2f347485.png" alt="m_s"/> is the mass, <img class="math" src="_images/math/a4f983455bdb6ec51b3fdaa4d3ddc93e712f4c75.png" alt="k_s"/> is the spring stiffness, <img class="math" src="_images/math/307b3725cbb03398131f9ca542d79aff4933195f.png" alt="g"/>
+is the acceleration due to gravity, <img class="math" src="_images/math/683f2dd9129a91d21aaf1c04afa6f78b39d4cb0a.png" alt="z"/> is the vertical displacement
+of the mass, and <img class="math" src="_images/math/ad7538581b1f02e87be67296fedce555dc704479.png" alt="\ddot{z}"/> is the acceleration of the mass. The
+source of uncertainty in the system will be the spring stiffness, which is
+modeled as a random variable of the following form:</p>
+<div class="math" id="equation-random-stiffness">
+<p><span class="eqno">(2)<a class="headerlink" href="#equation-random-stiffness" title="Permalink to this equation">¶</a></span><img src="_images/math/1d281d91e34a74f064c179fd70612c7bfe765eaa.png" alt="K_s = \gamma + \eta B"/></p>
+</div><p>where <img class="math" src="_images/math/3666981dc77862de77b6ecfcb64aad59b425cbaf.png" alt="\gamma"/> and <img class="math" src="_images/math/5635a7c34414599c2452d72430811e816b460335.png" alt="\eta"/> are shift and scale parameters,
+respectively, and <img class="math" src="_images/math/d748cfdac5dabbf89592b7f10bc320c27d98ebc3.png" alt="B = \text{Beta}(\alpha, \beta)"/> is a standard Beta
+random variable with shape parameters <img class="math" src="_images/math/877d234f4cec6974ce218fc2e975a486a7972dfd.png" alt="\alpha"/> and <img class="math" src="_images/math/410a9d0df9c135dd73b269cba7ef04dcfd932b1f.png" alt="\beta"/>. Let
+these parameters take the following values: <img class="math" src="_images/math/666f10b1d5338fe962e81b37cefb54d6633fd29f.png" alt="\gamma=1.0N/m"/>,
+<img class="math" src="_images/math/8b25e6d1d67015300bc0d13c686a6410a47a7d3a.png" alt="\eta = 2.5N/m"/>, <img class="math" src="_images/math/02e99335fa7566885ffc47f9d1d14dd30bff14cb.png" alt="\alpha=3.0"/>, and <img class="math" src="_images/math/58feb749986ef5862e812ca6c32b924a2f7aca6c.png" alt="\beta=2.0"/>. The mass
+is assumed to be deterministic, <img class="math" src="_images/math/032ffd36302c5d12a2f2e5b029c92c5015455208.png" alt="m_s = 1.5kg"/>, and the acceleration due
+to gravity is <img class="math" src="_images/math/fdd92017f5b9e8043b027461d74ddd99c720079c.png" alt="g = 9.8 m^2/s"/>.</p>
+<p>With uncertainty in an input parameter, the resulting displacement, <img class="math" src="_images/math/bcb2457ac9d8995a4f34d57cadac7ecbbe58f3bd.png" alt="Z"/>, is a random variable as well. The quantity of interest in this example with be the maximum displacement over a specified time window, <img class="math" src="_images/math/88342b20a6b5fba2b278a773e8ef013b315593af.png" alt="Z_{max}=max_t(Z)"/>. The equation of motion in Equation (1) can be numerically integrated over the time window with a specified time step, and the maximum of the resulting displacement time series can be taken to obtain <img class="math" src="_images/math/7e42ebe19fb98188fa6beba3bdea590fd7172513.png" alt="Z_{max}"/>.</p>
+<p>The goal of this example will be to estimate the expected value of the maximum displacement, <img class="math" src="_images/math/b125a026740c3cb29d8f1b0bef027d3e0be86939.png" alt="E[Z_{max}]"/>, using the MLMC approach with MLMCPy and compare it to a Monte Carlo simulation solution. The MLMC expected value estimate of a random quantity, <img class="math" src="_images/math/7a7bb470119808e2db2879fc2b2526f467b7a40b.png" alt="X"/>, is as follows:</p>
+<div class="math" id="equation-mlmc-estimate">
+<p><span class="eqno">(3)<a class="headerlink" href="#equation-mlmc-estimate" title="Permalink to this equation">¶</a></span><img src="_images/math/a3c67d38fee7afef3545d636b98cdc98770595c5.png" alt="E[X] \approx E[X_0] + \sum_{l=1}^{L} E[X_l - X_{l-1}]"/></p>
+</div><p>where <img class="math" src="_images/math/ae2b750f71e1fc0daaa3de9a85d42794d7cd1326.png" alt="L"/> is the number of levels (and number of models of varying fidelity) used. Each expected value is approximated by it’s Monte Carlo estimator:</p>
+<div class="math" id="equation-mc-expected-value">
+<p><span class="eqno">(4)<a class="headerlink" href="#equation-mc-expected-value" title="Permalink to this equation">¶</a></span><img src="_images/math/e953d3209778547be1bd9286b71f84a14d10f72e.png" alt="E[X_l] \approx \frac{1}{N_l} \sum_{i=1}^{N_l} X_l^{(i)}"/></p>
+</div><p>The MLMC method prescribes the number of samples to be taken on each level, <img class="math" src="_images/math/ca6885641737a46712b4741250822d1d98510a54.png" alt="N_l"/>, based on a user-specified precision and the variance of the output on each level.</p>
+<p>For this example, three levels will be employed, where each level corresponds to a maximum displacement predicted using a spring mass simulator model with varying time step. First, the random spring stiffness is represented using a MLMCPy random input, then a spring mass model is created and three instantiations of it are made with different time steps, then MLMC is used to estimate the expected maximum displacement to a prescibed precision.</p>
+</div>
+<div class="section" id="step-1-initialization-define-the-random-input-parameter">
+<h2>Step 1: Initialization; define the random input parameter<a class="headerlink" href="#step-1-initialization-define-the-random-input-parameter" title="Permalink to this headline">¶</a></h2>
+<p>Begin by importing the needed Python modules, including MLMCPy classes and the SpringMassModel class that defines the spring mass numerical integrator:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">timeit</span>
+
+<span class="kn">from</span> <span class="nn">spring_mass</span> <span class="kn">import</span> <span class="n">SpringMassModel</span>
+<span class="kn">from</span> <span class="nn">MLMCPy.input</span> <span class="kn">import</span> <span class="n">RandomInput</span>
+<span class="kn">from</span> <span class="nn">MLMCPy.mlmc</span> <span class="kn">import</span> <span class="n">MLMCSimulator</span>
+</pre></div>
+</div>
+<p>Below is a snippet of the SpringMassModel class, the entire class can be found in the MLMCPy repo (<code class="docutils literal notranslate"><span class="pre">/MLMCPy/examples/spring_mass/from_model/spring_mass_model.py</span></code>):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">MLMCPy.model</span> <span class="kn">import</span> <span class="n">Model</span>
+
+<span class="k">class</span> <span class="nc">SpringMassModel</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Defines Spring Mass model with 1 free param (stiffness of spring, k). The</span>
+<span class="sd">    quantity of interest that is returned by the evaluate() function is the</span>
+<span class="sd">    maximum displacement over the specified time interval</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mass</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">gravity</span><span class="o">=</span><span class="mf">9.8</span><span class="p">,</span> <span class="n">state0</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">time_step</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+               <span class="n">cost</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+</pre></div>
+</div>
+<p>Note that user-defined models in MLMCPy must inherit from the MLMCPy abstract class <code class="docutils literal notranslate"><span class="pre">Model</span></code> and implement an  <code class="docutils literal notranslate"><span class="pre">evaluate</span></code> function that accepts and returns numpy arrays for inputs and outputs, respectively. Here, the <code class="docutils literal notranslate"><span class="pre">time_step</span></code> argument governs numerical integration and will define the three levels used for MLMC.</p>
+<p>The first step in an analysis is to define the random variable representing the model inputs. Here, the spring stiffness <img class="math" src="_images/math/af115195c8b6c13c7f47455427b364a26eef1356.png" alt="K_s"/> is defined by a Beta random variable and created with MLMCPy as follows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Step 1 - Define random variable for spring stiffness:</span>
+<span class="c1"># Need to provide a sampleable function to create RandomInput instance.</span>
+<span class="k">def</span> <span class="nf">beta_distribution</span><span class="p">(</span><span class="n">shift</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">size</span><span class="p">):</span>
+
+    <span class="k">return</span> <span class="n">shift</span> <span class="o">+</span> <span class="n">scale</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">beta</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
+
+<span class="n">stiffness_distribution</span> <span class="o">=</span> <span class="n">RandomInput</span><span class="p">(</span><span class="n">distribution_function</span><span class="o">=</span><span class="n">beta_distribution</span><span class="p">,</span>
+                                <span class="n">shift</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">3.</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mf">2.</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">RandomInput</span></code> class is initialized with a function that produces random samples and any parameters it requires. See the <a class="reference internal" href="source_code.html#input-module-docs"><span class="std std-ref">Input Module Documentation</span></a> for more details about specifying random input parameters with MLMCPy.</p>
+</div>
+<div class="section" id="step-2-generate-reference-solution-using-standard-monte-carlo-simulation">
+<h2>Step 2: Generate reference solution using standard Monte Carlo simulation<a class="headerlink" href="#step-2-generate-reference-solution-using-standard-monte-carlo-simulation" title="Permalink to this headline">¶</a></h2>
+<p>Here a reference solution is generated using standard Monte Carlo simulation and a prescribed number of samples. This is done by instantiating a spring mass model (time step = 0.01) and evaluating the model for random samples of the stiffness random variable defined in Step 1. The code to do so is as follows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Step 2: Run standard Monte Carlo to generate a reference solution and target precision</span>
+<span class="n">num_samples</span> <span class="o">=</span> <span class="mi">5000</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">SpringMassModel</span><span class="p">(</span><span class="n">mass</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">time_step</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>
+<span class="n">input_samples</span> <span class="o">=</span> <span class="n">stiffness_distribution</span><span class="o">.</span><span class="n">draw_samples</span><span class="p">(</span><span class="n">num_samples</span><span class="p">)</span>
+<span class="n">output_samples_mc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">num_samples</span><span class="p">)</span>
+
+<span class="n">start_mc</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">default_timer</span><span class="p">()</span>
+
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">sample</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">input_samples</span><span class="p">):</span>
+    <span class="n">output_samples_mc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">evaluate</span><span class="p">([</span><span class="n">sample</span><span class="p">])</span>
+
+<span class="n">mc_total_cost</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">default_timer</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_mc</span>
+<span class="n">mean_mc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">output_samples_mc</span><span class="p">)</span>
+<span class="n">precision_mc</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">output_samples_mc</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">num_samples</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>The total time to compute the solution, the mean estimate, and the resulting precision in the estimate are stored for comparison to MLMC later. Note that this precision will be used as the target threshold for MLMC in Step 4.</p>
+</div>
+<div class="section" id="step-3-initialize-a-hierarchy-3-levels-of-models-for-mlmc">
+<h2>Step 3: Initialize a hierarchy (3 levels) of models for MLMC<a class="headerlink" href="#step-3-initialize-a-hierarchy-3-levels-of-models-for-mlmc" title="Permalink to this headline">¶</a></h2>
+<p>In order to apply the MLMC method (Equation (3)), multiple levels of models (defined by cost/accuracy) must be defined. The following code initializes three separate spring mass models defined by varying time step (the smaller the time step, the higher the cost and accuracy):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Step 3 - Initialize spring-mass models for MLMC. Here using three levels</span>
+<span class="c1"># with MLMC defined by different time steps</span>
+
+<span class="n">model_level1</span> <span class="o">=</span> <span class="n">SpringMassModel</span><span class="p">(</span><span class="n">mass</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">time_step</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+<span class="n">model_level2</span> <span class="o">=</span> <span class="n">SpringMassModel</span><span class="p">(</span><span class="n">mass</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">time_step</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+<span class="n">model_level3</span> <span class="o">=</span> <span class="n">SpringMassModel</span><span class="p">(</span><span class="n">mass</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">time_step</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>
+
+<span class="n">models</span> <span class="o">=</span> <span class="p">[</span><span class="n">model_level1</span><span class="p">,</span> <span class="n">model_level2</span><span class="p">,</span> <span class="n">model_level3</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="step-4-run-mlmc-to-estimate-the-expected-maximum-displacement">
+<h2>Step 4: Run MLMC to estimate the expected maximum displacement<a class="headerlink" href="#step-4-run-mlmc-to-estimate-the-expected-maximum-displacement" title="Permalink to this headline">¶</a></h2>
+<p>With a random input defined in Step 1 and multiple fidelity models defined in Step 3, MLMC can now be used to estimate the maximum displacement using the <code class="docutils literal notranslate"><span class="pre">MLMCSimulator</span></code> class. Here, MLMC is used to obtain an estimate with the same level of precision that was calculated using Monte Carlo in Step 2. The following code executes the MLMC algorithm and times it for comparison later:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Step 4 - Initialize MLMC &amp; predict max displacement to specified error.</span>
+<span class="n">mlmc_simulator</span> <span class="o">=</span> <span class="n">MLMCSimulator</span><span class="p">(</span><span class="n">stiffness_distribution</span><span class="p">,</span> <span class="n">models</span><span class="p">)</span>
+
+<span class="n">start_mlmc</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">default_timer</span><span class="p">()</span>
+
+<span class="p">[</span><span class="n">estimates</span><span class="p">,</span> <span class="n">sample_sizes</span><span class="p">,</span> <span class="n">variances</span><span class="p">]</span> <span class="o">=</span> \
+    <span class="n">mlmc_simulator</span><span class="o">.</span><span class="n">simulate</span><span class="p">(</span><span class="n">epsilon</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">precision_mc</span><span class="p">),</span>
+                            <span class="n">initial_sample_sizes</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                            <span class="n">verbose</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+<span class="n">mlmc_total_cost</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">default_timer</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_mlmc</span>
+</pre></div>
+</div>
+<p>Note that <code class="docutils literal notranslate"><span class="pre">MLMCSimulator</span></code> uses an initial setup to estimate output variances, where the provided models are executed a number of times equal to the <code class="docutils literal notranslate"><span class="pre">initial_sample_sizes</span></code> argument.  See <a class="reference internal" href="source_code.html#mlmc-module-docs"><span class="std std-ref">Multi-Level Monte Carlo Simulator Documentation</span></a> for more details about the <code class="docutils literal notranslate"><span class="pre">MLMCSimulator</span></code> API.</p>
+</div>
+<div class="section" id="step-5-compare-the-mlmc-and-monte-carlo-results">
+<h2>Step 5: Compare the MLMC and Monte Carlo results<a class="headerlink" href="#step-5-compare-the-mlmc-and-monte-carlo-results" title="Permalink to this headline">¶</a></h2>
+<p>Finally, the MLMC estimate is compared to the Monte Carlo reference solution.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">print</span> <span class="s1">&#39;MLMC estimate: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">estimates</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="k">print</span> <span class="s1">&#39;MLMC precision: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">variances</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="k">print</span> <span class="s1">&#39;MLMC total cost: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">mlmc_total_cost</span>
+
+<span class="k">print</span> <span class="s2">&quot;MC # samples: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">num_samples</span>
+<span class="k">print</span> <span class="s2">&quot;MC estimate: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">mean_mc</span>
+<span class="k">print</span> <span class="s2">&quot;MC precision: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">precision_mc</span>
+<span class="k">print</span> <span class="s2">&quot;MC total cost: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">mc_total_cost</span>
+<span class="k">print</span> <span class="s2">&quot;MLMC computational speedup: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span>  <span class="p">(</span><span class="n">mc_total_cost</span> <span class="o">/</span> <span class="n">mlmc_total_cost</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For one particular execution of this script in a single-core environment, the following results were obtained. Note that MLMC used 5553, 386, and 3 samples (model evaluations) on levels 1, 2, and 3, respectively, compared with 5000 samples of level 3 used by Monte Carlo simulation. The resulting computational speed up was 2.62</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="32%" />
+<col width="34%" />
+<col width="34%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Description</th>
+<th class="head">MLMC Value</th>
+<th class="head">MC Value</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>Estimate</td>
+<td>12.2739151773</td>
+<td>12.390705590117555</td>
+</tr>
+<tr class="row-odd"><td>Error</td>
+<td>0.045171289</td>
+<td>0.071619124</td>
+</tr>
+<tr class="row-even"><td>Precision</td>
+<td>0.009916230329196151</td>
+<td>0.010780941000560835</td>
+</tr>
+<tr class="row-odd"><td>Total cost (seconds)</td>
+<td>0.63</td>
+<td>1.14</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Example - Spring Mass System</a><ul>
+<li><a class="reference internal" href="#problem-specification">Problem Specification</a></li>
+<li><a class="reference internal" href="#step-1-initialization-define-the-random-input-parameter">Step 1: Initialization; define the random input parameter</a></li>
+<li><a class="reference internal" href="#step-2-generate-reference-solution-using-standard-monte-carlo-simulation">Step 2: Generate reference solution using standard Monte Carlo simulation</a></li>
+<li><a class="reference internal" href="#step-3-initialize-a-hierarchy-3-levels-of-models-for-mlmc">Step 3: Initialize a hierarchy (3 levels) of models for MLMC</a></li>
+<li><a class="reference internal" href="#step-4-run-mlmc-to-estimate-the-expected-maximum-displacement">Step 4: Run MLMC to estimate the expected maximum displacement</a></li>
+<li><a class="reference internal" href="#step-5-compare-the-mlmc-and-monte-carlo-results">Step 5: Compare the MLMC and Monte Carlo results</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="intro.html"
+                        title="previous chapter">Introduction</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="source_code.html"
+                        title="next chapter">Source Code Documentation</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/example.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="source_code.html" title="Source Code Documentation"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="intro.html" title="Introduction"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">MLMCPy 1.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, NASA.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.4.
+    </div>
+  </body>
+</html>
