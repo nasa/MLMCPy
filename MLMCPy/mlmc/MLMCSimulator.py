@@ -11,12 +11,12 @@ class MLMCSimulator:
     """
     Computes an estimate based on the Multi-Level Monte Carlo algorithm.
     """
-    def __init__(self, data, models):
+    def __init__(self, random_input, models):
         """
         Requires a data object that provides input samples and a list of models
         of increasing fidelity.
 
-        :param data: Provides a data sampling function.
+        :param random_input: Provides a data sampling function.
         :type data: Input
         :param models: Each model Produces outputs from sample data input.
         :type models: list(Model)
@@ -24,9 +24,9 @@ class MLMCSimulator:
         # Detect whether we have access to multiple CPUs.
         self.__detect_parallelization()
 
-        self.__check_init_parameters(data, models)
+        self.__check_init_parameters(random_input, models)
 
-        self._data = data
+        self._data = random_input
         self._models = models
         self._num_levels = len(self._models)
 
