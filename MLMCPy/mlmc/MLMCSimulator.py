@@ -148,8 +148,10 @@ class MLMCSimulator:
         compute_times = np.zeros(self._num_levels)
 
         for level in range(self._num_levels):
-
-            input_samples = self._draw_setup_samples(level, user_samples)
+            if user_sample_size is not None:
+                input_samples = self._draw_setup_samples(level, user_samples)
+            else:
+                input_samples = self._draw_setup_samples(level)
 
             start_time = timeit.default_timer()
             self._compute_setup_outputs(input_samples, level)
