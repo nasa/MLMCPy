@@ -300,7 +300,8 @@ class MLMCSimulator:
         # Need 2d version of costs in order to vectorize the operations.
         costs = costs[:, np.newaxis]
         
-        self._process_epsilon(user_epsilon)
+        if user_epsilon is not None:
+            self._process_epsilon(user_epsilon)
 
         mu = self._compute_mu(costs, variances)
 
