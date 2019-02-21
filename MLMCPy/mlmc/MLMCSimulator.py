@@ -299,8 +299,10 @@ class MLMCSimulator:
 
         # Need 2d version of costs in order to vectorize the operations.
         costs = costs[:, np.newaxis]
+        
+        self._process_epsilon(user_epsilon)
 
-        mu = self._compute_mu(costs, variances, user_epsilon)
+        mu = self._compute_mu(costs, variances)
 
         # Compute sample sizes.
         sqrt_v_over_c = np.sqrt(variances / costs)
@@ -316,7 +318,10 @@ class MLMCSimulator:
 
             self._show_time_estimate(estimated_runtime)
 
-    def _compute_mu(self, costs, variances, user_epsilon=None):
+        if user_epsilon is not None:
+            return self._sample_sizes
+
+    def _compute_mu(self, costs, variances):
         """
         Computes the mu value used to compute sample sizes.
 
@@ -327,9 +332,6 @@ class MLMCSimulator:
         sum_sqrt_vc = np.sum(np.sqrt(variances * costs), axis=0)
 
         if self._target_cost is None:
-            if user_epsilon is not None:
-                mu = np.power(user_epsilon, -2) * sum_sqrt_vc
-            else:
                 mu = np.power(self._epsilons, -2) * sum_sqrt_vc
         else:
             mu = self._target_cost * float(self._num_cpus) / sum_sqrt_vc
