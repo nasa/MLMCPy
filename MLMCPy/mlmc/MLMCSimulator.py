@@ -116,7 +116,7 @@ class MLMCSimulator:
             self._initial_sample_sizes = \
                 self._verify_sample_sizes(initial_sample_sizes)
 
-            costs, variances = self._compute_costs_and_variances()
+            costs, variances = self.compute_costs_and_variances()
             self._compute_optimal_sample_sizes(costs, variances)
 
         else:
@@ -125,7 +125,7 @@ class MLMCSimulator:
             sample_sizes = self._verify_sample_sizes(sample_sizes, False)
             self._process_sample_sizes(sample_sizes, None)
 
-    def _compute_costs_and_variances(self):
+    def compute_costs_and_variances(self, user_samples=None):
         """
         Compute costs and variances across levels.
 
@@ -136,7 +136,11 @@ class MLMCSimulator:
         if self._verbose:
             print "Determining costs: "
 
-        self._initialize_cache()
+        if user_samples is not None:
+            verified_user_samples = self._verify_sample_sizes(user_samples)
+            self._initialize_cache(verified_user_samples)
+        else:
+            self._initialize_cache()
 
         # Evaluate samples in model. Gather compute times for each level.
         # Variance is computed from difference between outputs of adjacent
@@ -144,8 +148,11 @@ class MLMCSimulator:
         compute_times = np.zeros(self._num_levels)
 
         for level in range(self._num_levels):
-
-            input_samples = self._draw_setup_samples(level)
+            if user_samples is not None:
+                input_samples = \
+                    self._draw_setup_samples(level, verified_user_samples)
+            else:
+                input_samples = self._draw_setup_samples(level)
 
             start_time = timeit.default_timer()
             self._compute_setup_outputs(input_samples, level)
@@ -162,15 +169,20 @@ class MLMCSimulator:
 
         return costs, variances
 
-    def _initialize_cache(self):
+    def _initialize_cache(self, user_samples=None):
         """
         Sets up the cache for retaining model outputs evaluated in the setup
         phase for reuse in the simulation phase.
         """
         # Determine number of samples to be taken on this processor.
         get_cpu_sample_sizes = np.vectorize(self._determine_num_cpu_samples)
-        self._cpu_initial_sample_sizes = \
-            get_cpu_sample_sizes(self._initial_sample_sizes)
+
+        if user_samples is not None:
+            self._cpu_initial_sample_sizes = \
+                get_cpu_sample_sizes(user_samples)
+        else:
+            self._cpu_initial_sample_sizes = \
+                get_cpu_sample_sizes(self._initial_sample_sizes)
 
         max_cpu_sample_size = int(np.max(self._cpu_initial_sample_sizes))
 
@@ -183,13 +195,17 @@ class MLMCSimulator:
                                          max_cpu_sample_size,
                                          self._output_size))
 
-    def _draw_setup_samples(self, level):
+    def _draw_setup_samples(self, level, user_samples=None):
         """
         Draw samples based on initial sample size at specified level.
         Store samples in _cached_inputs.
         :param level: int level
         """
-        num_samples = self._initial_sample_sizes[level]
+        if user_samples is not None:
+            num_samples = user_samples[level]
+        else:
+            num_samples = self._initial_sample_sizes[level]
+
         input_samples = self._draw_samples(num_samples)
 
         # To cache these samples, we have to account for the possibility
@@ -755,7 +771,7 @@ class MLMCSimulator:
             :return: Samples to be taken by this cpu.
         """
         num_cpu_samples = total_num_samples // self._num_cpus
-
+        
         num_residual_samples = total_num_samples - \
             num_cpu_samples * self._num_cpus
 
