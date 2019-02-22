@@ -1,4 +1,4 @@
-from abc import abstractmethod
+import abc
 
 from MLMCPy.model import Model
 
@@ -10,6 +10,6 @@ class WrapperModel(Model):
         if hasattr(self._model, 'cost'):
             self.cost = model.cost
         
-    @abstractmethod
+    @abc.abstractmethod
     def attach_model(self, model):
-        pass
+        raise NotImplementedError
