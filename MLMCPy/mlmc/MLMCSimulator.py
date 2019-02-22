@@ -466,11 +466,24 @@ class MLMCSimulator:
             return np.zeros((1, self._output_size))
 
         output_differences = np.zeros((num_samples, self._output_size))
+        print 'output_differences sim loop', output_differences.shape
 
         for i, sample in enumerate(samples):
             output_differences[i] = self._evaluate_sample(sample, level)
-
+        print 'output_differences sim loop', output_differences.shape
         return output_differences
+
+    def compute_estimators(self, outputs):
+        print 'outputs: ', outputs[0]
+        tests = np.concatenate(outputs[0], axis = None)
+        #tests2 = np.concatenate(outputs[1], axis = None)
+        #tests3 = np.concatenate(outputs[2], axis = None)
+
+        print 'after concat: ', tests.shape
+        #print 'after concat: ', tests2.shape
+        #print 'after concat: ', tests3.shape
+
+
 
     def _update_sim_loop_values(self, outputs, level):
         """
