@@ -1,7 +1,7 @@
 import numpy as np
 
 from WrapperModel import WrapperModel
-
+from Model import Model
 
 class CDFWrapperModel(WrapperModel):
     """
@@ -51,7 +51,7 @@ class CDFWrapperModel(WrapperModel):
 
     @staticmethod
     def __check_attached_model(model):
-        if not isinstance(model, WrapperModel):
+        if not isinstance(model, Model):
             raise TypeError('Model must be attached.')
 
     @staticmethod
