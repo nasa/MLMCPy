@@ -101,30 +101,6 @@ class MLMCSimulator:
         # Run models and return estimate, sample sizes, and variances.
         return self._run_simulation()
 
-    def _setup_simulation(self, epsilon, initial_sample_sizes, sample_sizes):
-        """
-        Performs any necessary manipulation of epsilon and initial_sample_sizes.
-        Computes variance and cost at each level in order to estimate optimal
-        number of samples at each level.
-
-        :param epsilon: Epsilon values for each quantity of interest.
-        :param initial_sample_sizes: Sample sizes used when computing costs
-            and variance for each model in simulation.
-        """
-        if sample_sizes is None:
-            self._process_epsilon(epsilon)
-            self._initial_sample_sizes = \
-                self._verify_sample_sizes(initial_sample_sizes)
-
-            costs, variances = self.compute_costs_and_variances()
-            self.compute_optimal_sample_sizes(costs, variances)
-
-        else:
-            self._target_cost = None
-            self._caching_enabled = False
-            sample_sizes = self._verify_sample_sizes(sample_sizes, False)
-            self._process_sample_sizes(sample_sizes, None)
-
     def compute_costs_and_variances(self, user_sample_size=None):
         """
         Compute costs and variances across levels.
@@ -167,6 +143,65 @@ class MLMCSimulator:
             print 'Initial sample variances: \n%s' % variances
 
         return costs, variances
+
+    def compute_optimal_sample_sizes(self, costs, variances, user_epsilon=None):
+        """
+        Compute the sample size for each level to be used in simulation.
+
+        :param variances: 2d ndarray of variances
+        :param costs: 1d ndarray of costs
+        """
+        if self._verbose:
+            print "Computing optimal sample sizes: "
+
+        # Need 2d version of costs in order to vectorize the operations.
+        costs = costs[:, np.newaxis]
+        
+        if user_epsilon is not None:
+            self._process_epsilon(user_epsilon)
+
+        mu = self._compute_mu(costs, variances)
+
+        # Compute sample sizes.
+        sqrt_v_over_c = np.sqrt(variances / costs)
+        sample_sizes = np.amax(np.trunc(mu * sqrt_v_over_c), axis=1)
+
+        self._process_sample_sizes(sample_sizes, costs)
+
+        if self._verbose:
+
+            print np.array2string(self._sample_sizes)
+
+            estimated_runtime = np.dot(self._sample_sizes, np.squeeze(costs))
+
+            self._show_time_estimate(estimated_runtime)
+
+        if user_epsilon is not None:
+            return self._sample_sizes
+
+    def _setup_simulation(self, epsilon, initial_sample_sizes, sample_sizes):
+        """
+        Performs any necessary manipulation of epsilon and initial_sample_sizes.
+        Computes variance and cost at each level in order to estimate optimal
+        number of samples at each level.
+
+        :param epsilon: Epsilon values for each quantity of interest.
+        :param initial_sample_sizes: Sample sizes used when computing costs
+            and variance for each model in simulation.
+        """
+        if sample_sizes is None:
+            self._process_epsilon(epsilon)
+            self._initial_sample_sizes = \
+                self._verify_sample_sizes(initial_sample_sizes)
+
+            costs, variances = self.compute_costs_and_variances()
+            self.compute_optimal_sample_sizes(costs, variances)
+
+        else:
+            self._target_cost = None
+            self._caching_enabled = False
+            sample_sizes = self._verify_sample_sizes(sample_sizes, False)
+            self._process_sample_sizes(sample_sizes, None)
 
     def _initialize_cache(self, user_sample_size=None):
         """
@@ -286,41 +321,6 @@ class MLMCSimulator:
         costs[1:] = costs[1:] + costs[:-1]
 
         return costs
-
-    def compute_optimal_sample_sizes(self, costs, variances, user_epsilon=None):
-        """
-        Compute the sample size for each level to be used in simulation.
-
-        :param variances: 2d ndarray of variances
-        :param costs: 1d ndarray of costs
-        """
-        if self._verbose:
-            print "Computing optimal sample sizes: "
-
-        # Need 2d version of costs in order to vectorize the operations.
-        costs = costs[:, np.newaxis]
-        
-        if user_epsilon is not None:
-            self._process_epsilon(user_epsilon)
-
-        mu = self._compute_mu(costs, variances)
-
-        # Compute sample sizes.
-        sqrt_v_over_c = np.sqrt(variances / costs)
-        sample_sizes = np.amax(np.trunc(mu * sqrt_v_over_c), axis=1)
-
-        self._process_sample_sizes(sample_sizes, costs)
-
-        if self._verbose:
-
-            print np.array2string(self._sample_sizes)
-
-            estimated_runtime = np.dot(self._sample_sizes, np.squeeze(costs))
-
-            self._show_time_estimate(estimated_runtime)
-
-        if user_epsilon is not None:
-            return self._sample_sizes
 
     def _compute_mu(self, costs, variances):
         """
