@@ -4,14 +4,14 @@ from datetime import timedelta
 import imp
 
 from MLMCPy.input import Input
-from MLMCPy.model import Model
+from MLMCPy.model import Model, WrapperModel
 
 
 class MLMCSimulator:
     """
     Computes an estimate based on the Multi-Level Monte Carlo algorithm.
     """
-    def __init__(self, random_input, models):
+    def __init__(self, random_input, models, wrapper=None):
         """
         Requires a data object that provides input samples and a list of models
         of increasing fidelity.
@@ -24,7 +24,7 @@ class MLMCSimulator:
         # Detect whether we have access to multiple CPUs.
         self.__detect_parallelization()
 
-        self.__check_init_parameters(random_input, models)
+        self.__check_init_parameters(random_input, models, wrapper)
 
         self._data = random_input
         self._models = models
@@ -639,7 +639,7 @@ class MLMCSimulator:
             self._target_cost = float(target_cost)
 
     @staticmethod
-    def __check_init_parameters(data, models):
+    def __check_init_parameters(data, models, wrapper):
         """
         Inspect parameters given to init method.
         :param data: Input object provided to init().
@@ -651,6 +651,9 @@ class MLMCSimulator:
         if not isinstance(models, list):
             TypeError("models must be a list of models.")
 
+        if wrapper is not None and not isinstance(wrapper, WrapperModel):
+            TypeError("wrapper must inherit from WrapperModel class.")
+
         # Reset sampling in case input data is used more than once.
         data.reset_sampling()
 
@@ -659,12 +662,13 @@ class MLMCSimulator:
         test_sample = data.draw_samples(1)[0]
         data.reset_sampling()
 
-        for model in models:
-            if not isinstance(model, Model):
-                TypeError("models must be a list of models.")
+        if wrapper is None:
+            for model in models:
+                if not isinstance(model, Model):
+                    TypeError("models must be a list of models.")
 
-            test_output = model.evaluate(test_sample)
-            output_sizes.append(test_output.size)
+                test_output = model.evaluate(test_sample)
+                output_sizes.append(test_output.size)
 
         output_sizes = np.array(output_sizes)
         if not np.all(output_sizes == output_sizes[0]):
