@@ -30,12 +30,12 @@ class MLMCSimulator:
         self._data = random_input
 
         if wrapper is not None:
+            self._models = None
+            self._num_levels = None
             self._wrapper = wrapper
-            self._models = self.generate_models_list(models)
         else:
             self._models = models
-
-        self._num_levels = len(self._models)
+            self._num_levels = len(self._models)
 
         # Sample size to be taken at each level.
         self._sample_sizes = np.zeros(self._num_levels, dtype=np.int)
@@ -76,7 +76,8 @@ class MLMCSimulator:
 
             wrapper_models.append(wrapper_copy)
 
-        return wrapper_models
+        self._models = wrapper_models
+        self._num_levels = len(self._models)
 
     def simulate(self, epsilon, initial_sample_sizes=100, target_cost=None,
                  sample_sizes=None, verbose=False):
