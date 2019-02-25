@@ -35,6 +35,7 @@ class CovarianceWrapperModel(WrapperModel):
         :param sample: ndarray of 0 or 1 dimensions to be passed to inner model.
         :return: 1d ndarray of indicators.
         """
+        self.__check_attached_model(self._model)
         # Run model and collect output value.
         output = self._model.evaluate(sample)
 
@@ -44,6 +45,11 @@ class CovarianceWrapperModel(WrapperModel):
                 products.append(out_i * out_j)
 
         return np.hstack((output, products))
+
+    @staticmethod
+    def __check_attached_model(model):
+        if not isinstance(model, WrapperModel):
+            raise TypeError('WrapperModel must be attached.')
 
     @staticmethod
     def post_process_covariance(expected_values):
