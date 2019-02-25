@@ -1,13 +1,13 @@
-import numpy as np
-import timeit
-from datetime import timedelta
 import imp
+from datetime import timedelta
+import timeit
+import numpy as np
 
 from MLMCPy.input import Input
 from MLMCPy.model import Model
 
 
-class MLMCSimulator:
+class MLMCSimulator(object):
     """
     Computes an estimate based on the Multi-Level Monte Carlo algorithm.
     """
@@ -64,8 +64,8 @@ class MLMCSimulator:
         Perform MLMC simulation.
         Computes number of samples per level before running simulations
         to determine estimates.
-        Can be specified based on target precision to achieve (epsilon), 
-        total target cost (in seconds), or on number of sample to run on each 
+        Can be specified based on target precision to achieve (epsilon),
+        total target cost (in seconds), or on number of sample to run on each
         level directly.
 
         :param epsilon: Desired accuracy to be achieved for each quantity of
@@ -103,7 +103,7 @@ class MLMCSimulator:
 
     def compute_costs_and_variances(self, user_sample_size=None):
         """
-        Compute costs and variances across levels.
+        Computes costs and variances across levels.
 
         :return: tuple of ndarrays:
             1d ndarray of costs
@@ -146,7 +146,7 @@ class MLMCSimulator:
 
     def compute_optimal_sample_sizes(self, costs, variances, user_epsilon=None):
         """
-        Compute the sample size for each level to be used in simulation.
+        Computes the sample size for each level to be used in simulation.
 
         :param variances: 2d ndarray of variances
         :param costs: 1d ndarray of costs
@@ -156,7 +156,7 @@ class MLMCSimulator:
 
         # Need 2d version of costs in order to vectorize the operations.
         costs = costs[:, np.newaxis]
-        
+
         if user_epsilon is not None:
             self._process_epsilon(user_epsilon)
 
@@ -236,7 +236,7 @@ class MLMCSimulator:
         :param level: int level
         """
         if user_samples is not None:
-            num_samples = user_samples[level]            
+            num_samples = user_samples[level]
         else:
             num_samples = self._initial_sample_sizes[level]
         input_samples = self._draw_samples(num_samples)
@@ -333,7 +333,7 @@ class MLMCSimulator:
         sum_sqrt_vc = np.sum(np.sqrt(variances * costs), axis=0)
 
         if self._target_cost is None:
-                mu = np.power(self._epsilons, -2) * sum_sqrt_vc
+            mu = np.power(self._epsilons, -2) * sum_sqrt_vc
         else:
             mu = self._target_cost * float(self._num_cpus) / sum_sqrt_vc
 
@@ -435,6 +435,12 @@ class MLMCSimulator:
 
         return self._estimates, self._variances
 
+    # def compute_estimators(self, outputs):
+    #     for level in range(self._num_levels):
+    #         self._update_sim_loop_values(outputs, level)
+
+    #     return self._estimates, self._variances
+
     def _get_sim_loop_samples(self, level):
         """
         Acquires input samples for designated level.
@@ -466,24 +472,11 @@ class MLMCSimulator:
             return np.zeros((1, self._output_size))
 
         output_differences = np.zeros((num_samples, self._output_size))
-        print 'output_differences sim loop', output_differences.shape
 
         for i, sample in enumerate(samples):
             output_differences[i] = self._evaluate_sample(sample, level)
-        print 'output_differences sim loop', output_differences.shape
+
         return output_differences
-
-    def compute_estimators(self, outputs):
-        print 'outputs: ', outputs[0]
-        tests = np.concatenate(outputs[0], axis = None)
-        #tests2 = np.concatenate(outputs[1], axis = None)
-        #tests3 = np.concatenate(outputs[2], axis = None)
-
-        print 'after concat: ', tests.shape
-        #print 'after concat: ', tests2.shape
-        #print 'after concat: ', tests3.shape
-
-
 
     def _update_sim_loop_values(self, outputs, level):
         """
@@ -679,8 +672,7 @@ class MLMCSimulator:
         """
         if target_cost is not None:
 
-            if not (isinstance(target_cost, float) or
-                    isinstance(target_cost, int)):
+            if not isinstance(target_cost, (int, float)):
 
                 raise TypeError('maximum cost must be an int or float.')
 
@@ -788,7 +780,7 @@ class MLMCSimulator:
             :return: Samples to be taken by this cpu.
         """
         num_cpu_samples = total_num_samples // self._num_cpus
-        
+
         num_residual_samples = total_num_samples - \
             num_cpu_samples * self._num_cpus
 
