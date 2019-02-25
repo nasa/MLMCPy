@@ -1,7 +1,7 @@
 import numpy as np
 
-from WrapperModel import WrapperModel
-from Model import Model
+from MLMCPy.model.WrapperModel import WrapperModel
+from MLMCPy.model.Model import Model
 
 class CDFWrapperModel(WrapperModel):
     """
@@ -42,6 +42,11 @@ class CDFWrapperModel(WrapperModel):
         return indicators
 
     def attach_model(self, model):
+        """
+        Updates _model to the desired model object.
+
+        :param model: Model object that must inherit from WrapperModel class.
+        """
         self.__check_attached_model(model)
 
         self._model = model

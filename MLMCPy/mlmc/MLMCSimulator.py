@@ -66,6 +66,16 @@ class MLMCSimulator:
         self._verbose = False
 
     def generate_models_list(self, models):
+        """
+        Generates a list of models to be used inconjunction with a optional
+        wrapper class.
+        
+        :param models: Models to be used to generate the list of model objects,
+            must inherit from the WrapperModel class.
+        
+        :return: List of model objects.
+        """
+        
         self.__check_generate_wrapper_models(models, self._data)
 
         wrapper_models = []
@@ -78,6 +88,8 @@ class MLMCSimulator:
 
         self._models = wrapper_models
         self._num_levels = len(self._models)
+
+        return wrapper_models
 
     def simulate(self, epsilon, initial_sample_sizes=100, target_cost=None,
                  sample_sizes=None, verbose=False):

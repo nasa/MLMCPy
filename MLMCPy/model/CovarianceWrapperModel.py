@@ -1,6 +1,6 @@
 import numpy as np
 
-from WrapperModel import WrapperModel
+from MLMCPy.model.WrapperModel import WrapperModel
 
 class CovarianceWrapperModel(WrapperModel):
     """
@@ -15,6 +15,11 @@ class CovarianceWrapperModel(WrapperModel):
         self._model = None
 
     def attach_model(self, model):
+        """
+        Updates _model to the desired model object.
+
+        :param model: Model object that must inherit from WrapperModel class.
+        """
         self.__check_init_parameter(model)
 
         self._model = model
