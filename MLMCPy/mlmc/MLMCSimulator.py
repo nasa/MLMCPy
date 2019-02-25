@@ -12,7 +12,7 @@ class MLMCSimulator:
     """
     Computes an estimate based on the Multi-Level Monte Carlo algorithm.
     """
-    def __init__(self, random_input, models, wrapper=None):
+    def __init__(self, random_input, models=None, wrapper=None):
         """
         Requires a data object that provides input samples and a list of models
         of increasing fidelity.
@@ -668,7 +668,7 @@ class MLMCSimulator:
         if not isinstance(data, Input):
             TypeError("data must inherit from Input class.")
 
-        if not isinstance(models, list):
+        if models is not None and not isinstance(models, list):
             TypeError("models must be a list of models.")
 
         if wrapper is not None and not isinstance(wrapper, WrapperModel):
