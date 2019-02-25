@@ -301,9 +301,13 @@ def test_sim_evaluate_returns_expected_results_from_data(initial_sample_size,
     """
     grid = np.linspace(8, 25, grid_size)
 
-    cdfw_level1 = CDFWrapperModel(models_from_data[0], grid)
-    cdfw_level2 = CDFWrapperModel(models_from_data[1], grid)
-    cdfw_level3 = CDFWrapperModel(models_from_data[2], grid)
+    cdfw_level1 = CDFWrapperModel(grid)
+    cdfw_level1.attach_model(models_from_data[0])
+    cdfw_level2 = CDFWrapperModel(grid)
+    cdfw_level2.attach_model(models_from_data[1])
+    cdfw_level3 = CDFWrapperModel(grid)
+    cdfw_level3.attach_model(models_from_data[2])
+
 
     cdfws = [cdfw_level1, cdfw_level2, cdfw_level3]
 
