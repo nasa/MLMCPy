@@ -1,18 +1,20 @@
 import numpy as np
 
-from Model import Model
+from WrapperModel import WrapperModel
 
-
-class CovarianceWrapperModel(Model):
+class CovarianceWrapperModel(WrapperModel):
     """
     Adds the product of the inner model outputs to the wrapper output array so
     that covariance may be calculated.
     """
-    def __init__(self, model):
+    def __init__(self):
         """
         :param model: An instance of a class inheriting from Model that
             implements the evaluate function.
         """
+        self._model = None
+
+    def attach_model(self, model):
         self.__check_init_parameter(model)
 
         self._model = model
@@ -23,8 +25,8 @@ class CovarianceWrapperModel(Model):
     @staticmethod
     def __check_init_parameter(model):
 
-        if not isinstance(model, Model):
-            raise TypeError("Model must inherit from class Model.")
+        if not isinstance(model, WrapperModel):
+            raise TypeError("Model must inherit from class WrapperModel.")
 
     def evaluate(self, sample):
         """
