@@ -30,7 +30,8 @@ class MLMCSimulator:
         self._data = random_input
 
         if wrapper is not None:
-            self._models = self.generate_models_list(models, wrapper)
+            self._wrapper = wrapper
+            self._models = self.generate_models_list(models)
         else:
             self._models = models
 
@@ -64,9 +65,18 @@ class MLMCSimulator:
         # Enabled diagnostic text output.
         self._verbose = False
 
-    def generate_models_list(self, models, wrapper):
+    def generate_models_list(self, models):
         self.__check_generate_wrapper_models(models, self._data)
 
+        wrapper_models = []
+
+        for model in models:
+            wrapper_copy = copy.deepcopy(self._wrapper)
+            wrapper_copy.attach_model(model)
+
+            wrapper_models.append(wrapper_copy)
+
+        return wrapper_models
 
     def simulate(self, epsilon, initial_sample_sizes=100, target_cost=None,
                  sample_sizes=None, verbose=False):
