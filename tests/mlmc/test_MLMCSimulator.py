@@ -170,7 +170,7 @@ def test_model_from_data(data_input, models_from_data):
     Executes  simulate() with models and inputs created from files
     to ensure there are no exceptions while performing basic functionality.
     """
-    sim = MLMCSimulator(models=models_from_data, data=data_input)
+    sim = MLMCSimulator(models=models_from_data, random_input=data_input)
     sim.simulate(1., initial_sample_sizes=20)
 
 
@@ -180,7 +180,7 @@ def test_model_with_random_input(beta_distribution_input, spring_models):
     distributions to ensure there are no exceptions while performing basic
     functionality.
     """
-    sim = MLMCSimulator(models=spring_models, data=beta_distribution_input)
+    sim = MLMCSimulator(models=spring_models, random_input=beta_distribution_input)
     sim.simulate(1., initial_sample_sizes=20)
 
 
@@ -194,7 +194,7 @@ def test_for_verbose_exceptions(data_input, models_from_data):
     with open(os.devnull, 'w') as f:
         sys.stdout = f
 
-        sim = MLMCSimulator(models=models_from_data, data=data_input)
+        sim = MLMCSimulator(models=models_from_data, random_input=data_input)
         sim.simulate(1., initial_sample_sizes=20, verbose=True)
 
     # Put stdout back in place.
@@ -207,7 +207,7 @@ def test_simulate_exception_for_invalid_parameters(data_input,
     Ensures that expected exceptions occur when running simulate() with invalid
     parameters.
     """
-    test_mlmc = MLMCSimulator(models=models_from_data, data=data_input)
+    test_mlmc = MLMCSimulator(models=models_from_data, random_input=data_input)
 
     with pytest.raises(ValueError):
         test_mlmc.simulate(epsilon=-.1, initial_sample_sizes=20)
@@ -235,7 +235,7 @@ def test_simulate_expected_output_types(data_input, models_from_data):
     """
     Tests the data types returned by simulate().
     """
-    test_mlmc = MLMCSimulator(models=models_from_data, data=data_input)
+    test_mlmc = MLMCSimulator(models=models_from_data, random_input=data_input)
 
     result, sample_count, variances = \
         test_mlmc.simulate(epsilon=1., initial_sample_sizes=20)
@@ -254,7 +254,8 @@ def test_optimal_sample_sizes_expected_outputs(num_qoi, variances, epsilons,
     Tests samples sizes produced by simulator's compute_optimal_sample_sizes()
     against expected computed sample sizes for various sets of parameters.
     """
-    test_mlmc = MLMCSimulator(models=models_from_data[:2], data=data_input)
+    test_mlmc = \
+        MLMCSimulator(models=models_from_data[:2], random_input=data_input)
 
     data_input._data = np.broadcast_to(data_input._data,
                                        (data_input._data.shape[0], num_qoi))
@@ -262,7 +263,7 @@ def test_optimal_sample_sizes_expected_outputs(num_qoi, variances, epsilons,
     test_mlmc._epsilons = epsilons
     costs = np.array([1., 4.])
 
-    test_mlmc._compute_optimal_sample_sizes(costs, np.array(variances))
+    test_mlmc.compute_optimal_sample_sizes(costs, np.array(variances))
 
     # Check results.
     sample_sizes = test_mlmc._sample_sizes
@@ -282,12 +283,13 @@ def test_costs_and_initial_variances_spring_models(beta_distribution_input,
     compute_costs_and_variances() against expected values based on a
     beta distribution.
     """
-    sim = MLMCSimulator(models=spring_models, data=beta_distribution_input)
+    sim = MLMCSimulator(models=spring_models, 
+                        random_input=beta_distribution_input)
 
     np.random.seed(1)
 
     sim._initial_sample_sizes = np.array([100,100,100])
-    costs, variances = sim._compute_costs_and_variances()
+    costs, variances = sim.compute_costs_and_variances()
 
     
 
@@ -309,10 +311,10 @@ def test_costs_and_initial_variances_models_from_data(data_input,
     from files.
     """
     np.random.seed(1)
-    sim = MLMCSimulator(models=models_from_data, data=data_input)
+    sim = MLMCSimulator(models=models_from_data, random_input=data_input)
 
     sim._initial_sample_sizes = np.array([100,100,100])
-    costs, variances = sim._compute_costs_and_variances()
+    costs, variances = sim.compute_costs_and_variances()
 
     true_variances = np.array([[9.262628271266264],
                                [0.07939834631411287],
@@ -335,7 +337,7 @@ def test_calculate_estimate_for_springmass_random_input(beta_distribution_input,
     mc_20000_output_sample_mean = 12.3186216602
 
     sim = MLMCSimulator(models=spring_models,
-                        data=beta_distribution_input)
+                        random_input=beta_distribution_input)
 
     estimate, sample_sizes, variances = sim.simulate(0.1, 100)
 
@@ -355,7 +357,7 @@ def test_monte_carlo_estimate_value(data_input, models_from_data):
     # carlo simulation mode.
     models = [models_from_data[0]]
 
-    sim = MLMCSimulator(models=models, data=data_input)
+    sim = MLMCSimulator(models=models, random_input=data_input)
     estimate, sample_sizes, variances = sim.simulate(.05, 50)
 
     assert np.isclose(estimate, mc_20000_output_sample_mean, atol=.25)
@@ -372,7 +374,7 @@ def test_hard_coded_springmass_random_input(beta_distribution_input,
     mlmc_hard_coded_variance = [0.01078008]
 
     sim = MLMCSimulator(models=spring_models,
-                        data=beta_distribution_input)
+                        random_input=beta_distribution_input)
 
     all_sample_sizes = np.array([1113, 34, 0])
     get_cpu_samples = np.vectorize(sim._determine_num_cpu_samples)
@@ -401,7 +403,7 @@ def test_estimate_and_variance_improved_by_lower_epsilon(data_input,
     mc_20000_output_sample_mean = 12.3186216602
 
     sim = MLMCSimulator(models=models_from_data,
-                        data=data_input)
+                        random_input=data_input)
 
     estimates = np.zeros(3)
     variances = np.zeros_like(estimates)
@@ -418,7 +420,7 @@ def test_estimate_and_variance_improved_by_lower_epsilon(data_input,
 
 def test_always_at_least_one_sample_taken(data_input, models_from_data):
 
-    sim = MLMCSimulator(models=models_from_data, data=data_input)
+    sim = MLMCSimulator(models=models_from_data, random_input=data_input)
 
     estimates, sample_sizes, variances = sim.simulate(epsilon=5.,
                                                       initial_sample_sizes=100)
@@ -437,7 +439,7 @@ def test_estimate_and_variance_improved_by_higher_target_cost(data_input,
     # Result from 20,000 sample monte carlo spring mass simulation.
     mc_20000_output_sample_mean = 12.3186216602
 
-    sim = MLMCSimulator(models=models_from_data, data=data_input)
+    sim = MLMCSimulator(models=models_from_data, random_input=data_input)
 
     estimates = np.zeros(3)
     variances = np.zeros_like(estimates)
@@ -466,7 +468,7 @@ def test_final_variances_less_than_epsilon_goal(data_input,
     Ensures that square root of variances produced by simulator are lower than
     the specified epsilon parameter.
     """
-    sim = MLMCSimulator(models=models_from_data, data=data_input)
+    sim = MLMCSimulator(models=models_from_data, random_input=data_input)
 
     estimate, sample_sizes, variances = \
         sim.simulate(epsilon=epsilon,
@@ -497,7 +499,7 @@ def test_outputs_for_small_sample_sizes(data_input, models_from_data,
 
     all_sample_sizes = np.array(cpu_sample_sizes) * comm.size
 
-    sim = MLMCSimulator(models=models_from_data, data=data_input)
+    sim = MLMCSimulator(models=models_from_data, random_input=data_input)
 
     sim._caching_enabled = False
     sim._cpu_sample_sizes = np.array(cpu_sample_sizes)
@@ -544,7 +546,7 @@ def test_output_caching(data_input, models_from_data, cache_size):
     to ensure consistency of outputs. Also tests the estimate and variances
     with and without caching.
     """
-    sim = MLMCSimulator(models=models_from_data, data=data_input)
+    sim = MLMCSimulator(models=models_from_data, random_input=data_input)
 
     # Run simulation to generate cache.
     estimate1, sample_sizes, variances1 = sim.simulate(1., cache_size)
@@ -614,7 +616,7 @@ def test_input_output_with_differing_column_count(filename_2d_5_column_data,
 
     data_input = InputFromData(filename_2d_5_column_data)
 
-    sim = MLMCSimulator(models=[model1, model2], data=data_input)
+    sim = MLMCSimulator(models=[model1, model2], random_input=data_input)
     sim.simulate(100., 10)
 
 
@@ -635,7 +637,7 @@ def test_fail_if_model_outputs_do_not_match_shapes(filename_2d_5_column_data,
     data_input = InputFromData(filename_2d_5_column_data)
 
     with pytest.raises(ValueError):
-        MLMCSimulator(models=[model1, model2], data=data_input)
+        MLMCSimulator(models=[model1, model2], random_input=data_input)
 
 
 def test_hard_coded_test_2_level(data_input, models_from_data):
@@ -647,10 +649,10 @@ def test_hard_coded_test_2_level(data_input, models_from_data):
     np.random.seed(1)
     models = models_from_data[:2]
 
-    sim = MLMCSimulator(models=models, data=data_input)
+    sim = MLMCSimulator(models=models, random_input=data_input)
     sim_estimate, sim_sample_sizes, output_variances = \
         sim.simulate(epsilon=1., initial_sample_sizes=200)
-    sim_costs, sim_variances = sim._compute_costs_and_variances()
+    sim_costs, sim_variances = sim.compute_costs_and_variances()
 
     # Results from hard coded testing with same parameters.
     hard_coded_variances = np.array([[7.659619446414387],
@@ -670,10 +672,10 @@ def test_hard_coded_test_3_level(data_input, models_from_data):
     precomputed values with three models.
     """
     # Get simulation results.
-    sim = MLMCSimulator(models=models_from_data, data=data_input)
+    sim = MLMCSimulator(models=models_from_data, random_input=data_input)
     sim_estimate, sim_sample_sizes, output_variances = \
         sim.simulate(epsilon=1., initial_sample_sizes=200)
-    sim_costs, sim_variances = sim._compute_costs_and_variances()
+    sim_costs, sim_variances = sim.compute_costs_and_variances()
 
     # Results from hard coded testing with same parameters.
     hard_coded_variances = np.array([[7.659619446414387],
@@ -704,11 +706,11 @@ def test_graceful_handling_of_insufficient_samples(data_input_2d, comm,
             return
 
         # Test when sampling with too large initial sample size.
-        sim = MLMCSimulator(models=models_from_2d_data, data=data_input_2d)
+        sim = MLMCSimulator(models=models_from_2d_data, random_input=data_input_2d)
         sim.simulate(epsilon=1., initial_sample_sizes=10)
 
         # Test when sampling with too large computed sample sizes.
-        sim = MLMCSimulator(models=models_from_2d_data, data=data_input_2d)
+        sim = MLMCSimulator(models=models_from_2d_data, random_input=data_input_2d)
         sim.simulate(epsilon=.01, initial_sample_sizes=5)
 
 
@@ -717,11 +719,11 @@ def test_multiple_run_consistency(data_input, models_from_data):
     Ensure that simulator can be run multiple times without exceptions and
     returns consistent results.
     """
-    sim = MLMCSimulator(models=models_from_data, data=data_input)
+    sim = MLMCSimulator(models=models_from_data, random_input=data_input)
     estimate1, sample_sizes1, variances1 = \
         sim.simulate(epsilon=1., initial_sample_sizes=100)
 
-    sim = MLMCSimulator(models=models_from_data, data=data_input)
+    sim = MLMCSimulator(models=models_from_data, random_input=data_input)
     estimate2, sample_sizes2, variances2 = \
         sim.simulate(epsilon=1., initial_sample_sizes=100)
 
@@ -752,7 +754,7 @@ def test_fixed_cost(beta_distribution_input, spring_models, target_cost):
         delattr(model, 'cost')
 
     sim = MLMCSimulator(models=spring_models,
-                        data=beta_distribution_input)
+                        random_input=beta_distribution_input)
 
     # Multiply sample sizes times costs and take the sum; verify that this is
     # close to the target cost.
@@ -760,8 +762,8 @@ def test_fixed_cost(beta_distribution_input, spring_models, target_cost):
     sim._target_cost = float(target_cost)
 
     sim._determine_input_output_size()
-    costs, variances = sim._compute_costs_and_variances()
-    sim._compute_optimal_sample_sizes(costs, variances)
+    costs, variances = sim.compute_costs_and_variances()
+    sim.compute_optimal_sample_sizes(costs, variances)
 
     expected_cost = np.dot(costs, sim._cpu_sample_sizes)
 
@@ -793,7 +795,7 @@ def test_multi_cpu_sample_splitting(data_input, models_from_data, num_cpus):
 
     sample_sizes = np.zeros(num_cpus)
 
-    sim = MLMCSimulator(models=models_from_data, data=data_input)
+    sim = MLMCSimulator(models=models_from_data, random_input=data_input)
 
     for cpu_rank in range(num_cpus):
 
@@ -815,7 +817,7 @@ def test_gather_arrays(data_input, models_from_data, comm):
     Tests simulator's _gather_arrays() to ensure that it produces expected
     results for axis=0 and axis=1 parameters.
     """
-    sim = MLMCSimulator(data=data_input, models=models_from_data)
+    sim = MLMCSimulator(random_input=data_input, models=models_from_data)
 
     # Axis 0 test.
     test = np.ones((2, 2)) * comm.rank
@@ -864,7 +866,7 @@ def test_multiple_cpu_compute_costs_and_variances(data_input, num_samples,
     environment for various numbers of initial sample sizes vs single cpu case.
     Also tests to ensure consistency of sampling.
     """
-    sim = MLMCSimulator(data=data_input, models=models_from_data)
+    sim = MLMCSimulator(random_input=data_input, models=models_from_data)
 
     num_cpu_samples = sim._determine_num_cpu_samples(num_samples)
 
@@ -934,7 +936,7 @@ def test_multiple_cpu_simulation(data_input, models_from_data, comm):
     full_data_input._data = \
         full_data_input._data.reshape(full_data_input._data.shape[0], -1)
 
-    base_sim = MLMCSimulator(models=models_from_data, data=full_data_input)
+    base_sim = MLMCSimulator(models=models_from_data, random_input=full_data_input)
     base_sim._num_cpus = 1
     base_sim._cpu_rank = 0
 
@@ -942,13 +944,13 @@ def test_multiple_cpu_simulation(data_input, models_from_data, comm):
         base_sim.simulate(.1, 200)
 
     full_data_input.reset_sampling()
-    base_costs, base_initial_variances = base_sim._compute_costs_and_variances()
+    base_costs, base_initial_variances = base_sim.compute_costs_and_variances()
 
-    sim = MLMCSimulator(models=models_from_data, data=data_input)
+    sim = MLMCSimulator(models=models_from_data, random_input=data_input)
     estimates, sample_sizes, variances = sim.simulate(.1, 200)
 
     data_input.reset_sampling()
-    sim_costs, initial_variances = sim._compute_costs_and_variances()
+    sim_costs, initial_variances = sim.compute_costs_and_variances()
 
     assert np.all(np.isclose(base_initial_variances, initial_variances))
     assert np.all(np.isclose(base_costs, sim_costs))
@@ -975,7 +977,7 @@ def test_simulate_with_set_sample_sizes(data_input, models_from_data):
     level rather than computing it. Takes precomputed reference solution from
     spring-mass data example
     """
-    test_mlmc = MLMCSimulator(models=models_from_data, data=data_input)
+    test_mlmc = MLMCSimulator(models=models_from_data, random_input=data_input)
 
     sample_sizes = [7007, 290, 1]
 
@@ -993,7 +995,7 @@ def test_simulate_with_bad_sample_sizes_input(data_input, models_from_data,
     bad values for the sample_sizes input. Makes sure exceptions are raised.
     """
 
-    test_mlmc = MLMCSimulator(models=models_from_data, data=data_input)
+    test_mlmc = MLMCSimulator(models=models_from_data, random_input=data_input)
 
     with pytest.raises(ValueError):
         test_mlmc.simulate(epsilon=1., sample_sizes=sample_sizes)
@@ -1007,7 +1009,7 @@ def test_simulate_with_bad_type_sample_sizes_input(data_input, models_from_data,
     wrong type for sample_sizes input
     """
 
-    test_mlmc = MLMCSimulator(models=models_from_data, data=data_input)
+    test_mlmc = MLMCSimulator(models=models_from_data, random_input=data_input)
 
     with pytest.raises(TypeError):
         test_mlmc.simulate(epsilon=1., sample_sizes=sample_sizes)
@@ -1018,7 +1020,7 @@ def test_simulate_with_scalar_sample_sizes(data_input, models_from_data):
     Tests running MLMC by specifying the number of samples to run on each
     level. Tests providing just a scalar value that mlmc handles this
     """
-    test_mlmc = MLMCSimulator(models=models_from_data, data=data_input)
+    test_mlmc = MLMCSimulator(models=models_from_data, random_input=data_input)
 
     sample_sizes = 5
 
