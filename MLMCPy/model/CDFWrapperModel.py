@@ -23,9 +23,6 @@ class CDFWrapperModel(WrapperModel):
         self._grid = grid
         self._inner_model_outputs = list()
 
-        if hasattr(self._model, 'cost'):
-            self.cost = self._model.cost
-
     def evaluate(self, sample):
         """
         Evaluates the internal model on the given sample and computes the
@@ -48,6 +45,9 @@ class CDFWrapperModel(WrapperModel):
         self.__check_attached_model(model)
 
         self._model = model
+
+        if hasattr(self._model, 'cost'):
+            self.cost = self._model.cost
 
     @staticmethod
     def __check_attached_model(model):
