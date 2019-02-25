@@ -22,7 +22,8 @@ class DummyModel(Model):
 @pytest.mark.parametrize("output_size", range(1, 5))
 def test_covariance_correct_size(output_size):
     model = DummyModel(output_size)
-    covariance_model = CovarianceWrapperModel(model)
+    covariance_model = CovarianceWrapperModel()
+    covariance_model.attach_model(model)
 
     cov_size = covariance_model.evaluate(np.zeros(1)).size
     expected_cov_size = output_size*(output_size + 3) / 2
@@ -31,7 +32,8 @@ def test_covariance_correct_size(output_size):
 
 def test_covariance_correct_values():
     model = DummyModel(3)
-    covariance_model = CovarianceWrapperModel(model)
+    covariance_model = CovarianceWrapperModel()
+    covariance_model.attach_model(model)
 
     cov_output = covariance_model.evaluate(np.array([0.2]))
 
@@ -42,7 +44,9 @@ def test_covariance_correct_values():
 
 def test_covariance_post_processing():
     model = DummyModel(3)
-    covariance_model = CovarianceWrapperModel(model)
+    covariance_model = CovarianceWrapperModel()
+    covariance_model.attach_model(model)
+
     expected_values = np.array([0.2, 0.8, 0.0, 0.04, 0.16, 0.0, 0.64, 0.0,
                                 0.0])
     covariance = covariance_model.post_process_covariance(expected_values)
@@ -53,7 +57,9 @@ def test_covariance_post_processing():
 
 def test_raises_error_wrong_sized_expected_values():
     model = DummyModel(3)
-    covariance_model = CovarianceWrapperModel(model)
+    covariance_model = CovarianceWrapperModel()
+    covariance_model.attach_model(model)
+
     expected_values = np.array([0.2, 0.8, 0.0])
 
     with pytest.raises(TypeError):
@@ -62,7 +68,8 @@ def test_raises_error_wrong_sized_expected_values():
 
 def test_covariance_end_to_end():
     model = DummyModel(3)
-    covariance_model = CovarianceWrapperModel(model)
+    covariance_model = CovarianceWrapperModel()
+    covariance_model.attach_model(model)
 
     MC_output = [covariance_model.evaluate(np.random.random(1))
                  for _ in range(50)]
