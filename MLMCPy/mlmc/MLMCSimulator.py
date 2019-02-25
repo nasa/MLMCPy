@@ -2,6 +2,7 @@ import numpy as np
 import timeit
 from datetime import timedelta
 import imp
+import copy
 
 from MLMCPy.input import Input
 from MLMCPy.model import Model, WrapperModel
@@ -27,7 +28,12 @@ class MLMCSimulator:
         self.__check_init_parameters(random_input, models, wrapper)
 
         self._data = random_input
-        self._models = models
+
+        if wrapper is not None:
+            self._models = self.generate_models_list(models, wrapper)
+        else:
+            self._models = models
+
         self._num_levels = len(self._models)
 
         # Sample size to be taken at each level.
@@ -57,6 +63,10 @@ class MLMCSimulator:
 
         # Enabled diagnostic text output.
         self._verbose = False
+
+    def generate_models_list(self, models, wrapper):
+        self.__check_generate_wrapper_models(models, self._data)
+
 
     def simulate(self, epsilon, initial_sample_sizes=100, target_cost=None,
                  sample_sizes=None, verbose=False):
@@ -466,24 +476,11 @@ class MLMCSimulator:
             return np.zeros((1, self._output_size))
 
         output_differences = np.zeros((num_samples, self._output_size))
-        print 'output_differences sim loop', output_differences.shape
 
         for i, sample in enumerate(samples):
             output_differences[i] = self._evaluate_sample(sample, level)
-        print 'output_differences sim loop', output_differences.shape
+
         return output_differences
-
-    def compute_estimators(self, outputs):
-        print 'outputs: ', outputs[0]
-        tests = np.concatenate(outputs[0], axis = None)
-        #tests2 = np.concatenate(outputs[1], axis = None)
-        #tests3 = np.concatenate(outputs[2], axis = None)
-
-        print 'after concat: ', tests.shape
-        #print 'after concat: ', tests2.shape
-        #print 'after concat: ', tests3.shape
-
-
 
     def _update_sim_loop_values(self, outputs, level):
         """
@@ -670,6 +667,24 @@ class MLMCSimulator:
                 test_output = model.evaluate(test_sample)
                 output_sizes.append(test_output.size)
 
+            output_sizes = np.array(output_sizes)
+            if not np.all(output_sizes == output_sizes[0]):
+                raise ValueError("All models must return the same output " +
+                                "dimensions.")
+
+    @staticmethod
+    def __check_generate_wrapper_models(models, data):
+        output_sizes = []
+        test_sample = data.draw_samples(1)[0]
+        data.reset_sampling()
+
+        for model in models:
+            if not isinstance(model, Model):
+                TypeError("models must be a list of models.")
+
+            test_output = model.evaluate(test_sample)
+            output_sizes.append(test_output.size)
+        
         output_sizes = np.array(output_sizes)
         if not np.all(output_sizes == output_sizes[0]):
             raise ValueError("All models must return the same output " +
