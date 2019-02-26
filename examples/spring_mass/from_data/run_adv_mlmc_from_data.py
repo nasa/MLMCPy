@@ -37,7 +37,7 @@ mlmc_simulator = MLMCSimulator(data_input, models)
 
 # Step 4 - Calculate optimal sample size for each level:
 initial_sample_size = 100
-epsilon = 5e-2
+epsilon = 1e-1
 
 # Optional - Compute cost and variances of model:
 costs, variances = \
