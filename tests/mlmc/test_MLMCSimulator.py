@@ -326,6 +326,85 @@ def test_costs_and_initial_variances_models_from_data(data_input,
     assert np.all(np.isclose(true_variances, variances, rtol=.1))
 
 
+def test_modular_costs_and_initial_variances_from_model(beta_distribution_input,
+                                                        spring_models):
+    """
+    Tests costs and variances computed by simulator's modular
+    compute_costs_and_variances() against expected values based on a
+    beta distribution.
+    """
+    sim = MLMCSimulator
+
+    sim = MLMCSimulator(models=spring_models, 
+                        random_input=beta_distribution_input)
+
+    np.random.seed(1)
+
+    initial_sample_sizes = np.array([100,100,100])
+    costs, variances = sim.compute_costs_and_variances(initial_sample_sizes)
+
+    
+
+    true_variances = np.array([[8.245224951411819],
+                               [0.0857219498864355],
+                               [7.916295509470576e-06]])
+
+    true_costs = np.array([1., 11., 110.])
+
+    assert np.all(np.isclose(true_costs, costs))
+    assert np.all(np.isclose(true_variances, variances, rtol=.1))
+    
+
+def test_modular_costs_and_initial_variances_from_data(data_input, 
+                                                       models_from_data):
+    """
+    Tests modular costs and variances computed by simulator's
+    compute_costs_and_variances() against expected values based on data loaded
+    from files.
+    """
+    np.random.seed(1)
+    sim = MLMCSimulator(models=models_from_data, random_input=data_input)
+
+    sample_sizes = np.array([100,100,100])
+    costs, variances = sim.compute_costs_and_variances(sample_sizes)
+
+    true_variances = np.array([[9.262628271266264],
+                               [0.07939834631411287],
+                               [5.437083709623372e-06]])
+
+    true_costs = np.array([1.0, 5.0, 20.0])
+
+    assert np.all(np.isclose(true_costs, costs))
+    assert np.all(np.isclose(true_variances, variances, rtol=.1))
+
+
+def test_modular_compute_optimal_sample_sizes_models(beta_distribution_input,
+                                                     spring_models):
+    """
+    Tests optimal sample sizes computed by simulator's modular
+    compute_optimal_sample_sizes() against expected values based on a
+    beta distribution.
+    """
+    sim = MLMCSimulator
+
+    sim = MLMCSimulator(models=spring_models, 
+                        random_input=beta_distribution_input)
+
+    np.random.seed(1)
+
+    initial_sample_sizes = np.array([100,100,100])
+    costs, variances = sim.compute_costs_and_variances(initial_sample_sizes)
+    epsilon = np.sqrt(0.00170890122096)
+
+    optimal_sample_sizes = sim.compute_optimal_sample_sizes(costs,
+                                                            variances,
+                                                            epsilon)
+
+    true_optimal_sizes = np.array([6506, 200, 0])
+
+    assert np.all(np.array_equal(true_optimal_sizes, optimal_sample_sizes))
+
+
 def test_calculate_estimate_for_springmass_random_input(beta_distribution_input,
                                                         spring_models):
     """
