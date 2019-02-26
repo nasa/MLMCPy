@@ -116,10 +116,10 @@ class MLMCSimulator:
         """
         for model in models:
             if not isinstance(model, Model):
-                TypeError("models must be a list of Model objects.")
+                raise TypeError("models must be a list of Model objects.")
 
         if not isinstance(wrapper, WrapperModel):
-            TypeError('wrapper must inherit from WrapperModel')
+            raise TypeError('wrapper must inherit from WrapperModel')
 
         wrapper_models = []
 
