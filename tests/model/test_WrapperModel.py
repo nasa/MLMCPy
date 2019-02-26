@@ -7,3 +7,4 @@ def test_attach_model_exception():
 
     with pytest.raises(NotImplementedError):
         wrapper_model.attach_model('Not a Model')
+        
