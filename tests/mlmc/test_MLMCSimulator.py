@@ -384,6 +384,11 @@ def test_modular_costs_and_initial_variances_from_model(beta_distribution_input,
 
 def test_modular_compute_optimal_sample_sizes_models(beta_distribution_input,
                                                      spring_models):
+    """
+    Tests optimal sample sizes computed by simulator's modular
+    compute_optimal_sample_sizes() against expected values based on a
+    beta distribution.
+    """
     sim = MLMCSimulator
 
     sim = MLMCSimulator(models=spring_models, 
