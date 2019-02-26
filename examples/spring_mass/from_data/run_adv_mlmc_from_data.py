@@ -13,13 +13,13 @@ ModelFromData to utilize precomputed data as inputs.
 
 # Step 1 - Define I/O files:
 inputfile = \
-    "data/spring_mass_1D_outputs_0.01.txt"
+    "/data/spring_mass_1D_inputs.txt"
 outputfile_level1 = \
-    "data/spring_mass_1D_outputs_0.01.txt"
+    "/data/spring_mass_1D_outputs_1.0.txt"
 outputfile_level2 = \
-    "data/spring_mass_1D_outputs_0.01.txt"
+    "/data/spring_mass_1D_outputs_0.1.txt"
 outputfile_level3 = \
-    "data/spring_mass_1D_outputs_0.01.txt"
+    "/data/spring_mass_1D_outputs_0.01.txt"
 
 # Step 2 - Initialize random input from data:
 data_input = InputFromData(inputfile)
@@ -82,13 +82,12 @@ print 'Variances: ', variances
 
 #     output_diffs_per_level.append(output_diffs)
 
-# Step 6 - Aggregate model outputs to compute estimators:
+# # Step 6 - Aggregate model outputs to compute estimators:
 # estimates, variances = \
 #     mlmc_simulator.compute_estimators(output_diffs_per_level)
 
-# # Step 7 - Summarize results:
-
+# # # Step 7 - Summarize results:
 # print
 # print 'MLMC estimate: %s' % estimates[0]
 # print 'MLMC precision: %s' % variances[0]
-# print 'MLMC total cost: %s' % mlmc_total_cost
+# # print 'MLMC total cost: %s' % mlmc_total_cost
