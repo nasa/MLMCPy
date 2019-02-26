@@ -179,8 +179,43 @@ class MLMCSimulator(object):
         if user_epsilon is not None:
             return self._sample_sizes
 
-    # def compute_estimators(self, output_diffs_per_level):
-    #     return 0
+        return None
+
+    def compute_estimators(self, outputs):
+        """Computes the estimators using the output differences per level.
+
+        :param outputs: The differences per level.
+        :type outputs: ndarray, list
+        :return: Returns the estimates and variances as an ndarray.
+        """
+        outputs = self._check_compute_estimators_parameter(outputs)
+
+        for level in range(self._num_levels):
+            self._update_sim_loop_values(outputs, level)
+
+        return self._estimates, self._variances
+
+    def _check_compute_estimators_parameter(self, outputs):
+        """
+        Checks the parameter given to compute_estimators(), and if it is a list,
+        or tuple, it reshapes it into a np.ndarray and returns it. If it is a
+        np.ndarray, returns it.
+        """
+        if isinstance(outputs, (list, tuple)):
+            outputs_array = np.asarray(outputs)
+
+            for level in range(self._num_levels):
+                outputs_reshaped = \
+                    outputs_array[level].reshape(len(outputs_array[level]),
+                                                 self._output_size)
+
+            return outputs_reshaped
+
+        elif isinstance(outputs, np.ndarray):
+            return outputs
+
+        else:
+            raise TypeError('outputs must be a list, tuple, or ndarray.')
 
     def _setup_simulation(self, epsilon, initial_sample_sizes, sample_sizes):
         """
@@ -437,42 +472,6 @@ class MLMCSimulator(object):
             self._update_sim_loop_values(output_differences, level)
 
         return self._estimates, self._variances
-
-    def compute_estimators(self, outputs):
-        """Computes the estimators using the output differences per level.
-        
-        :param outputs: The differences per level.
-        :type outputs: ndarray, list
-        :return: Returns the estimates and variances as an ndarray.
-        """
-        outputs = self._check_compute_estimators_parameter(outputs)
-
-        for level in range(self._num_levels):
-            self._update_sim_loop_values(outputs, level)
-
-        return self._estimates, self._variances
-    
-    def _check_compute_estimators_parameter(self, outputs):
-        """
-        Checks the parameter given to compute_estimators(), and if it is a list,
-        or tuple, it reshapes it into a np.ndarray and returns it. If it is a 
-        np.ndarray, returns it. 
-        """
-        if isinstance(outputs, (list, tuple)):
-            outputs_array = np.asarray(outputs)
-
-            for level in range(self._num_levels):
-                outputs_reshaped = \
-                    outputs_array[level].reshape(len(outputs_array[level]),
-                                                 self._num_cpus)
-
-            return outputs_reshaped
-        
-        elif isinstance(outputs, np.ndarray):
-            return outputs
-        
-        else:
-            raise TypeError('outputs must be a list, tuple, or ndarray.')
 
     def _get_sim_loop_samples(self, level):
         """
