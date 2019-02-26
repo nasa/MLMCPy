@@ -380,6 +380,29 @@ def test_modular_costs_and_initial_variances_from_model(beta_distribution_input,
 
     assert np.all(np.isclose(true_costs, costs))
     assert np.all(np.isclose(true_variances, variances, rtol=.1))
+    
+
+def test_modular_costs_and_initial_variances_from_data(data_input, 
+                                                       models_from_data):
+    """
+    Tests modular costs and variances computed by simulator's
+    compute_costs_and_variances() against expected values based on data loaded
+    from files.
+    """
+    np.random.seed(1)
+    sim = MLMCSimulator(models=models_from_data, random_input=data_input)
+
+    sample_sizes = np.array([100,100,100])
+    costs, variances = sim.compute_costs_and_variances(sample_sizes)
+
+    true_variances = np.array([[9.262628271266264],
+                               [0.07939834631411287],
+                               [5.437083709623372e-06]])
+
+    true_costs = np.array([1.0, 5.0, 20.0])
+
+    assert np.all(np.isclose(true_costs, costs))
+    assert np.all(np.isclose(true_variances, variances, rtol=.1))
 
 
 def test_modular_compute_optimal_sample_sizes_models(beta_distribution_input,
