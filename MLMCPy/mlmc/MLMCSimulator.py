@@ -205,6 +205,7 @@ class MLMCSimulator(object):
             outputs_array = np.asarray(outputs)
 
             for level in range(self._num_levels):
+                #Double check the self._output_size for reshaping (TODO)
                 outputs_reshaped = \
                     outputs_array[level].reshape(len(outputs_array[level]),
                                                  self._output_size)
