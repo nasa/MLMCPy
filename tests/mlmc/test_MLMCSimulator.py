@@ -381,6 +381,29 @@ def test_modular_costs_and_initial_variances_from_model(beta_distribution_input,
     assert np.all(np.isclose(true_costs, costs))
     assert np.all(np.isclose(true_variances, variances, rtol=.1))
 
+
+def test_modular_compute_optimal_sample_sizes_models(beta_distribution_input,
+                                                     spring_models):
+    sim = MLMCSimulator
+
+    sim = MLMCSimulator(models=spring_models, 
+                        random_input=beta_distribution_input)
+
+    np.random.seed(1)
+
+    initial_sample_sizes = np.array([100,100,100])
+    costs, variances = sim.compute_costs_and_variances(initial_sample_sizes)
+    epsilon = np.sqrt(0.00170890122096)
+
+    optimal_sample_sizes = sim.compute_optimal_sample_sizes(costs,
+                                                            variances,
+                                                            epsilon)
+
+    true_optimal_sizes = np.array([6506, 200, 0])
+
+    assert np.all(np.array_equal(true_optimal_sizes, optimal_sample_sizes))
+
+
 def test_calculate_estimate_for_springmass_random_input(beta_distribution_input,
                                                         spring_models):
     """
