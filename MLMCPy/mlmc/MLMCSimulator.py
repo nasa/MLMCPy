@@ -104,7 +104,7 @@ class MLMCSimulator:
         return self._run_simulation()
 
     @staticmethod
-    def generate_models_list(models, wrapper):
+    def generate_wrapper_models_list(models, wrapper):
         """
         Generates a list of models to be used in conjunction with a optional
         wrapper class.
