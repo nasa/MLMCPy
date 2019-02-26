@@ -1,14 +1,14 @@
 import numpy as np
 
-from Model import Model
+from MLMCPy.model.WrapperModel import WrapperModel
+from MLMCPy.model.Model import Model
 
-
-class CDFWrapperModel(Model):
+class CDFWrapperModel(WrapperModel):
     """
     Generates CDF indicators from an inner model that will be used by
     MLMCSimulator to generate a CDF from the inner model outputs.
     """
-    def __init__(self, model, grid, smoothing=None):
+    def __init__(self, grid, smoothing=None):
         """
         :param model: An instance of a class inheriting from Model that
             implements the evaluate function.
@@ -17,14 +17,11 @@ class CDFWrapperModel(Model):
         :param smoothing: Whether to implement smoothing in order to improve
             the CDF result. TODO: Improve this description.
         """
-        self.__check_init_parameters(model, grid, smoothing)
+        self.__check_init_parameters(grid, smoothing)
 
-        self._model = model
+        self._model = None
         self._grid = grid
         self._inner_model_outputs = list()
-
-        if hasattr(self._model, 'cost'):
-            self.cost = model.cost
 
     def evaluate(self, sample):
         """
@@ -33,6 +30,7 @@ class CDFWrapperModel(Model):
         :param sample: ndarray of 0 or 1 dimensions to be passed to inner model.
         :return: 1d ndarray of indicators.
         """
+        self.__check_attached_model(self._model)
         # Run model and collect output value.
         output = self._model.evaluate(sample)
 
@@ -43,12 +41,26 @@ class CDFWrapperModel(Model):
 
         return indicators
 
+    def attach_model(self, model):
+        """
+        Updates _model to the desired model object.
+
+        :param model: Model object that must inherit from WrapperModel class.
+        """
+        self.__check_attached_model(model)
+
+        self._model = model
+
+        if hasattr(self._model, 'cost'):
+            self.cost = self._model.cost
+
     @staticmethod
-    def __check_init_parameters(model, grid, smoothing):
-
+    def __check_attached_model(model):
         if not isinstance(model, Model):
-            raise TypeError("Model must inherit from class Model.")
+            raise TypeError('Model must be attached.')
 
+    @staticmethod
+    def __check_init_parameters(grid, smoothing):
         if not isinstance(grid, np.ndarray):
             raise TypeError("Grid must be a ndarray.")
 

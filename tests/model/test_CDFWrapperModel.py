@@ -10,6 +10,7 @@ from MLMCPy.mlmc import MLMCSimulator
 from tests.testing_scripts import SpringMassModel
 from tests.testing_scripts import ModelForTesting
 from tests.testing_scripts import InputForTesting
+from tests.testing_scripts import WrapperModelForTesting
 
 # Access spring mass data:
 my_path = os.path.dirname(os.path.abspath(__file__))
@@ -79,7 +80,6 @@ def spring_models():
 
     return [model_level1, model_level2, model_level3]
 
-
 @pytest.fixture
 def grid_0_1():
     """
@@ -88,27 +88,41 @@ def grid_0_1():
     """
     return np.arange(0., 1., .1)
 
+@pytest.fixture
+def wrapper_model():
+    """
+    Creates a WrapperModel object.
+    
+    """
+    return WrapperModelForTesting()
 
-def test_init_fails_on_bad_parameters(spring_model, grid_0_1):
+def test_init_fails_on_bad_parameters(grid_0_1):
     """
     Ensures that an expected exception type occurs when instantiating
     the model with unacceptable parameters.
     """
     with pytest.raises(TypeError):
-        CDFWrapperModel("Model", grid_0_1)
-
-    with pytest.raises(TypeError):
-        CDFWrapperModel(spring_model, "Grid")
+        CDFWrapperModel("Grid")
 
     with pytest.raises(ValueError):
-        CDFWrapperModel(spring_model, np.zeros(1))
+        CDFWrapperModel(np.zeros(1))
 
     with pytest.raises(ValueError):
-        CDFWrapperModel(spring_model, np.array([[1, 2], [3, 4]]))
+        CDFWrapperModel(np.array([[1, 2], [3, 4]]))
 
     with pytest.raises(TypeError):
-        CDFWrapperModel(spring_model, grid_0_1, "Super smooth")
+        CDFWrapperModel(grid_0_1, "Super smooth")
 
+def test_attached_model_parameter(grid_0_1):
+    cdfw = CDFWrapperModel(grid_0_1)
+    with pytest.raises(TypeError):
+        cdfw.evaluate(1)
+
+def test_attach_model_functionality(grid_0_1, spring_model):
+    cdfw = CDFWrapperModel(grid_0_1)
+    cdfw.attach_model(spring_model)
+
+    assert isinstance(cdfw._model, SpringMassModel)
 
 @pytest.mark.parametrize('sample', [0, -1, .5, 2.])
 def test_simple_indicator(grid_0_1, sample):
@@ -116,9 +130,9 @@ def test_simple_indicator(grid_0_1, sample):
     Checks for the expected result when evaluating the CDF Wrapper on a very
     simple model that simply repeats its inputs.
     """
-    inner_model = ModelForTesting('repeat')
-    cdfw = CDFWrapperModel(inner_model, grid_0_1)
-
+    inner_model = WrapperModelForTesting('repeat')
+    cdfw = CDFWrapperModel(grid_0_1)
+    cdfw.attach_model(inner_model)
     output = cdfw.evaluate(sample)
 
     expected_output_sum = np.count_nonzero(sample <= grid_0_1)
@@ -138,8 +152,8 @@ def test_evaluate_returns_expected_results_from_data(data_input, num_samples,
     """
     grid = np.linspace(8, 25, 100)
 
-    cdfw = CDFWrapperModel(models_from_data[0], grid)
-
+    cdfw = CDFWrapperModel(grid)
+    cdfw.attach_model(models_from_data[0])
     outputs = np.zeros((num_samples, grid.size))
     input_samples = data_input.draw_samples(num_samples)
 
@@ -173,7 +187,8 @@ def test_single_cdf_wrapper_output_consistency(data_input, models_from_data,
     num_samples = 400
     grid = np.linspace(8, 25, grid_size)
 
-    cdfw = CDFWrapperModel(models_from_data[model_num], grid)
+    cdfw = CDFWrapperModel(grid)
+    cdfw.attach_model(models_from_data[model_num])
 
     input_samples = data_input.draw_samples(num_samples)
     outputs1 = np.zeros((num_samples, grid_size))
@@ -198,9 +213,14 @@ def test_sim_result_consistency(data_input, models_from_data,
     grid_size = 100
     grid = np.linspace(8, 25, grid_size)
 
-    cdfw_level1 = CDFWrapperModel(models_from_data[0], grid)
-    cdfw_level2 = CDFWrapperModel(models_from_data[1], grid)
-    cdfw_level3 = CDFWrapperModel(models_from_data[2], grid)
+    cdfw_level1 = CDFWrapperModel(grid)
+    cdfw_level1.attach_model(models_from_data[0])
+
+    cdfw_level2 = CDFWrapperModel(grid)
+    cdfw_level2.attach_model(models_from_data[1])
+
+    cdfw_level3 = CDFWrapperModel(grid)
+    cdfw_level3.attach_model(models_from_data[2])
 
     cdfws = [cdfw_level1, cdfw_level2, cdfw_level3]
 
@@ -229,9 +249,14 @@ def test_output_caching_cdf_wrapper(initial_sample_size, data_input,
     grid_size = 100
     grid = np.linspace(8, 25, grid_size)
 
-    cdfw_level1 = CDFWrapperModel(models_from_data[0], grid)
-    cdfw_level2 = CDFWrapperModel(models_from_data[1], grid)
-    cdfw_level3 = CDFWrapperModel(models_from_data[2], grid)
+    cdfw_level1 = CDFWrapperModel(grid)
+    cdfw_level1.attach_model(models_from_data[0])
+
+    cdfw_level2 = CDFWrapperModel(grid)
+    cdfw_level2.attach_model(models_from_data[1])
+
+    cdfw_level3 = CDFWrapperModel(grid)
+    cdfw_level3.attach_model(models_from_data[2])
 
     cdfws = [cdfw_level1, cdfw_level2, cdfw_level3]
 
@@ -276,9 +301,13 @@ def test_sim_evaluate_returns_expected_results_from_data(initial_sample_size,
     """
     grid = np.linspace(8, 25, grid_size)
 
-    cdfw_level1 = CDFWrapperModel(models_from_data[0], grid)
-    cdfw_level2 = CDFWrapperModel(models_from_data[1], grid)
-    cdfw_level3 = CDFWrapperModel(models_from_data[2], grid)
+    cdfw_level1 = CDFWrapperModel(grid)
+    cdfw_level1.attach_model(models_from_data[0])
+    cdfw_level2 = CDFWrapperModel(grid)
+    cdfw_level2.attach_model(models_from_data[1])
+    cdfw_level3 = CDFWrapperModel(grid)
+    cdfw_level3.attach_model(models_from_data[2])
+
 
     cdfws = [cdfw_level1, cdfw_level2, cdfw_level3]
 

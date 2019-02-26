@@ -1,3 +1,4 @@
 from InputForTesting import InputForTesting
 from ModelForTesting import ModelForTesting
 from spring_mass import SpringMassModel
+from WrapperModelForTesting import WrapperModelForTesting
