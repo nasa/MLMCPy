@@ -209,14 +209,12 @@ def test_generate_models_output_types(spring_models, beta_distribution_input):
 
     grid = np.arange(0., 1., .1)
     cdf_wrapper = CDFWrapperModel(grid)
-    test_mlmc = MLMCSimulator(beta_distribution_input, spring_models,
-                              cdf_wrapper)
-    test_mlmc.generate_models_list(spring_models)
+    test_mlmc = MLMCSimulator.generate_models_list(spring_models, cdf_wrapper)
 
-    assert isinstance(test_mlmc._models, list)
-    assert isinstance(test_mlmc._models[0]._model, Model)
-    assert isinstance(test_mlmc._models[1]._model, Model)
-    assert isinstance(test_mlmc._models[2]._model, Model)
+    assert isinstance(test_mlmc, list)
+    assert isinstance(test_mlmc[0], Model)
+    assert isinstance(test_mlmc[1], Model)
+    assert isinstance(test_mlmc[2], Model)
 
 
 def test_simulate_exception_for_invalid_parameters(data_input,
