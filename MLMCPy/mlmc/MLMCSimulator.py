@@ -66,8 +66,8 @@ class MLMCSimulator:
         Perform MLMC simulation.
         Computes number of samples per level before running simulations
         to determine estimates.
-        Can be specified based on target precision to achieve (epsilon), 
-        total target cost (in seconds), or on number of sample to run on each 
+        Can be specified based on target precision to achieve (epsilon),
+        total target cost (in seconds), or on number of sample to run on each
         level directly.
 
         :param epsilon: Desired accuracy to be achieved for each quantity of
@@ -105,31 +105,31 @@ class MLMCSimulator:
 
     @staticmethod
     def generate_models_list(models, wrapper):
-            """
-            Generates a list of models to be used inconjunction with a optional
-            wrapper class.
-            
-            :param models: Models to be used to generate the list of model objects,
-                must inherit from the WrapperModel class.
-            
-            :return: List of model objects.
-            """
-            for model in models:
-                if not isinstance(model, Model):
-                    TypeError("models must be a list of Model objects.")
+        """
+        Generates a list of models to be used in conjunction with a optional
+        wrapper class.
 
-            if not isinstance(wrapper, WrapperModel):
-                    TypeError('wrapper must inherit from WrapperModel')
+        :param models: Models to be used to generate the list of model objects,
+            must inherit from the WrapperModel class.
 
-            wrapper_models = []
+        :return: List of model objects.
+        """
+        for model in models:
+            if not isinstance(model, Model):
+                TypeError("models must be a list of Model objects.")
 
-            for model in models:
-                wrapper_copy = copy.deepcopy(wrapper)
-                wrapper_copy.attach_model(model)
+        if not isinstance(wrapper, WrapperModel):
+            TypeError('wrapper must inherit from WrapperModel')
 
-                wrapper_models.append(wrapper_copy)
+        wrapper_models = []
 
-            return wrapper_models
+        for model in models:
+            wrapper_copy = copy.deepcopy(wrapper)
+            wrapper_copy.attach_model(model)
+
+            wrapper_models.append(wrapper_copy)
+
+        return wrapper_models
 
     def compute_costs_and_variances(self, user_sample_size=None):
         """
@@ -186,7 +186,7 @@ class MLMCSimulator:
 
         # Need 2d version of costs in order to vectorize the operations.
         costs = costs[:, np.newaxis]
-        
+
         if user_epsilon is not None:
             self._process_epsilon(user_epsilon)
 
@@ -208,6 +208,8 @@ class MLMCSimulator:
 
         if user_epsilon is not None:
             return self._sample_sizes
+
+        return None
 
     def _setup_simulation(self, epsilon, initial_sample_sizes, sample_sizes):
         """
@@ -266,7 +268,7 @@ class MLMCSimulator:
         :param level: int level
         """
         if user_samples is not None:
-            num_samples = user_samples[level]            
+            num_samples = user_samples[level]
         else:
             num_samples = self._initial_sample_sizes[level]
         input_samples = self._draw_samples(num_samples)
@@ -363,7 +365,7 @@ class MLMCSimulator:
         sum_sqrt_vc = np.sum(np.sqrt(variances * costs), axis=0)
 
         if self._target_cost is None:
-                mu = np.power(self._epsilons, -2) * sum_sqrt_vc
+            mu = np.power(self._epsilons, -2) * sum_sqrt_vc
         else:
             mu = self._target_cost * float(self._num_cpus) / sum_sqrt_vc
 
@@ -686,7 +688,7 @@ class MLMCSimulator:
         output_sizes = np.array(output_sizes)
         if not np.all(output_sizes == output_sizes[0]):
             raise ValueError("All models must return the same output " +
-                            "dimensions.")
+                             "dimensions.")
 
     @staticmethod
     def __check_simulate_parameters(target_cost):
@@ -696,8 +698,7 @@ class MLMCSimulator:
         """
         if target_cost is not None:
 
-            if not (isinstance(target_cost, float) or
-                    isinstance(target_cost, int)):
+            if not (isinstance(target_cost, (int, float))):
 
                 raise TypeError('maximum cost must be an int or float.')
 
@@ -805,7 +806,7 @@ class MLMCSimulator:
             :return: Samples to be taken by this cpu.
         """
         num_cpu_samples = total_num_samples // self._num_cpus
-        
+
         num_residual_samples = total_num_samples - \
             num_cpu_samples * self._num_cpus
 
