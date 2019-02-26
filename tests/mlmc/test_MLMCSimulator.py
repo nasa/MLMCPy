@@ -385,8 +385,6 @@ def test_modular_compute_optimal_sample_sizes_models(beta_distribution_input,
     compute_optimal_sample_sizes() against expected values based on a
     beta distribution.
     """
-    sim = MLMCSimulator
-
     sim = MLMCSimulator(models=spring_models, 
                         random_input=beta_distribution_input)
 
@@ -403,6 +401,27 @@ def test_modular_compute_optimal_sample_sizes_models(beta_distribution_input,
     true_optimal_sizes = np.array([6506, 200, 0])
 
     assert np.all(np.array_equal(true_optimal_sizes, optimal_sample_sizes))
+
+
+def test_modular_compute_estimators_parameter(beta_distribution_input,
+                                              spring_models):
+    sim = MLMCSimulator(models=spring_models,
+                        random_input=beta_distribution_input)
+    
+    output_list = [(1,2,3),(4,5,6),(7,8,9)]
+    outputs_array = sim._check_compute_estimators_parameter(output_list)
+    assert isinstance(outputs_array, np.ndarray)
+
+    output_tuple = ((1,2,3),(4,5,6),(7,8,9))
+    outputs_array = sim._check_compute_estimators_parameter(output_tuple)
+    assert isinstance(outputs_array, np.ndarray)
+
+    output_nparr = np.array((1,2,3))
+    outputs_array = sim._check_compute_estimators_parameter(output_nparr)
+    assert isinstance(outputs_array, np.ndarray)
+
+    with pytest.raises(TypeError):
+        sim._check_compute_estimators_parameter('Not a Valid Parameter')
 
 
 def test_calculate_estimate_for_springmass_random_input(beta_distribution_input,
