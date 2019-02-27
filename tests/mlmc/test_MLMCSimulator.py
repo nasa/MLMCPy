@@ -203,6 +203,10 @@ def test_for_verbose_exceptions(data_input, models_from_data):
 
 def test_init_exception_for_invalid_parameters(beta_distribution_input,
                                                spring_models):
+    """
+    Ensures the parameters passed to MLMCSimulator are valid, or will throw the
+    implemented exceptions.
+    """
     with pytest.raises(TypeError):
         MLMCSimulator('Not Input', spring_models)
     
