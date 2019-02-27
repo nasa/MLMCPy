@@ -215,6 +215,9 @@ def test_simulate_exception_for_invalid_parameters(data_input,
     with pytest.raises(TypeError):
         test_mlmc.simulate(epsilon='one', initial_sample_sizes=20)
 
+    with pytest.raises(ValueError):
+        test_mlmc.simulate(epsilon=[.1,.2], initial_sample_sizes=20)
+
     with pytest.raises(TypeError):
         test_mlmc.simulate(epsilon=.1, initial_sample_sizes='five')
 
@@ -243,6 +246,7 @@ def test_simulate_expected_output_types(data_input, models_from_data):
     assert isinstance(result, np.ndarray)
     assert isinstance(sample_count, np.ndarray)
     assert isinstance(variances, np.ndarray)
+
 
 @pytest.mark.parametrize("num_qoi, variances, epsilons",
                          [[1, [[4.], [1.]], [.1]],
