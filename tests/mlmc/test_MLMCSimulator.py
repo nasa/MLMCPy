@@ -403,8 +403,32 @@ def test_modular_compute_optimal_sample_sizes_models(beta_distribution_input,
     assert np.all(np.array_equal(true_optimal_sizes, optimal_sample_sizes))
 
 
+def test_modular_compute_estimators_expected_outputs(beta_distribution_input,
+                                                    spring_models):
+    """
+    Ensures consistent outputs when using compute_estimators().
+    """
+    sim = MLMCSimulator(models=spring_models,
+                        random_input=beta_distribution_input)
+    
+    sim.simulate(epsilon=np.sqrt(.00174325), sample_sizes=[100, 10, 5])
+
+    outputs = [(5,6,7),(8,9,10),(4,3,2)]
+
+    estimates, variances = sim.compute_estimators(outputs)
+    true_estimate = 14.8735050632
+    true_variance = 0.29611765335
+
+    assert np.isclose(true_estimate, estimates[0])
+    assert np.isclose(true_variance, variances[0])
+
+
 def test_modular_compute_estimators_parameter(beta_distribution_input,
                                               spring_models):
+    """
+    Ensures the reshape/type check function within compute_estimators()
+    appropriately reshapes an object into a np.ndarray.
+    """                                          
     sim = MLMCSimulator(models=spring_models,
                         random_input=beta_distribution_input)
     
