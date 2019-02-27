@@ -13,13 +13,13 @@ ModelFromData to utilize precomputed data as inputs.
 
 # Step 1 - Define I/O files:
 inputfile = \
-    "/data/spring_mass_1D_inputs.txt"
+    "data/spring_mass_1D_inputs.txt"
 outputfile_level1 = \
-    "/data/spring_mass_1D_outputs_1.0.txt"
+    "data/spring_mass_1D_outputs_1.0.txt"
 outputfile_level2 = \
-    "/data/spring_mass_1D_outputs_0.1.txt"
+    "data/spring_mass_1D_outputs_0.1.txt"
 outputfile_level3 = \
-    "/data/spring_mass_1D_outputs_0.01.txt"
+    "data/spring_mass_1D_outputs_0.01.txt"
 
 # Step 2 - Initialize random input from data:
 data_input = InputFromData(inputfile)
