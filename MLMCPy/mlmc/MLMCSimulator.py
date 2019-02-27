@@ -672,10 +672,10 @@ class MLMCSimulator(object):
         :param models: Model object provided to init().
         """
         if not isinstance(data, Input):
-            TypeError("data must inherit from Input class.")
+            raise TypeError("data must inherit from Input class.")
 
         if not isinstance(models, list):
-            TypeError("models must be a list of models.")
+            raise TypeError("models must be a list of models.")
 
         # Reset sampling in case input data is used more than once.
         data.reset_sampling()
@@ -687,7 +687,7 @@ class MLMCSimulator(object):
 
         for model in models:
             if not isinstance(model, Model):
-                TypeError("models must be a list of models.")
+                raise TypeError("models must be a list of models.")
 
             test_output = model.evaluate(test_sample)
             output_sizes.append(test_output.size)

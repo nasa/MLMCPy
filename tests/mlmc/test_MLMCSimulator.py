@@ -201,6 +201,18 @@ def test_for_verbose_exceptions(data_input, models_from_data):
     sys.stdout = stdout
 
 
+def test_init_exception_for_invalid_parameters(beta_distribution_input,
+                                               spring_models):
+    with pytest.raises(TypeError):
+        MLMCSimulator('Not Input', spring_models)
+    
+    with pytest.raises(TypeError):
+        MLMCSimulator(beta_distribution_input, spring_models[0])
+
+    with pytest.raises(TypeError):
+        MLMCSimulator(beta_distribution_input, ['Random', 'List', 'Testing'])
+
+
 def test_simulate_exception_for_invalid_parameters(data_input,
                                                    models_from_data):
     """
