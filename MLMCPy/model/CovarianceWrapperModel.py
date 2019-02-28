@@ -20,7 +20,7 @@ class CovarianceWrapperModel(Model):
 
         :param model: Model object that must inherit from Model class.
         """
-        self.__check_init_parameter(model)
+        self.__check_attach_model_parameter(model)
 
         self._model = model
 
@@ -28,7 +28,7 @@ class CovarianceWrapperModel(Model):
             self.cost = model.cost
 
     @staticmethod
-    def __check_init_parameter(model):
+    def __check_attach_model_parameter(model):
 
         if not isinstance(model, Model):
             raise TypeError("Model must inherit from class Model.")

@@ -12,7 +12,7 @@ class MLMCSimulator:
     """
     Computes an estimate based on the Multi-Level Monte Carlo algorithm.
     """
-    def __init__(self, random_input, models, wrapper=None):
+    def __init__(self, random_input, models):
         """
         Requires a data object that provides input samples and a list of models
         of increasing fidelity.
@@ -25,17 +25,12 @@ class MLMCSimulator:
         # Detect whether we have access to multiple CPUs.
         self.__detect_parallelization()
 
-        self.__check_init_parameters(random_input, models, wrapper)
+        self.__check_init_parameters(random_input, models)
 
         self._data = random_input
 
-        if wrapper is not None:
-            self._models = None
-            self._num_levels = None
-            self._wrapper = wrapper
-        else:
-            self._models = models
-            self._num_levels = len(self._models)
+        self._models = models
+        self._num_levels = len(self._models)
 
         # Sample size to be taken at each level.
         self._sample_sizes = np.zeros(self._num_levels, dtype=np.int)
@@ -65,40 +60,14 @@ class MLMCSimulator:
         # Enabled diagnostic text output.
         self._verbose = False
 
-    def generate_models_list(self, models):
-        """
-        Generates a list of models to be used inconjunction with a optional
-        wrapper class.
-        
-        :param models: Models to be used to generate the list of model objects,
-            must inherit from the WrapperModel class.
-        
-        :return: List of model objects.
-        """
-        
-        self.__check_generate_wrapper_models(models, self._data)
-
-        wrapper_models = []
-
-        for model in models:
-            wrapper_copy = copy.deepcopy(self._wrapper)
-            wrapper_copy.attach_model(model)
-
-            wrapper_models.append(wrapper_copy)
-
-        self._models = wrapper_models
-        self._num_levels = len(self._models)
-
-        return wrapper_models
-
     def simulate(self, epsilon, initial_sample_sizes=100, target_cost=None,
                  sample_sizes=None, verbose=False):
         """
         Perform MLMC simulation.
         Computes number of samples per level before running simulations
         to determine estimates.
-        Can be specified based on target precision to achieve (epsilon), 
-        total target cost (in seconds), or on number of sample to run on each 
+        Can be specified based on target precision to achieve (epsilon),
+        total target cost (in seconds), or on number of sample to run on each
         level directly.
 
         :param epsilon: Desired accuracy to be achieved for each quantity of
@@ -133,6 +102,34 @@ class MLMCSimulator:
 
         # Run models and return estimate, sample sizes, and variances.
         return self._run_simulation()
+
+    @staticmethod
+    def generate_wrapper_models_list(models, wrapper):
+        """
+        Generates a list of models to be used in conjunction with a optional
+        wrapper class.
+
+        :param models: Models to be used to generate the list of model objects,
+            must inherit from the WrapperModel class.
+
+        :return: List of model objects.
+        """
+        for model in models:
+            if not isinstance(model, Model):
+                raise TypeError("models must be a list of Model objects.")
+
+        if not isinstance(wrapper, WrapperModel):
+            raise TypeError('wrapper must inherit from WrapperModel')
+
+        wrapper_models = []
+
+        for model in models:
+            wrapper_copy = copy.deepcopy(wrapper)
+            wrapper_copy.attach_model(model)
+
+            wrapper_models.append(wrapper_copy)
+
+        return wrapper_models
 
     def compute_costs_and_variances(self, user_sample_size=None):
         """
@@ -189,7 +186,7 @@ class MLMCSimulator:
 
         # Need 2d version of costs in order to vectorize the operations.
         costs = costs[:, np.newaxis]
-        
+
         if user_epsilon is not None:
             self._process_epsilon(user_epsilon)
 
@@ -211,6 +208,8 @@ class MLMCSimulator:
 
         if user_epsilon is not None:
             return self._sample_sizes
+
+        return None
 
     def _setup_simulation(self, epsilon, initial_sample_sizes, sample_sizes):
         """
@@ -269,7 +268,7 @@ class MLMCSimulator:
         :param level: int level
         """
         if user_samples is not None:
-            num_samples = user_samples[level]            
+            num_samples = user_samples[level]
         else:
             num_samples = self._initial_sample_sizes[level]
         input_samples = self._draw_samples(num_samples)
@@ -366,7 +365,7 @@ class MLMCSimulator:
         sum_sqrt_vc = np.sum(np.sqrt(variances * costs), axis=0)
 
         if self._target_cost is None:
-                mu = np.power(self._epsilons, -2) * sum_sqrt_vc
+            mu = np.power(self._epsilons, -2) * sum_sqrt_vc
         else:
             mu = self._target_cost * float(self._num_cpus) / sum_sqrt_vc
 
@@ -659,7 +658,7 @@ class MLMCSimulator:
             self._target_cost = float(target_cost)
 
     @staticmethod
-    def __check_init_parameters(data, models, wrapper):
+    def __check_init_parameters(data, models):
         """
         Inspect parameters given to init method.
         :param data: Input object provided to init().
@@ -668,35 +667,13 @@ class MLMCSimulator:
         if not isinstance(data, Input):
             TypeError("data must inherit from Input class.")
 
-        if not isinstance(models, list):
+        if models is not None and not isinstance(models, list):
             TypeError("models must be a list of models.")
-
-        if wrapper is not None and not isinstance(wrapper, WrapperModel):
-            TypeError("wrapper must inherit from WrapperModel class.")
 
         # Reset sampling in case input data is used more than once.
         data.reset_sampling()
 
         # Ensure all models have the same output dimensions.
-        output_sizes = []
-        test_sample = data.draw_samples(1)[0]
-        data.reset_sampling()
-
-        if wrapper is None:
-            for model in models:
-                if not isinstance(model, Model):
-                    TypeError("models must be a list of models.")
-
-                test_output = model.evaluate(test_sample)
-                output_sizes.append(test_output.size)
-
-            output_sizes = np.array(output_sizes)
-            if not np.all(output_sizes == output_sizes[0]):
-                raise ValueError("All models must return the same output " +
-                                "dimensions.")
-
-    @staticmethod
-    def __check_generate_wrapper_models(models, data):
         output_sizes = []
         test_sample = data.draw_samples(1)[0]
         data.reset_sampling()
@@ -707,7 +684,7 @@ class MLMCSimulator:
 
             test_output = model.evaluate(test_sample)
             output_sizes.append(test_output.size)
-        
+
         output_sizes = np.array(output_sizes)
         if not np.all(output_sizes == output_sizes[0]):
             raise ValueError("All models must return the same output " +
@@ -721,8 +698,7 @@ class MLMCSimulator:
         """
         if target_cost is not None:
 
-            if not (isinstance(target_cost, float) or
-                    isinstance(target_cost, int)):
+            if not (isinstance(target_cost, (int, float))):
 
                 raise TypeError('maximum cost must be an int or float.')
 
@@ -830,7 +806,7 @@ class MLMCSimulator:
             :return: Samples to be taken by this cpu.
         """
         num_cpu_samples = total_num_samples // self._num_cpus
-        
+
         num_residual_samples = total_num_samples - \
             num_cpu_samples * self._num_cpus
 

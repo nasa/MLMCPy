@@ -6,8 +6,9 @@ from MLMCPy.model.CovarianceWrapperModel import CovarianceWrapperModel
 
 
 class DummyModel(Model):
-    def __init__(self, output_size):
+    def __init__(self, output_size, cost=10):
         self._output_size = output_size
+        self.cost = cost
 
     def evaluate(self, inputs):
         output = np.zeros(self._output_size)
@@ -18,6 +19,28 @@ class DummyModel(Model):
                 output[i] = 1 - inputs[0]
         return output
 
+
+def test_attach_model_exception():
+    covariance_model = CovarianceWrapperModel()
+
+    with pytest.raises(TypeError):
+        covariance_model.attach_model('Not a Model')    
+
+
+def test_attach_model_cost_attr_check():
+    covariance_model = CovarianceWrapperModel()
+    model = DummyModel(10)
+
+    covariance_model.attach_model(model)
+
+    assert covariance_model.cost == 10
+
+
+def test_evaluate_attached_model_exception():
+    covariance_model = CovarianceWrapperModel()
+
+    with pytest.raises(TypeError):
+        covariance_model.evaluate(10)
 
 @pytest.mark.parametrize("output_size", range(1, 5))
 def test_covariance_correct_size(output_size):
