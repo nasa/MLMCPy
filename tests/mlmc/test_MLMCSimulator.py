@@ -276,6 +276,18 @@ def test_optimal_sample_sizes_expected_outputs(num_qoi, variances, epsilons,
     assert np.all(np.isclose(sample_sizes, expected_sample_size, atol=1))
 
 
+def test_init_wrapper_models_generation(beta_distribution_input, spring_models):
+    grid = np.arange(0., 1., .1)
+    cdf_wrapper = CDFWrapperModel(grid)
+
+    test_mlmc = MLMCSimulator(beta_distribution_input, spring_models,
+                              cdf_wrapper)
+
+    assert isinstance(test_mlmc._models, list)
+    assert isinstance(test_mlmc._models[0], CDFWrapperModel)
+    assert isinstance(test_mlmc._models[1], CDFWrapperModel)
+    assert isinstance(test_mlmc._models[2], CDFWrapperModel)
+
 def test_generate_wrapper_models_exceptions(spring_models):
     grid = np.arange(0., 1., .1)
     cdf_wrapper = CDFWrapperModel(grid)
