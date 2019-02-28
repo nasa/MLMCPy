@@ -188,7 +188,7 @@ class MLMCSimulator(object):
         :type outputs: ndarray, list
         :return: Returns the estimates and variances as an ndarray.
         """
-        outputs = self._check_compute_estimators_parameter(outputs)
+        self._check_compute_estimators_parameter(outputs)
 
         for level in range(self._num_levels):
             self._update_sim_loop_values(outputs, level)
@@ -197,26 +197,11 @@ class MLMCSimulator(object):
 
     def _check_compute_estimators_parameter(self, outputs):
         """
-        Checks the parameter given to compute_estimators(), and if it is a list,
-        or tuple, it reshapes it into a np.ndarray and returns it. If it is a
-        np.ndarray, returns it.
+        Checks the parameter given to compute_estimators(), and ensures that it
+        is a np.ndarray.
         """
-        if isinstance(outputs, (list, tuple)):
-            outputs_array = np.asarray(outputs)
-
-            for level in range(self._num_levels):
-                #Double check the self._output_size for reshaping (TODO)
-                outputs_reshaped = \
-                    outputs_array[level].reshape(len(outputs_array[level]),
-                                                 self._output_size)
-
-            return outputs_reshaped
-
-        elif isinstance(outputs, np.ndarray):
-            return outputs
-
-        else:
-            raise TypeError('outputs must be a list, tuple, or ndarray.')
+        if not isinstance(outputs, np.ndarray):
+            raise TypeError("outputs must be a np.ndarray")      
 
     def _setup_simulation(self, epsilon, initial_sample_sizes, sample_sizes):
         """
