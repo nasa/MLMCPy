@@ -33,7 +33,7 @@ class MLMCSimulator:
             self._models = self.generate_wrapper_models_list(models, wrapper)
         else:
             self._models = models
-            
+
         self._num_levels = len(self._models)
 
         # Sample size to be taken at each level.
@@ -702,7 +702,7 @@ class MLMCSimulator:
         """
         if target_cost is not None:
 
-            if not (isinstance(target_cost, (int, float))):
+            if not isinstance(target_cost, (int, float)):
 
                 raise TypeError('maximum cost must be an int or float.')
 
