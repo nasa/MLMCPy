@@ -43,12 +43,13 @@ mlmc_simulator = MLMCSimulator(data_input, models, cdf_wrapper)
     mlmc_simulator.simulate(epsilon=precision,
                             initial_sample_sizes=initial_sample,
                             verbose=True)
-
+                            
+# Step 5 - Summarize results:
 print 'Estimate: %s' % estimates
 print 'Sample sizes used: %s' % sample_sizes
 print 'Variance: %s' % variances
 
-# Step 6 - Plot CDFs
+# Step 6 - Plot CDFs:
 outputfile_level3 = "data/spring_mass_1D_outputs_0.01.txt"
 mc_level3 = np.genfromtxt(outputfile_level3)
 x_mc = np.sort(mc_level3)
