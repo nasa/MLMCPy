@@ -423,50 +423,17 @@ def test_modular_compute_optimal_sample_sizes_models(beta_distribution_input,
     assert np.all(np.array_equal(true_optimal_sizes, optimal_sample_sizes))
 
 
-def test_modular_compute_estimators_expected_outputs(beta_distribution_input,
-                                                    spring_models):
-    """
-    Ensures consistent outputs when using compute_estimators().
-    """
-    sim = MLMCSimulator(models=spring_models,
-                        random_input=beta_distribution_input)
-    
-    sim.simulate(epsilon=np.sqrt(.00174325), sample_sizes=[100, 10, 5])
-
-    outputs = [(5,6,7),(8,9,10),(4,3,2)]
-
-    estimates, variances = sim.compute_estimators(outputs)
-    true_estimate = 14.8735050632
-    true_variance = 0.29611765335
-
-    assert np.isclose(true_estimate, estimates[0])
-    assert np.isclose(true_variance, variances[0])
-
-
 def test_modular_compute_estimators_parameter(beta_distribution_input,
                                               spring_models):
     """
-    Ensures the reshape/type check function within compute_estimators()
-    appropriately reshapes an object into a np.ndarray.
+    Ensures the outputs parameter is of type np.ndarray.
     """                                          
     sim = MLMCSimulator(models=spring_models,
                         random_input=beta_distribution_input)
     
-    output_list = [(1,2,3),(4,5,6),(7,8,9)]
-    outputs_array = sim._check_compute_estimators_parameter(output_list)
-    assert isinstance(outputs_array, np.ndarray)
-
-    output_tuple = ((1,2,3),(4,5,6),(7,8,9))
-    outputs_array = sim._check_compute_estimators_parameter(output_tuple)
-    assert isinstance(outputs_array, np.ndarray)
-
-    output_nparr = np.array((1,2,3))
-    outputs_array = sim._check_compute_estimators_parameter(output_nparr)
-    assert isinstance(outputs_array, np.ndarray)
-
     with pytest.raises(TypeError):
-        sim._check_compute_estimators_parameter('Not a Valid Parameter')
-
+        sim._check_compute_estimators_parameter([1, 2, 3])
+    
 
 def test_calculate_estimate_for_springmass_random_input(beta_distribution_input,
                                                         spring_models):
