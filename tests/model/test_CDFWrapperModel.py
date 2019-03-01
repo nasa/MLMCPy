@@ -113,16 +113,26 @@ def test_init_fails_on_bad_parameters(grid_0_1):
     with pytest.raises(TypeError):
         CDFWrapperModel(grid_0_1, "Super smooth")
 
+
 def test_attached_model_parameter(grid_0_1):
     cdfw = CDFWrapperModel(grid_0_1)
     with pytest.raises(TypeError):
         cdfw.evaluate(1)
+
 
 def test_attach_model_functionality(grid_0_1, spring_model):
     cdfw = CDFWrapperModel(grid_0_1)
     cdfw.attach_model(spring_model)
 
     assert isinstance(cdfw._model, SpringMassModel)
+
+
+def test_attach_model_exception(grid_0_1):
+    cdfw = CDFWrapperModel(grid_0_1)
+
+    with pytest.raises(TypeError):
+        cdfw.attach_model('Not a Model')
+
 
 @pytest.mark.parametrize('sample', [0, -1, .5, 2.])
 def test_simple_indicator(grid_0_1, sample):
