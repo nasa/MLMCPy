@@ -44,11 +44,11 @@ class CDFWrapperModel(WrapperModel):
     def attach_model(self, model):
         """
         Updates _model to the desired model object.
-        
+
         :param model: Model object that must inherit from Model class.
         """
-        super(CDFWrapperModel, self).attach_model(model)
-    
+        WrapperModel.attach_model(self, model)
+
     @staticmethod
     def __check_attached_model(model):
         if not isinstance(model, Model):

@@ -20,7 +20,7 @@ class CovarianceWrapperModel(WrapperModel):
         
         :param model: Model object that must inherit from Model class.
         """
-        super(CovarianceWrapperModel, self).attach_model(model)
+        WrapperModel.attach_model(self, model)
 
     def evaluate(self, sample):
         """
