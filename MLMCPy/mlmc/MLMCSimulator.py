@@ -189,11 +189,20 @@ class MLMCSimulator(object):
         :return: Returns the estimates and variances as an ndarray.
         """
         self._check_compute_estimators_parameter(outputs)
+        
+        estimates = 0
+        variances = 0
+        num_samples = 0
 
         for level in range(self._num_levels):
-            self._update_sim_loop_values(outputs, level)
+            num_samples = float(len(outputs[level]))
 
-        return self._estimates, self._variances
+            estimates += \
+                np.sum(outputs[level], axis=0) / num_samples
+            variances += \
+                np.var(outputs[level], axis=0) / num_samples
+
+        return estimates, variances
 
     def _check_compute_estimators_parameter(self, outputs):
         """
