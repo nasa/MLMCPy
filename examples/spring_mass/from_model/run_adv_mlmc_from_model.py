@@ -45,9 +45,9 @@ print "Target precision: ", precision_mc
 
 # Step 3 - Initialize spring-mass models for MLMC. Here using three levels
 # with MLMC defined by different time steps:
-model_level1 = SpringMassModel(mass=1.5, time_step=1.0)
-model_level2 = SpringMassModel(mass=1.5, time_step=0.1)
-model_level3 = SpringMassModel(mass=1.5, time_step=0.01)
+model_level1 = SpringMassModel(mass=1.5, time_step=1.0, cost=0.00034791)
+model_level2 = SpringMassModel(mass=1.5, time_step=0.1, cost=0.00073748)
+model_level3 = SpringMassModel(mass=1.5, time_step=0.01, cost=0.00086135)
 
 models = [model_level1, model_level2, model_level3]
 
@@ -76,13 +76,13 @@ print 'Optimal sample sizes: ', np.array2string(sample_sizes)
 
 # Optional - Call simulate now using the sample_sizes:
 
-# estimates, sample_count, variances = \
-#     mlmc_simulator.simulate(epsilon, sample_sizes=sample_sizes)
+estimates, sample_count, variances = \
+    mlmc_simulator.simulate(epsilon, sample_sizes=sample_sizes)
 
-# print
-# print 'Estimates: ', estimates
-# print 'Sample count: ', sample_count
-# print 'Variances: ', variances
+print
+print 'Estimates: ', estimates
+print 'Sample count: ', sample_count
+print 'Variances: ', variances
 
 # Step 6 - Run the model on each level the specified number of times in
 # sample_sizes to calculate the output differences for levels greater than 1
