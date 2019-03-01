@@ -1,7 +1,7 @@
 import numpy as np
 
-#from MLMCPy.model.WrapperModel import WrapperModel
-from MLMCPy.model.WrapperModel import WrapperModel
+from MLMCPy.model import WrapperModel, Model
+
 class CovarianceWrapperModel(WrapperModel):
     """
     Adds the product of the inner model outputs to the wrapper output array so
@@ -48,7 +48,7 @@ class CovarianceWrapperModel(WrapperModel):
 
     @staticmethod
     def __check_attached_model(model):
-        if not isinstance(model, WrapperModel):
+        if not isinstance(model, Model):
             raise TypeError('WrapperModel must be attached.')
 
     @staticmethod

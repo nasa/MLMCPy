@@ -1,7 +1,6 @@
 import numpy as np
 
-from MLMCPy.model.WrapperModel import WrapperModel
-from MLMCPy.model.Model import Model
+from MLMCPy.model import WrapperModel, Model
 
 class CDFWrapperModel(WrapperModel):
     """

@@ -1,5 +1,5 @@
 from Model import Model
+from WrapperModel import WrapperModel
 from ModelFromData import ModelFromData
 from CDFWrapperModel import CDFWrapperModel
-from WrapperModel import WrapperModel
 from CovarianceWrapperModel import CovarianceWrapperModel
