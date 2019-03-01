@@ -41,12 +41,6 @@ class CovarianceWrapperModel(WrapperModel):
         return np.hstack((output, products))
 
     @staticmethod
-    def __check_attach_model_parameter(model):
-
-        if not isinstance(model, WrapperModel):
-            raise TypeError("WrapperModel must inherit from class WrapperModel.")
-
-    @staticmethod
     def __check_attached_model(model):
         if not isinstance(model, Model):
             raise TypeError('WrapperModel must be attached.')
