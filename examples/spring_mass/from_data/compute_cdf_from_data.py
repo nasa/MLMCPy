@@ -19,7 +19,7 @@ outputfile_level1 = "data/spring_mass_1D_outputs_1.0.txt"
 outputfile_level2 = "data/spring_mass_1D_outputs_0.1.txt"
 outputfile_level3 = "data/spring_mass_1D_outputs_0.01.txt"
 
-# Step 2 - Initialize random input & model objects:
+# Step 2 - Initialize random input and model objects:
 data_input = InputFromData(inputfile)
 
 model_level1 = ModelFromData(inputfile, outputfile_level1, cost=1.0)
@@ -43,7 +43,7 @@ mlmc_simulator = MLMCSimulator(data_input, models, cdf_wrapper)
     mlmc_simulator.simulate(epsilon=precision,
                             initial_sample_sizes=initial_sample,
                             verbose=True)
-                            
+      
 # Step 5 - Summarize results:
 print 'Estimate: %s' % estimates
 print 'Sample sizes used: %s' % sample_sizes
