@@ -76,16 +76,25 @@ print 'Optimal sample sizes: ', np.array2string(sample_sizes)
 
 # Optional - Call simulate now using the sample_sizes:
 
-estimates, sample_count, variances = \
-    mlmc_simulator.simulate(epsilon, sample_sizes=sample_sizes)
+# estimates, sample_count, variances = \
+#     mlmc_simulator.simulate(epsilon, sample_sizes=sample_sizes)
 
-print
-print 'Estimates: ', estimates
-print 'Sample count: ', sample_count
-print 'Variances: ', variances
+# print
+# print 'Estimates: ', estimates
+# print 'Sample count: ', sample_count
+# print 'Variances: ', variances
 
 # Step 6 - Run the model on each level the specified number of times in
 # sample_sizes to calculate the output differences for levels greater than 1
+def reshape_differences_per_level(outputs):
+    outputs_array = np.asarray(outputs)
+    for i in range(3):
+        outputs_reshaped = \
+            outputs_array[i].reshape(-1, 1)
+        
+        outputs_array[i] = outputs_reshaped
+    
+    return outputs_array
 
 output_diffs_per_level = []
 
@@ -105,9 +114,11 @@ for level, model in enumerate(models):
 
     output_diffs_per_level.append(output_diffs)
 
+outputs = reshape_differences_per_level(output_diffs_per_level)
+
 # Step 7 - Aggregate model outputs to compute estimators:
 estimates, variances = \
-    mlmc_simulator.compute_estimators(output_diffs_per_level)
+    mlmc_simulator.compute_estimators(outputs)
 
 #mlmc_total_cost = timeit.default_timer() - start_mlmc
 
