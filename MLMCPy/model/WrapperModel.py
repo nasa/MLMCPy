@@ -1,5 +1,3 @@
-import abc
-
 from MLMCPy.model import Model
 
 class WrapperModel(Model):
