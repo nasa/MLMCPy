@@ -12,7 +12,7 @@ class MLMCSimulator:
     """
     Computes an estimate based on the Multi-Level Monte Carlo algorithm.
     """
-    def __init__(self, random_input, models):
+    def __init__(self, random_input, models, wrapper=None):
         """
         Requires a data object that provides input samples and a list of models
         of increasing fidelity.
@@ -29,7 +29,11 @@ class MLMCSimulator:
 
         self._data = random_input
 
-        self._models = models
+        if wrapper is not None:
+            self._models = self.generate_wrapper_models_list(models, wrapper)
+        else:
+            self._models = models
+
         self._num_levels = len(self._models)
 
         # Sample size to be taken at each level.
@@ -698,7 +702,7 @@ class MLMCSimulator:
         """
         if target_cost is not None:
 
-            if not (isinstance(target_cost, (int, float))):
+            if not isinstance(target_cost, (int, float)):
 
                 raise TypeError('maximum cost must be an int or float.')
 

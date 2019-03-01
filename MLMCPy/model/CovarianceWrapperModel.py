@@ -27,12 +27,6 @@ class CovarianceWrapperModel(Model):
         if hasattr(self._model, 'cost'):
             self.cost = model.cost
 
-    @staticmethod
-    def __check_attach_model_parameter(model):
-
-        if not isinstance(model, Model):
-            raise TypeError("Model must inherit from class Model.")
-
     def evaluate(self, sample):
         """
         Evaluates the internal model on the given sample and computes products
@@ -50,6 +44,12 @@ class CovarianceWrapperModel(Model):
                 products.append(out_i * out_j)
 
         return np.hstack((output, products))
+
+    @staticmethod
+    def __check_attach_model_parameter(model):
+
+        if not isinstance(model, Model):
+            raise TypeError("Model must inherit from class Model.")
 
     @staticmethod
     def __check_attached_model(model):
