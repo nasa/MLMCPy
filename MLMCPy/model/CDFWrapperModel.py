@@ -45,7 +45,7 @@ class CDFWrapperModel(WrapperModel):
         """
         Updates _model to the desired model object.
 
-        :param model: Model object that must inherit from WrapperModel class.
+        :param model: Model object that must inherit from Model class.
         """
         self.__check_attached_model(model)
 
