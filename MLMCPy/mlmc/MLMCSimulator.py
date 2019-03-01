@@ -118,9 +118,12 @@ class MLMCSimulator:
 
         :return: List of model objects.
         """
+        if not isinstance(models, list):
+            raise TypeError('models must be a list of Model objects.')
+
         for model in models:
             if not isinstance(model, Model):
-                raise TypeError("models must be a list of Model objects.")
+                raise TypeError('models must be a list of Model objects.')
 
         if not isinstance(wrapper, WrapperModel):
             raise TypeError('wrapper must inherit from WrapperModel')

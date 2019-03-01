@@ -40,7 +40,7 @@ class CDFWrapperModel(WrapperModel):
             indicators[x] = np.count_nonzero(output <= y)
 
         return indicators
-
+    #Move to abstract class WrapperModel (TODO)
     def attach_model(self, model):
         """
         Updates _model to the desired model object.
