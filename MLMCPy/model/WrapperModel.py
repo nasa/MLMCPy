@@ -21,6 +21,5 @@ class WrapperModel(Model):
 
     @staticmethod
     def __check_attach_model_parameter(model):
-
         if not isinstance(model, Model):
-            raise TypeError("model must inherit from class Model.")
+            raise TypeError("model must inherit from Model class.")
