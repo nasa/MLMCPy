@@ -17,15 +17,10 @@ class CovarianceWrapperModel(WrapperModel):
     def attach_model(self, model):
         """
         Updates _model to the desired model object.
-
-        :param model: WrapperModel object that must inherit from WrapperModel class.
+        
+        :param model: Model object that must inherit from Model class.
         """
-        self.__check_attach_model_parameter(model)
-
-        self._model = model
-
-        if hasattr(self._model, 'cost'):
-            self.cost = model.cost
+        super(CovarianceWrapperModel, self).attach_model(model)
 
     def evaluate(self, sample):
         """
