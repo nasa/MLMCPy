@@ -1,11 +1,11 @@
 import pytest
 import numpy as np
 
-from MLMCPy.model.Model import Model
+from MLMCPy.model.WrapperModel import WrapperModel
 from MLMCPy.model.CovarianceWrapperModel import CovarianceWrapperModel
 
 
-class DummyModel(Model):
+class DummyModel(WrapperModel):
     def __init__(self, output_size, cost=10):
         self._output_size = output_size
         self.cost = cost
@@ -24,7 +24,7 @@ def test_attach_model_exception():
     covariance_model = CovarianceWrapperModel()
 
     with pytest.raises(TypeError):
-        covariance_model.attach_model('Not a Model')    
+        covariance_model.attach_model('Not a WrapperModel')    
 
 
 def test_attach_model_cost_attr_check():
