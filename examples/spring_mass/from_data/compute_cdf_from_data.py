@@ -43,7 +43,7 @@ mlmc_simulator = MLMCSimulator(data_input, models, cdf_wrapper)
     mlmc_simulator.simulate(epsilon=precision,
                             initial_sample_sizes=initial_sample,
                             verbose=True)
-      
+
 # Step 5 - Summarize results:
 print 'Estimate: %s' % estimates
 print 'Sample sizes used: %s' % sample_sizes
