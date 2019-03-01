@@ -17,7 +17,7 @@ class CovarianceWrapperModel(WrapperModel):
     def attach_model(self, model):
         """
         Updates _model to the desired model object.
-        
+
         :param model: Model object that must inherit from Model class.
         """
         WrapperModel.attach_model(self, model)
