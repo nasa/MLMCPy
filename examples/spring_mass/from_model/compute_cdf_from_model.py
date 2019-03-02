@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import timeit
 
 from MLMCPy.mlmc import MLMCSimulator
 from MLMCPy.input import RandomInput
@@ -42,22 +43,41 @@ cdf_wrapper = CDFWrapperModel(grid, smoothing)
 precision = 2.5e-2
 initial_sample = 100
 
+print "Running MLMC..."
+start_mlmc = timeit.default_timer()
+
 mlmc_simulator = MLMCSimulator(stiffness_distribution, models, cdf_wrapper)
 
 [estimates, sample_sizes, variances] = \
     mlmc_simulator.simulate(epsilon=precision,
                             initial_sample_sizes=initial_sample,
-                            verbose=True)
+                            verbose=False)
 
-# Step 5 - Summarize results:
-print 'Estimate: %s' % estimates
-print 'Sample sizes used: %s' % sample_sizes
-print 'Variance: %s' % variances
+mlmc_total_cost = timeit.default_timer() - start_mlmc
 
-# Step 6 - Compute CDFs
-outputfile_level3 = "data/spring_mass_1D_outputs_0.01.txt"
-mc_level3 = np.genfromtxt(outputfile_level3)
-x_mc = np.sort(mc_level3)
+
+# Step 5 - Calculate Monte Carlo reference CDF
+num_samples = 5000
+model = SpringMassModel(mass=1.5, time_step=0.01)
+input_samples = stiffness_distribution.draw_samples(num_samples)
+output_samples_mc = np.zeros(num_samples)
+
+print "Running Monte Carlo..."
+start_mc = timeit.default_timer()
+
+for i, sample in enumerate(input_samples):
+    output_samples_mc[i] = model.evaluate([sample])
+
+mc_total_cost = timeit.default_timer() - start_mc
+
+print '\nMLMC number of samples: ', sample_sizes
+print 'MLMC total cost: %s' % mlmc_total_cost
+print "MC total cost: %s" % mc_total_cost
+print "MLMC computational speedup: %s" %  (mc_total_cost / mlmc_total_cost)
+
+# Step 6 - Compare CDFs
+
+x_mc = np.sort(output_samples_mc)
 cdf_mc = np.arange(len(x_mc))/float(len(x_mc))
 
 plt.figure()
