@@ -1,15 +1,15 @@
 import numpy as np
 
-from MLMCPy.model.Model import Model
+from MLMCPy.model import WrapperModel, Model
 
-class CovarianceWrapperModel(Model):
+class CovarianceWrapperModel(WrapperModel):
     """
     Adds the product of the inner model outputs to the wrapper output array so
     that covariance may be calculated.
     """
     def __init__(self):
         """
-        :param model: An instance of a class inheriting from Model that
+        :param model: An instance of a class inheriting from WrapperModel that
             implements the evaluate function.
         """
         self._model = None
@@ -20,12 +20,7 @@ class CovarianceWrapperModel(Model):
 
         :param model: Model object that must inherit from Model class.
         """
-        self.__check_attach_model_parameter(model)
-
-        self._model = model
-
-        if hasattr(self._model, 'cost'):
-            self.cost = model.cost
+        WrapperModel.attach_model(self, model)
 
     def evaluate(self, sample):
         """
@@ -46,15 +41,9 @@ class CovarianceWrapperModel(Model):
         return np.hstack((output, products))
 
     @staticmethod
-    def __check_attach_model_parameter(model):
-
-        if not isinstance(model, Model):
-            raise TypeError("Model must inherit from class Model.")
-
-    @staticmethod
     def __check_attached_model(model):
         if not isinstance(model, Model):
-            raise TypeError('Model must be attached.')
+            raise TypeError('WrapperModel must be attached.')
 
     @staticmethod
     def post_process_covariance(expected_values):

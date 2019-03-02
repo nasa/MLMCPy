@@ -1,7 +1,6 @@
 import numpy as np
 
-from MLMCPy.model.WrapperModel import WrapperModel
-from MLMCPy.model.Model import Model
+from MLMCPy.model import WrapperModel, Model
 
 class CDFWrapperModel(WrapperModel):
     """
@@ -47,19 +46,8 @@ class CDFWrapperModel(WrapperModel):
 
         :param model: Model object that must inherit from Model class.
         """
-        self.__check_attach_model_parameter(model)
+        WrapperModel.attach_model(self, model)
 
-        self._model = model
-
-        if hasattr(self._model, 'cost'):
-            self.cost = self._model.cost
-
-    @staticmethod
-    def __check_attach_model_parameter(model):
-
-        if not isinstance(model, Model):
-            raise TypeError("model must inherit from class Model.")
-    
     @staticmethod
     def __check_attached_model(model):
         if not isinstance(model, Model):

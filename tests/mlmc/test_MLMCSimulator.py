@@ -294,6 +294,9 @@ def test_generate_wrapper_models_exceptions(spring_models):
 
     with pytest.raises(TypeError):
         MLMCSimulator.generate_wrapper_models_list('Not a Model', cdf_wrapper)
+
+    with pytest.raises(TypeError):
+        MLMCSimulator.generate_wrapper_models_list(['Not', 'A', 'Mode'], cdf_wrapper)
     
     with pytest.raises(TypeError):
         MLMCSimulator.generate_wrapper_models_list(spring_models, 'Not a WrapperModel')
