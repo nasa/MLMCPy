@@ -138,7 +138,7 @@ class MLMCSimulator:
 
         return wrapper_models
 
-    def compute_costs_and_variances(self, user_sample_size=None):
+    def _compute_costs_and_variances(self):
         """
         Compute costs and variances across levels.
 
@@ -149,11 +149,7 @@ class MLMCSimulator:
         if self._verbose:
             print "Determining costs: "
 
-        if user_sample_size is not None:
-            user_samples = self._verify_sample_sizes(user_sample_size)
-            self._initialize_cache(user_samples)
-        else:
-            self._initialize_cache()
+        self._initialize_cache()
 
         # Evaluate samples in model. Gather compute times for each level.
         # Variance is computed from difference between outputs of adjacent
@@ -161,10 +157,7 @@ class MLMCSimulator:
         compute_times = np.zeros(self._num_levels)
 
         for level in range(self._num_levels):
-            if user_sample_size is not None:
-                input_samples = self._draw_setup_samples(level, user_samples)
-            else:
-                input_samples = self._draw_setup_samples(level)
+            input_samples = self._draw_setup_samples(level)
 
             start_time = timeit.default_timer()
             self._compute_setup_outputs(input_samples, level)
@@ -181,7 +174,7 @@ class MLMCSimulator:
 
         return costs, variances
 
-    def compute_optimal_sample_sizes(self, costs, variances, user_epsilon=None):
+    def _compute_optimal_sample_sizes(self, costs, variances):
         """
         Compute the sample size for each level to be used in simulation.
 
@@ -193,9 +186,6 @@ class MLMCSimulator:
 
         # Need 2d version of costs in order to vectorize the operations.
         costs = costs[:, np.newaxis]
-
-        if user_epsilon is not None:
-            self._process_epsilon(user_epsilon)
 
         mu = self._compute_mu(costs, variances)
 
@@ -213,11 +203,6 @@ class MLMCSimulator:
 
             self._show_time_estimate(estimated_runtime)
 
-        if user_epsilon is not None:
-            return self._sample_sizes
-
-        return None
-
     def _setup_simulation(self, epsilon, initial_sample_sizes, sample_sizes):
         """
         Performs any necessary manipulation of epsilon and initial_sample_sizes.
@@ -233,8 +218,8 @@ class MLMCSimulator:
             self._initial_sample_sizes = \
                 self._verify_sample_sizes(initial_sample_sizes)
 
-            costs, variances = self.compute_costs_and_variances()
-            self.compute_optimal_sample_sizes(costs, variances)
+            costs, variances = self._compute_costs_and_variances()
+            self._compute_optimal_sample_sizes(costs, variances)
 
         else:
             self._target_cost = None

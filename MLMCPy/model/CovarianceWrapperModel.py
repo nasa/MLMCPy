@@ -14,14 +14,6 @@ class CovarianceWrapperModel(WrapperModel):
         """
         self._model = None
 
-    def attach_model(self, model):
-        """
-        Updates _model to the desired model object.
-
-        :param model: Model object that must inherit from Model class.
-        """
-        WrapperModel.attach_model(self, model)
-
     def evaluate(self, sample):
         """
         Evaluates the internal model on the given sample and computes products

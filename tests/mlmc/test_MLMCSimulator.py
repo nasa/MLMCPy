@@ -251,7 +251,7 @@ def test_simulate_expected_output_types(data_input, models_from_data):
 def test_optimal_sample_sizes_expected_outputs(num_qoi, variances, epsilons,
                                                data_input, models_from_data):
     """
-    Tests samples sizes produced by simulator's compute_optimal_sample_sizes()
+    Tests samples sizes produced by simulator's _compute_optimal_sample_sizes()
     against expected computed sample sizes for various sets of parameters.
     """
     test_mlmc = \
@@ -263,7 +263,7 @@ def test_optimal_sample_sizes_expected_outputs(num_qoi, variances, epsilons,
     test_mlmc._epsilons = epsilons
     costs = np.array([1., 4.])
 
-    test_mlmc.compute_optimal_sample_sizes(costs, np.array(variances))
+    test_mlmc._compute_optimal_sample_sizes(costs, np.array(variances))
 
     # Check results.
     sample_sizes = test_mlmc._sample_sizes
@@ -322,7 +322,7 @@ def test_costs_and_initial_variances_spring_models(beta_distribution_input,
                                                    spring_models):
     """
     Tests costs and variances computed by simulator's
-    compute_costs_and_variances() against expected values based on a
+    _compute_costs_and_variances() against expected values based on a
     beta distribution.
     """
     sim = MLMCSimulator(models=spring_models, 
@@ -331,9 +331,7 @@ def test_costs_and_initial_variances_spring_models(beta_distribution_input,
     np.random.seed(1)
 
     sim._initial_sample_sizes = np.array([100,100,100])
-    costs, variances = sim.compute_costs_and_variances()
-
-    
+    costs, variances = sim._compute_costs_and_variances()
 
     true_variances = np.array([[8.245224951411819],
                                [0.0857219498864355],
@@ -349,14 +347,14 @@ def test_costs_and_initial_variances_models_from_data(data_input,
                                                       models_from_data):
     """
     Tests costs and variances computed by simulator's
-    compute_costs_and_variances() against expected values based on data loaded
+    _compute_costs_and_variances() against expected values based on data loaded
     from files.
     """
     np.random.seed(1)
     sim = MLMCSimulator(models=models_from_data, random_input=data_input)
 
     sim._initial_sample_sizes = np.array([100,100,100])
-    costs, variances = sim.compute_costs_and_variances()
+    costs, variances = sim._compute_costs_and_variances()
 
     true_variances = np.array([[9.262628271266264],
                                [0.07939834631411287],
@@ -366,85 +364,6 @@ def test_costs_and_initial_variances_models_from_data(data_input,
 
     assert np.all(np.isclose(true_costs, costs))
     assert np.all(np.isclose(true_variances, variances, rtol=.1))
-
-
-def test_modular_costs_and_initial_variances_from_model(beta_distribution_input,
-                                                        spring_models):
-    """
-    Tests costs and variances computed by simulator's modular
-    compute_costs_and_variances() against expected values based on a
-    beta distribution.
-    """
-    sim = MLMCSimulator
-
-    sim = MLMCSimulator(models=spring_models, 
-                        random_input=beta_distribution_input)
-
-    np.random.seed(1)
-
-    initial_sample_sizes = np.array([100,100,100])
-    costs, variances = sim.compute_costs_and_variances(initial_sample_sizes)
-
-    
-
-    true_variances = np.array([[8.245224951411819],
-                               [0.0857219498864355],
-                               [7.916295509470576e-06]])
-
-    true_costs = np.array([1., 11., 110.])
-
-    assert np.all(np.isclose(true_costs, costs))
-    assert np.all(np.isclose(true_variances, variances, rtol=.1))
-    
-
-def test_modular_costs_and_initial_variances_from_data(data_input, 
-                                                       models_from_data):
-    """
-    Tests modular costs and variances computed by simulator's
-    compute_costs_and_variances() against expected values based on data loaded
-    from files.
-    """
-    np.random.seed(1)
-    sim = MLMCSimulator(models=models_from_data, random_input=data_input)
-
-    sample_sizes = np.array([100,100,100])
-    costs, variances = sim.compute_costs_and_variances(sample_sizes)
-
-    true_variances = np.array([[9.262628271266264],
-                               [0.07939834631411287],
-                               [5.437083709623372e-06]])
-
-    true_costs = np.array([1.0, 5.0, 20.0])
-
-    assert np.all(np.isclose(true_costs, costs))
-    assert np.all(np.isclose(true_variances, variances, rtol=.1))
-
-
-def test_modular_compute_optimal_sample_sizes_models(beta_distribution_input,
-                                                     spring_models):
-    """
-    Tests optimal sample sizes computed by simulator's modular
-    compute_optimal_sample_sizes() against expected values based on a
-    beta distribution.
-    """
-    sim = MLMCSimulator
-
-    sim = MLMCSimulator(models=spring_models, 
-                        random_input=beta_distribution_input)
-
-    np.random.seed(1)
-
-    initial_sample_sizes = np.array([100,100,100])
-    costs, variances = sim.compute_costs_and_variances(initial_sample_sizes)
-    epsilon = np.sqrt(0.00170890122096)
-
-    optimal_sample_sizes = sim.compute_optimal_sample_sizes(costs,
-                                                            variances,
-                                                            epsilon)
-
-    true_optimal_sizes = np.array([6506, 200, 0])
-
-    assert np.all(np.array_equal(true_optimal_sizes, optimal_sample_sizes))
 
 
 def test_calculate_estimate_for_springmass_random_input(beta_distribution_input,
@@ -773,7 +692,7 @@ def test_hard_coded_test_2_level(data_input, models_from_data):
     sim = MLMCSimulator(models=models, random_input=data_input)
     sim_estimate, sim_sample_sizes, output_variances = \
         sim.simulate(epsilon=1., initial_sample_sizes=200)
-    sim_costs, sim_variances = sim.compute_costs_and_variances()
+    sim_costs, sim_variances = sim._compute_costs_and_variances()
 
     # Results from hard coded testing with same parameters.
     hard_coded_variances = np.array([[7.659619446414387],
@@ -796,7 +715,7 @@ def test_hard_coded_test_3_level(data_input, models_from_data):
     sim = MLMCSimulator(models=models_from_data, random_input=data_input)
     sim_estimate, sim_sample_sizes, output_variances = \
         sim.simulate(epsilon=1., initial_sample_sizes=200)
-    sim_costs, sim_variances = sim.compute_costs_and_variances()
+    sim_costs, sim_variances = sim._compute_costs_and_variances()
 
     # Results from hard coded testing with same parameters.
     hard_coded_variances = np.array([[7.659619446414387],
@@ -883,8 +802,8 @@ def test_fixed_cost(beta_distribution_input, spring_models, target_cost):
     sim._target_cost = float(target_cost)
 
     sim._determine_input_output_size()
-    costs, variances = sim.compute_costs_and_variances()
-    sim.compute_optimal_sample_sizes(costs, variances)
+    costs, variances = sim._compute_costs_and_variances()
+    sim._compute_optimal_sample_sizes(costs, variances)
 
     expected_cost = np.dot(costs, sim._cpu_sample_sizes)
 
@@ -980,7 +899,7 @@ def test_gather_arrays(data_input, models_from_data, comm):
 
 
 @pytest.mark.parametrize('num_samples', [2, 3, 5, 7, 11, 23, 101])
-def test_multiple_cpu_compute_costs_and_variances(data_input, num_samples,
+def test_multiple_cpu__compute_costs_and_variances(data_input, num_samples,
                                                   models_from_data):
     """
     Tests simulator's computation of costs and initial variances in an MPI
@@ -1065,13 +984,13 @@ def test_multiple_cpu_simulation(data_input, models_from_data, comm):
         base_sim.simulate(.1, 200)
 
     full_data_input.reset_sampling()
-    base_costs, base_initial_variances = base_sim.compute_costs_and_variances()
+    base_costs, base_initial_variances = base_sim._compute_costs_and_variances()
 
     sim = MLMCSimulator(models=models_from_data, random_input=data_input)
     estimates, sample_sizes, variances = sim.simulate(.1, 200)
 
     data_input.reset_sampling()
-    sim_costs, initial_variances = sim.compute_costs_and_variances()
+    sim_costs, initial_variances = sim._compute_costs_and_variances()
 
     assert np.all(np.isclose(base_initial_variances, initial_variances))
     assert np.all(np.isclose(base_costs, sim_costs))
