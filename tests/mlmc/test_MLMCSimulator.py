@@ -333,8 +333,6 @@ def test_costs_and_initial_variances_spring_models(beta_distribution_input,
     sim._initial_sample_sizes = np.array([100,100,100])
     costs, variances = sim._compute_costs_and_variances()
 
-    
-
     true_variances = np.array([[8.245224951411819],
                                [0.0857219498864355],
                                [7.916295509470576e-06]])
