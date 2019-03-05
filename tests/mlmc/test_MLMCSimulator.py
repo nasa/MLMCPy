@@ -567,6 +567,39 @@ def test_store_model_inputs_to_run_for_each_level_exceptions(spring_mlmc_simulat
         sim.store_model_inputs_to_run_for_each_level([3,2,1], 1)
 
 
+def test_load_model_outputs_for_each_level_one_output(spring_mlmc_simulator):
+    sim = spring_mlmc_simulator
+    sample_sizes = [3, 2]
+
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes)
+    model_outputs = sim.load_model_outputs_for_each_level(3)
+
+    assert np.isclose(model_outputs['level0'][0], 2.87610342)
+
+
+def test_load_model_outputs_for_each_level_two_outputs(spring_mlmc_simulator):
+    sim = spring_mlmc_simulator
+    sample_sizes = [3, 2]
+
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes)
+    model_outputs = sim.load_model_outputs_for_each_level(3)
+
+    assert np.isclose(model_outputs['level0'][0], 2.87610342)
+    assert np.isclose(model_outputs['level1'][0], 3.22645934)
+
+
+def test_load_model_outputs_for_each_level_three_outputs(spring_mlmc_simulator):
+    sim = spring_mlmc_simulator
+    sample_sizes = [3, 2, 1]
+
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes)
+    model_outputs = sim.load_model_outputs_for_each_level(3)
+
+    assert np.isclose(model_outputs['level0'][0], 2.87610342)
+    assert np.isclose(model_outputs['level1'][0], 3.22645934)
+    assert np.isclose(model_outputs['level2'], 1.63840664)
+
+
 def test_load_model_outputs_for_each_level_return_type(spring_mlmc_simulator):
     sim = spring_mlmc_simulator
     sample_sizes = [3, 2, 1]
