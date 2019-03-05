@@ -238,7 +238,20 @@ class MLMCSimulator(object):
         else:
             for key in inputs:
                 np.savetxt('%s_inputs.txt' % key, inputs[key])
-            
+
+    @staticmethod
+    def load_model_outputs_for_each_level(num_models, filenames=None):
+        outputs_dict = {}
+
+        if not isinstance(num_models, int):
+            raise TypeError('num_models must be an integer of models(levels).')
+
+        for level in range(num_models):
+            outputs = np.loadtxt('level%s_inputs.txt' % level)
+            outputs_dict.update({'level%s' % level: outputs})
+
+        return outputs_dict
+
     def compute_estimators(self, outputs):
         """Computes the estimators using the output differences per level.
 

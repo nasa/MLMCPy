@@ -553,6 +553,42 @@ def test_store_model_inputs_to_run_for_each_level_exceptions(mlmc_simulator):
         sim.store_model_inputs_to_run_for_each_level([3,2,1], 1)
 
 
+def test_load_model_outputs_for_each_level_return_type(mlmc_simulator):
+    sim = mlmc_simulator
+    sample_sizes = [3, 2, 1]
+
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes)
+
+    model_outputs = sim.load_model_outputs_for_each_level(3)
+
+    assert isinstance(model_outputs, dict)
+    assert isinstance(model_outputs['level0'], np.ndarray)
+    assert isinstance(model_outputs['level1'], np.ndarray)
+    assert isinstance(model_outputs['level2'], np.ndarray)
+
+
+def test_load_model_outputs_for_each_level_custom_filename(mlmc_simulator):
+    sim = mlmc_simulator
+    sample_sizes = [3, 2, 1]
+    fnames = ['level0.txt', 'level1.txt', 'level2.txt']
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes, fnames)
+
+    model_outputs = sim.load_model_outputs_for_each_level(3, fnames)
+
+    assert isinstance(model_outputs, dict)
+    assert isinstance(model_outputs['level0'], np.ndarray)
+    assert isinstance(model_outputs['level1'], np.ndarray)
+    assert isinstance(model_outputs['level2'], np.ndarray)
+
+
+def test_load_model_outputs_for_each_level_exception():
+    with pytest.raises(TypeError):
+        MLMCSimulator.load_model_outputs_for_each_level(5.5)
+    
+    with pytest.raises(TypeError):
+        MLMCSimulator.load_model_outputs_for_each_level('Not an Integer.')
+
+
 def test_calculate_estimate_for_springmass_random_input(beta_distribution_input,
                                                         spring_models):
     """
