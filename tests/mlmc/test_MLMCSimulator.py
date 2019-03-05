@@ -423,6 +423,18 @@ def test_modular_compute_optimal_sample_sizes_models(spring_mlmc_simulator):
     assert np.all(np.array_equal(true_optimal_sizes, optimal_sample_sizes))
 
 
+def test_modular_compute_estimators_expected_output(spring_mlmc_simulator):
+    sim = spring_mlmc_simulator
+    sample_sizes = [3, 2, 1]
+    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
+
+    estimates, variances = \
+        sim.compute_estimators(inputs)
+
+    assert np.isclose(estimates, 9.4232859)
+    assert np.isclose(variances, 0.07005233)
+
+
 def test_modular_compute_estimators_return_type(spring_mlmc_simulator):
     sim = spring_mlmc_simulator
     sample_sizes = [3, 2, 1]
@@ -431,7 +443,8 @@ def test_modular_compute_estimators_return_type(spring_mlmc_simulator):
     estimates, variances = \
         sim.compute_estimators(inputs)
 
-    assert isinstance((estimates, variances), float)
+    assert isinstance(variances, np.ndarray)
+    assert isinstance(estimates, np.ndarray)
 
 
 def test_modular_compute_estimators_exception(spring_mlmc_simulator):

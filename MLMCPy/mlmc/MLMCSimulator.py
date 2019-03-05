@@ -259,6 +259,8 @@ class MLMCSimulator(object):
         :type outputs: ndarray, list
         :return: Returns the estimates and variances as an ndarray.
         """
+        self._check_compute_estimators_parameter(model_outputs)
+        
         differences_per_level = \
             self._compute_differences_per_level(model_outputs, self._models)
 
@@ -288,9 +290,9 @@ class MLMCSimulator(object):
         for level, model in enumerate(models):
             sample_size = len(outputs[level])
             output_diffs = np.zeros((sample_size, 1))
+            samples = outputs[level]
 
-            for i, sample in enumerate(outputs):
-
+            for i, sample in enumerate(samples):
                 if level == 0:
                     output_diffs[i] = model.evaluate(sample)
                 else:
@@ -301,7 +303,8 @@ class MLMCSimulator(object):
 
         return output_diffs_per_level
 
-    def _check_compute_estimators_parameter(self, model_outputs):
+    @staticmethod
+    def _check_compute_estimators_parameter(model_outputs):
         """
         Checks the parameter given to compute_estimators(), and ensures that it
         is a np.ndarray.
