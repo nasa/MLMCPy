@@ -252,36 +252,68 @@ class MLMCSimulator(object):
 
         return outputs_dict
 
-    def compute_estimators(self, outputs):
+    def compute_estimators(self, model_outputs):
         """Computes the estimators using the output differences per level.
 
         :param outputs: The differences per level.
         :type outputs: ndarray, list
         :return: Returns the estimates and variances as an ndarray.
         """
-        self._check_compute_estimators_parameter(outputs)
-        
+        differences_per_level = \
+            self._compute_differences_per_level(model_outputs, self._models)
+
         estimates = 0
         variances = 0
         num_samples = 0
 
-        for level in range(self._num_levels):
-            num_samples = float(len(outputs[level]))
+        for level in range(len(differences_per_level)):
+            num_samples = float(len(differences_per_level[level]))
 
             estimates += \
-                np.sum(outputs[level], axis=0) / num_samples
+                np.sum(differences_per_level[level], axis=0) / num_samples
             variances += \
-                np.var(outputs[level], axis=0) / num_samples
+                np.var(differences_per_level[level], axis=0) / num_samples
 
         return estimates, variances
 
-    def _check_compute_estimators_parameter(self, outputs):
+    @staticmethod
+    def _compute_differences_per_level(model_outputs, models):
+        outputs = []
+
+        for k in model_outputs:
+            outputs.append(model_outputs[k])
+
+        output_diffs_per_level = []
+
+        for level, model in enumerate(models):
+            sample_size = len(outputs[level])
+            output_diffs = np.zeros((sample_size, 1))
+
+            for i, sample in enumerate(outputs):
+
+                if level == 0:
+                    output_diffs[i] = model.evaluate(sample)
+                else:
+                    output_diffs[i] = model.evaluate(sample) - \
+                                            models[level-1].evaluate(sample)
+            
+            output_diffs_per_level.append(output_diffs)
+
+        return output_diffs_per_level
+
+    def _check_compute_estimators_parameter(self, model_outputs):
         """
         Checks the parameter given to compute_estimators(), and ensures that it
         is a np.ndarray.
         """
-        if not isinstance(outputs, np.ndarray):
-            raise TypeError("outputs must be a np.ndarray")      
+        if not isinstance(model_outputs, dict):
+            raise TypeError('model_outputs must be a dictionary of output' + 
+                            'numpy arrays.')
+
+        for key in model_outputs:
+            if not isinstance(model_outputs[key], np.ndarray):
+                raise TypeError('model_outputs must be a dictionary of output' +
+                                'numpy arrays.')      
 
     def _setup_simulation(self, epsilon, initial_sample_sizes, sample_sizes):
         """
