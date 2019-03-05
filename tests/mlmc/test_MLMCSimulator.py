@@ -458,19 +458,6 @@ def test_get_model_inputs_for_each_level_return_type(mlmc_simulator):
     assert len(inputs['level2']) == 1
 
 
-def test_get_model_inputs_expected_output(mlmc_simulator):
-    np.random.seed(1)
-    
-    sample_sizes = [3, 2, 1]
-    sim = mlmc_simulator
-
-    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
-
-    assert np.isclose(inputs['level0'][0], 3.15880039)
-    assert np.isclose(inputs['level1'][0], 3.42888628)
-    assert np.isclose(inputs['level2'][0], 2.89126945)
-
-
 def test_get_model_inputs_one_sample_expected_output(mlmc_simulator):
     np.random.seed(1)
     
@@ -492,6 +479,19 @@ def test_get_model_inputs_two_samples_expected_output(mlmc_simulator):
 
     assert np.isclose(inputs['level0'][0], 3.15880039)
     assert np.isclose(inputs['level1'][0], 3.42888628)
+
+
+def test_get_model_inputs_three_samples_expected_output(mlmc_simulator):
+    np.random.seed(1)
+    
+    sample_sizes = [3, 2, 1]
+    sim = mlmc_simulator
+
+    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
+
+    assert np.isclose(inputs['level0'][0], 3.15880039)
+    assert np.isclose(inputs['level1'][0], 3.42888628)
+    assert np.isclose(inputs['level2'][0], 2.89126945)
 
 
 def test_get_model_inputs_param_exception(mlmc_simulator):
