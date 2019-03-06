@@ -69,6 +69,18 @@ def beta_distribution_input():
     return RandomInput(distribution_function=beta_distribution,
                        shift=1.0, scale=2.5, alpha=3., beta=2.)
 
+@pytest.fixture
+def dummy_arange_random_input():
+    """
+    Creates a random input object that just returns np.arange(size) 
+    for testing
+    """
+
+    def get_arange(size):
+        return np.arange(size)
+
+    return RandomInput(distribution_function=get_arange)
+
 
 @pytest.fixture
 def spring_models():
@@ -172,6 +184,17 @@ def spring_mlmc_simulator(beta_distribution_input, spring_models):
                         random_input=beta_distribution_input)
     
     return sim
+
+@pytest.fixture
+def dummy_arange_simulator(dummy_arange_random_input, spring_models):
+    """
+    Dummy simulator to test get model inputs modular function where the 
+    random input object simply returns numpy.arange for testing
+    """
+    sim = MLMCSimulator(models=spring_models,
+                        random_input=dummy_arange_random_input)
+    return sim
+    
 
 def test_model_from_data(data_input, models_from_data):
     """
@@ -566,6 +589,28 @@ def test_get_model_inputs_five_samples_expected_output(spring_mlmc_simulator):
     assert np.isclose(inputs['level3'][0], 2.84713918)
     assert np.isclose(inputs['level4'][0], 2.79495595)
 
+def test_simple_get_model_inputs_1D(dummy_arange_simulator):
+
+    sample_sizes = [24]
+    
+    sim = dummy_arange_simulator
+    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
+    
+    assert len(inputs.keys()) == 1
+    assert np.array_equal(inputs["level0"].flatten(), np.arange(24))
+
+def test_simple_get_model_inputs_4D(dummy_arange_simulator):
+
+    sample_sizes = [5, 3, 3, 2]
+    
+    sim = dummy_arange_simulator
+    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
+ 
+    assert len(inputs.keys()) == 4   
+    assert np.array_equal(inputs["level0"].flatten(), np.arange(8))
+    assert np.array_equal(inputs["level1"].flatten(), np.arange(5,11))
+    assert np.array_equal(inputs["level2"].flatten(), np.arange(8,13))
+    assert np.array_equal(inputs["level3"].flatten(), np.arange(11,13))
 
 def test_get_model_inputs_param_exceptions(spring_mlmc_simulator):
     """
