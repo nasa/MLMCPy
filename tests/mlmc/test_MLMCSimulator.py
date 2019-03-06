@@ -630,8 +630,8 @@ def test_load_model_outputs_for_each_level_three_outputs(spring_mlmc_simulator):
 def test_load_model_outputs_for_each_level_return_type(spring_mlmc_simulator):
     sim = spring_mlmc_simulator
     sample_sizes = [3, 2, 1]
-
-    sim.store_model_inputs_to_run_for_each_level(sample_sizes)
+    fnames = ['level0_outputs.txt', 'level1_outputs.txt', 'level2_outputs.txt']
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes, fnames)
 
     model_outputs = sim.load_model_outputs_for_each_level(3)
 

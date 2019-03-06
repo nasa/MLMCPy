@@ -275,7 +275,7 @@ class MLMCSimulator(object):
                 raise TypeError('filenames must be a list of strings.')
         else:
             for level in range(num_models):
-                outputs = np.loadtxt('level%s_inputs.txt' % level)
+                outputs = np.loadtxt('level%s_outputs.txt' % level)
                 outputs_dict.update({'level%s' % level: outputs})
 
         return outputs_dict
