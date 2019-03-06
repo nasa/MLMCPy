@@ -271,12 +271,8 @@ class MLMCSimulator(object):
                 for i, filename in enumerate(filenames):
                     outputs = np.loadtxt('%s' % filename)
                     outputs_dict.update({'level%s' % i: outputs})
-            elif isinstance(filenames, str):
-                outputs = np.loadtxt('%s' % filenames)
-                outputs_dict.update({'level%s' % 1: outputs})
             else:
-                raise TypeError('filenames must be a string or a list of' + \
-                                'strings.')
+                raise TypeError('filenames must be a list of strings.')
         else:
             for level in range(num_models):
                 outputs = np.loadtxt('level%s_inputs.txt' % level)

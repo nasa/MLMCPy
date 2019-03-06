@@ -452,9 +452,12 @@ def test_modular_compute_estimators_exception(spring_mlmc_simulator):
     Ensures the outputs parameter is of type np.ndarray.
     """                                          
     sim = spring_mlmc_simulator
-    
+    test_dict = {'level0': 10, 'level1': 100.5}
     with pytest.raises(TypeError):
         sim.compute_estimators([3, 2, 1])
+    
+    with pytest.raises(TypeError):
+        sim.compute_estimators(test_dict)
 
 
 def test_get_model_inputs_for_each_level_return_type(spring_mlmc_simulator):    
@@ -658,6 +661,9 @@ def test_load_model_outputs_for_each_level_exception():
     
     with pytest.raises(TypeError):
         MLMCSimulator.load_model_outputs_for_each_level('Not an Integer.')
+
+    with pytest.raises(TypeError):
+        MLMCSimulator.load_model_outputs_for_each_level(3, 1)
 
 
 def test_calculate_estimate_for_springmass_random_input(beta_distribution_input,
