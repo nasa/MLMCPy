@@ -17,7 +17,7 @@ from MLMCPy.mlmc import MLMCSimulator
 from MLMCPy.model import ModelFromData
 from MLMCPy.input import RandomInput
 from MLMCPy.input import InputFromData
-
+from MLMCPy.input import Input
 from tests.testing_scripts.spring_mass import SpringMassModel
 
 # Create list of paths for each data file.
@@ -164,6 +164,14 @@ def comm():
 
         return FakeCOMM()
 
+
+@pytest.fixture
+def spring_mlmc_simulator(beta_distribution_input, spring_models):
+    np.random.seed(1)
+    sim = MLMCSimulator(models=spring_models,
+                        random_input=beta_distribution_input)
+    
+    return sim
 
 def test_model_from_data(data_input, models_from_data):
     """
@@ -346,24 +354,18 @@ def test_costs_and_initial_variances_models_from_data(data_input,
     assert np.all(np.isclose(true_variances, variances, rtol=.1))
 
 
-def test_modular_costs_and_initial_variances_from_model(beta_distribution_input,
-                                                        spring_models):
+def test_modular_costs_and_initial_variances_from_model(spring_mlmc_simulator):
     """
     Tests costs and variances computed by simulator's modular
     compute_costs_and_variances() against expected values based on a
     beta distribution.
     """
-    sim = MLMCSimulator
-
-    sim = MLMCSimulator(models=spring_models, 
-                        random_input=beta_distribution_input)
+    sim = spring_mlmc_simulator
 
     np.random.seed(1)
 
     initial_sample_sizes = np.array([100,100,100])
     costs, variances = sim.compute_costs_and_variances(initial_sample_sizes)
-
-    
 
     true_variances = np.array([[8.245224951411819],
                                [0.0857219498864355],
@@ -398,15 +400,13 @@ def test_modular_costs_and_initial_variances_from_data(data_input,
     assert np.all(np.isclose(true_variances, variances, rtol=.1))
 
 
-def test_modular_compute_optimal_sample_sizes_models(beta_distribution_input,
-                                                     spring_models):
+def test_modular_compute_optimal_sample_sizes_models(spring_mlmc_simulator):
     """
     Tests optimal sample sizes computed by simulator's modular
     compute_optimal_sample_sizes() against expected values based on a
     beta distribution.
     """
-    sim = MLMCSimulator(models=spring_models, 
-                        random_input=beta_distribution_input)
+    sim = spring_mlmc_simulator
 
     np.random.seed(1)
 
@@ -423,17 +423,242 @@ def test_modular_compute_optimal_sample_sizes_models(beta_distribution_input,
     assert np.all(np.array_equal(true_optimal_sizes, optimal_sample_sizes))
 
 
-def test_modular_compute_estimators_parameter(beta_distribution_input,
-                                              spring_models):
+def test_modular_compute_estimators_expected_output(spring_mlmc_simulator):
+    sim = spring_mlmc_simulator
+    sample_sizes = [3, 2, 1]
+    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
+
+    estimates, variances = \
+        sim.compute_estimators(inputs)
+
+    assert np.isclose(estimates, 9.4232859)
+    assert np.isclose(variances, 0.07005233)
+
+
+def test_modular_compute_estimators_return_type(spring_mlmc_simulator):
+    sim = spring_mlmc_simulator
+    sample_sizes = [3, 2, 1]
+    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
+
+    estimates, variances = \
+        sim.compute_estimators(inputs)
+
+    assert isinstance(variances, np.ndarray)
+    assert isinstance(estimates, np.ndarray)
+
+
+def test_modular_compute_estimators_exception(spring_mlmc_simulator):
     """
     Ensures the outputs parameter is of type np.ndarray.
     """                                          
-    sim = MLMCSimulator(models=spring_models,
-                        random_input=beta_distribution_input)
+    sim = spring_mlmc_simulator
     
     with pytest.raises(TypeError):
-        sim._check_compute_estimators_parameter([1, 2, 3])
+        sim.compute_estimators([3, 2, 1])
+
+
+def test_get_model_inputs_for_each_level_return_type(spring_mlmc_simulator):    
+    sample_sizes = [3, 2, 1]
+    sim = spring_mlmc_simulator
+
+    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
+
+    assert isinstance(inputs, dict)
+    assert isinstance(inputs['level0'], np.ndarray)
+    assert isinstance(inputs['level1'], np.ndarray)
+    assert isinstance(inputs['level2'], np.ndarray)
+    assert len(inputs['level0']) == 5
+    assert len(inputs['level1']) == 3
+    assert len(inputs['level2']) == 1
+
+
+def test_get_model_inputs_one_sample_expected_output(spring_mlmc_simulator):
+    np.random.seed(1)
     
+    sample_sizes = [1]
+    sim = spring_mlmc_simulator
+
+    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
+    assert len(inputs['level0']) == 1
+    assert np.isclose(inputs['level0'][0], 3.15880039)
+
+
+def test_get_model_inputs_two_samples_expected_output(spring_mlmc_simulator):
+    np.random.seed(1)
+    
+    sample_sizes = [3, 1]
+    sim = spring_mlmc_simulator
+
+    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
+    assert len(inputs['level0']) == 4
+    assert len(inputs['level1']) == 1
+    assert np.isclose(inputs['level0'][0], 3.15880039)
+    assert np.isclose(inputs['level1'][0], 3.42888628)
+
+
+def test_get_model_inputs_three_samples_expected_output(spring_mlmc_simulator):
+    np.random.seed(1)
+    
+    sample_sizes = [3, 2, 1]
+    sim = spring_mlmc_simulator
+
+    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
+    assert len(inputs['level0']) == 5
+    assert len(inputs['level1']) == 3
+    assert len(inputs['level2']) == 1
+    assert np.isclose(inputs['level0'][0], 3.15880039)
+    assert np.isclose(inputs['level1'][0], 3.42888628)
+    assert np.isclose(inputs['level2'][0], 2.89126945)
+
+def test_get_model_inputs_five_samples_expected_output(spring_mlmc_simulator):
+    np.random.seed(1)
+    
+    sample_sizes = [5, 4, 3, 2, 1]
+    sim = spring_mlmc_simulator
+
+    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
+    assert len(inputs['level0']) == 9
+    assert len(inputs['level1']) == 7
+    assert len(inputs['level2']) == 5
+    assert len(inputs['level3']) == 3
+    assert len(inputs['level4']) == 1
+    assert np.isclose(inputs['level0'][0], 3.15880039)
+    assert np.isclose(inputs['level1'][0], 2.89126945)
+    assert np.isclose(inputs['level2'][0], 2.70076945)
+    assert np.isclose(inputs['level3'][0], 2.84713918)
+    assert np.isclose(inputs['level4'][0], 2.79495595)
+
+
+def test_get_model_inputs_param_exceptions(spring_mlmc_simulator):
+    sim = spring_mlmc_simulator
+
+    with pytest.raises(TypeError):
+        sim.get_model_inputs_to_run_for_each_level(5)
+
+    with pytest.raises(TypeError):
+        sim.get_model_inputs_to_run_for_each_level([5.5])
+
+    with pytest.raises(TypeError):
+        sim.get_model_inputs_to_run_for_each_level('Not A List')
+
+
+def test_store_model_inputs_to_run_for_each_level_return_type(spring_mlmc_simulator):
+    sim = spring_mlmc_simulator
+    sample_sizes = [3,2,1]
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes)
+    
+    level0 = np.loadtxt('level0_inputs.txt')
+    level1 = np.loadtxt('level1_inputs.txt')
+    level2 = np.loadtxt('level2_inputs.txt')
+
+
+    assert isinstance(level0, np.ndarray)
+    assert isinstance(level1, np.ndarray)
+    assert isinstance(level2, np.ndarray)
+
+
+def test_store_model_inputs_to_run_for_each_level_custom_filename(spring_mlmc_simulator):
+    sim = spring_mlmc_simulator
+    sample_sizes = [3, 2, 1]
+    fnames = ['level0.txt', 'level1.txt', 'level2.txt']
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes, fnames)
+    
+    level0 = np.loadtxt('level0.txt')
+    level1 = np.loadtxt('level1.txt')
+    level2 = np.loadtxt('level2.txt')
+
+    assert isinstance(level0, np.ndarray)
+    assert isinstance(level1, np.ndarray)
+    assert isinstance(level2, np.ndarray)
+
+
+def test_store_model_inputs_to_run_for_each_level_exceptions(spring_mlmc_simulator):
+    sim = spring_mlmc_simulator
+
+    with pytest.raises(TypeError):
+        sim.store_model_inputs_to_run_for_each_level(5)
+    
+    with pytest.raises(TypeError):
+        sim.store_model_inputs_to_run_for_each_level([10.5])
+    
+    with pytest.raises(TypeError):
+        sim.store_model_inputs_to_run_for_each_level('Not sample sizes')
+
+    with pytest.raises(TypeError):
+        sim.store_model_inputs_to_run_for_each_level([3,2,1], 1)
+    
+    with pytest.raises(TypeError):
+        sim.store_model_inputs_to_run_for_each_level([3,2,1], ['string', 1])
+
+
+def test_load_model_outputs_for_each_level_one_output(spring_mlmc_simulator):
+    sim = spring_mlmc_simulator
+    sample_sizes = [3, 2]
+
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes)
+    model_outputs = sim.load_model_outputs_for_each_level(3)
+
+    assert np.isclose(model_outputs['level0'][0], 2.87610342)
+
+
+def test_load_model_outputs_for_each_level_two_outputs(spring_mlmc_simulator):
+    sim = spring_mlmc_simulator
+    sample_sizes = [3, 2]
+
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes)
+    model_outputs = sim.load_model_outputs_for_each_level(3)
+
+    assert np.isclose(model_outputs['level0'][0], 2.87610342)
+    assert np.isclose(model_outputs['level1'][0], 3.22645934)
+
+
+def test_load_model_outputs_for_each_level_three_outputs(spring_mlmc_simulator):
+    sim = spring_mlmc_simulator
+    sample_sizes = [3, 2, 1]
+
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes)
+    model_outputs = sim.load_model_outputs_for_each_level(3)
+
+    assert np.isclose(model_outputs['level0'][0], 2.87610342)
+    assert np.isclose(model_outputs['level1'][0], 3.22645934)
+    assert np.isclose(model_outputs['level2'], 1.63840664)
+
+
+def test_load_model_outputs_for_each_level_return_type(spring_mlmc_simulator):
+    sim = spring_mlmc_simulator
+    sample_sizes = [3, 2, 1]
+
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes)
+
+    model_outputs = sim.load_model_outputs_for_each_level(3)
+
+    assert isinstance(model_outputs, dict)
+    assert isinstance(model_outputs['level0'], np.ndarray)
+    assert isinstance(model_outputs['level1'], np.ndarray)
+    assert isinstance(model_outputs['level2'], np.ndarray)
+
+
+def test_load_model_outputs_for_each_level_custom_filename(spring_mlmc_simulator):
+    sim = spring_mlmc_simulator
+    sample_sizes = [3, 2, 1]
+    fnames = ['level0.txt', 'level1.txt', 'level2.txt']
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes, fnames)
+
+    model_outputs = sim.load_model_outputs_for_each_level(3, fnames)
+
+    assert isinstance(model_outputs, dict)
+    assert isinstance(model_outputs['level0'], np.ndarray)
+    assert isinstance(model_outputs['level1'], np.ndarray)
+    assert isinstance(model_outputs['level2'], np.ndarray)
+
+
+def test_load_model_outputs_for_each_level_exception():
+    with pytest.raises(TypeError):
+        MLMCSimulator.load_model_outputs_for_each_level(5.5)
+    
+    with pytest.raises(TypeError):
+        MLMCSimulator.load_model_outputs_for_each_level('Not an Integer.')
+
 
 def test_calculate_estimate_for_springmass_random_input(beta_distribution_input,
                                                         spring_models):

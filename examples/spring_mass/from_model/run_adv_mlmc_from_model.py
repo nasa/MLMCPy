@@ -45,9 +45,9 @@ print "Target precision: ", precision_mc
 
 # Step 3 - Initialize spring-mass models for MLMC. Here using three levels
 # with MLMC defined by different time steps:
-model_level1 = SpringMassModel(mass=1.5, time_step=1.0)
-model_level2 = SpringMassModel(mass=1.5, time_step=0.1)
-model_level3 = SpringMassModel(mass=1.5, time_step=0.01)
+model_level1 = SpringMassModel(mass=1.5, time_step=1.0, cost=0.00034791)
+model_level2 = SpringMassModel(mass=1.5, time_step=0.1, cost=0.00073748)
+model_level3 = SpringMassModel(mass=1.5, time_step=0.01, cost=0.00086135)
 
 models = [model_level1, model_level2, model_level3]
 
@@ -86,6 +86,15 @@ print 'Variances: ', variances
 
 # Step 6 - Run the model on each level the specified number of times in
 # sample_sizes to calculate the output differences for levels greater than 1
+def reshape_differences_per_level(outputs):
+    outputs_array = np.asarray(outputs)
+    for i in range(3):
+        outputs_reshaped = \
+            outputs_array[i].reshape(-1, 1)
+        
+        outputs_array[i] = outputs_reshaped
+    
+    return outputs_array
 
 output_diffs_per_level = []
 
@@ -105,9 +114,11 @@ for level, model in enumerate(models):
 
     output_diffs_per_level.append(output_diffs)
 
+outputs = reshape_differences_per_level(output_diffs_per_level)
+
 # Step 7 - Aggregate model outputs to compute estimators:
 estimates, variances = \
-    mlmc_simulator.compute_estimators(output_diffs_per_level)
+    mlmc_simulator.compute_estimators(outputs)
 
 #mlmc_total_cost = timeit.default_timer() - start_mlmc
 
