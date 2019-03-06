@@ -629,7 +629,7 @@ def test_get_model_inputs_param_exceptions(spring_mlmc_simulator):
         sim.get_model_inputs_to_run_for_each_level('Not A List')
 
 
-def test_store_model_inputs_to_run_for_each_level_return_type(tmpdir, spring_mlmc_simulator):
+def test_store_model_inputs_to_run_for_each_level_return(spring_mlmc_simulator):
     """
     Ensures that store_model_inputs_to_run_for_each_level() is properly storing
     the inputs to text files using default file names and transitioning back to 
@@ -676,7 +676,7 @@ def test_store_model_inputs_to_run_for_each_level_custom_filename(spring_mlmc_si
         os.remove('level%s.txt' % i)
 
 
-def test_store_model_inputs_to_run_for_each_level_exceptions(spring_mlmc_simulator):
+def test_store_model_inputs_to_run_for_each_level_except(spring_mlmc_simulator):
     """
     Ensures that store_model_inputs_to_run_for_each_level() is raising
     exceptions.
@@ -757,7 +757,7 @@ def test_load_model_outputs_for_each_level_return_type(spring_mlmc_simulator):
         os.remove('level%s_outputs.txt' % i)
 
 
-def test_load_model_outputs_for_each_level_custom_filename(spring_mlmc_simulator):
+def test_load_model_outputs_for_each_level_custom_fname(spring_mlmc_simulator):
     sim = spring_mlmc_simulator
     sample_sizes = [3, 2, 1]
     fnames = ['level0.txt', 'level1.txt', 'level2.txt']
