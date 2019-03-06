@@ -183,7 +183,7 @@ class MLMCSimulator(object):
 
     def get_model_inputs_to_run_for_each_level(self, sample_sizes):
         """
-        Takes a list of sample sizes sizes and returns a dictionary 2D 
+        Takes a list of sample sizes sizes and returns a dictionary 2D
         np.ndarray with random inputs.
 
         :param sample_sizes: A list of integer sample sizes.
@@ -194,34 +194,34 @@ class MLMCSimulator(object):
         self.__check_get_model_inputs_to_run_for_each_level_params(sample_sizes)
 
         inputs_dict = {}
-        total_sum = np.sum(sample_sizes)
-        inputs = self._data.draw_samples(np.sum(total_sum))
-        sample_sum = 0
+        total_samples_sum = np.sum(sample_sizes)
+        inputs = self._data.draw_samples(total_samples_sum)
+        samples_sum = 0
 
         for level in range(len(sample_sizes)):
             if level == 0:
                 if len(sample_sizes) > 1:
-                    samples_added = sample_sizes[level]+sample_sizes[level+1]
+                    samples_added = sample_sizes[level] + sample_sizes[level+1]
 
                     inputs_dict.update({'level'+str(level): \
                                         inputs[:samples_added]})
-                    
-                    sample_sum += sample_sizes[level]
+
+                    samples_sum += sample_sizes[level]
                 else:
                     inputs_dict.update({'level'+str(level): inputs})
 
             elif level == len(sample_sizes) - 1:
                 inputs_dict.update({'level'+str(level): \
-                    inputs[total_sum-sample_sizes[level]:]})
+                    inputs[total_samples_sum-sample_sizes[level]:]})
 
             else:
                 samples_added = \
-                    sample_sum + sample_sizes[level] + sample_sizes[level+1]
+                    samples_sum + sample_sizes[level] + sample_sizes[level+1]
 
                 inputs_dict.update({'level'+str(level): \
-                    inputs[sample_sum: samples_added]})
-                
-                sample_sum += sample_sizes[level]
+                    inputs[samples_sum: samples_added]})
+
+                samples_sum += sample_sizes[level]
 
         return inputs_dict
 
@@ -234,7 +234,7 @@ class MLMCSimulator(object):
 
         :param sample_sizes: A list of integer sample sizes.
         :type sample_sizes: list
-        :param filenames: Desired file names that must match the number of 
+        :param filenames: Custom file names that must match the number of
             models(levels) provided.
         """
         self.__check_store_model_params(sample_sizes, filenames)
@@ -253,7 +253,7 @@ class MLMCSimulator(object):
     def load_model_outputs_for_each_level(num_models, filenames=None):
         """
         Loads model outputs from text file provided.
-        
+
         :param num_models: Number of models(levels).
         :type num_models: int
         :param filenames: Custom file names that will be loaded into the output
@@ -268,27 +268,24 @@ class MLMCSimulator(object):
 
         if filenames is not None:
             if isinstance(filenames, list):
-                for i, filename in enumerate(filenames):
+                for level, filename in enumerate(filenames):
                     outputs = np.loadtxt('%s' % filename)
-                    outputs_dict.update({'level%s' % i: outputs})
-            elif isinstance(filenames, str):
-                outputs = np.loadtxt('%s' % filenames)
-                outputs_dict.update({'level%s' % 1: outputs})
+                    outputs_dict.update({'level%s' % level: outputs})
             else:
-                raise TypeError('filenames must be a string or a list of' + \
-                                'strings.')
+                raise TypeError('filenames must be a list of strings.')
         else:
             for level in range(num_models):
-                outputs = np.loadtxt('level%s_inputs.txt' % level)
+                outputs = np.loadtxt('level%s_outputs.txt' % level)
                 outputs_dict.update({'level%s' % level: outputs})
 
         return outputs_dict
 
     def compute_estimators(self, model_outputs):
-        """Computes the estimators using the output differences per level.
+        """
+        Computes the differences per level and then the estimates and variances.
 
-        :param outputs: The differences per level.
-        :type outputs: ndarray, list
+        :param model_outputs: Model outputs.
+        :type outputs: dict
         :return: Returns the estimates and variances as an ndarray.
         """
         self._check_compute_estimators_parameter(model_outputs)
@@ -312,19 +309,22 @@ class MLMCSimulator(object):
 
     @staticmethod
     def _compute_differences_per_level(model_outputs, models):
+        """
+        Uses model outputs to compute the differences per level, returns a list
+        of arrays.
+        """
         outputs = []
 
-        for k in model_outputs:
-            outputs.append(model_outputs[k])
+        for level in model_outputs:
+            outputs.append(model_outputs[level])
 
         output_diffs_per_level = []
 
         for level, model in enumerate(models):
             sample_size = len(outputs[level])
             output_diffs = np.zeros((sample_size, 1))
-            samples = outputs[level]
 
-            for i, sample in enumerate(samples):
+            for i, sample in enumerate(outputs[level]):
                 if level == 0:
                     output_diffs[i] = model.evaluate(sample)
                 else:
@@ -334,21 +334,6 @@ class MLMCSimulator(object):
             output_diffs_per_level.append(output_diffs)
 
         return output_diffs_per_level
-
-    @staticmethod
-    def _check_compute_estimators_parameter(model_outputs):
-        """
-        Checks the parameter given to compute_estimators(), and ensures that it
-        is a np.ndarray.
-        """
-        if not isinstance(model_outputs, dict):
-            raise TypeError('model_outputs must be a dictionary of output' +
-                            'numpy arrays.')
-
-        for key in model_outputs:
-            if not isinstance(model_outputs[key], np.ndarray):
-                raise TypeError('model_outputs must be a dictionary of output' +
-                                'numpy arrays.')
 
     def _setup_simulation(self, epsilon, initial_sample_sizes, sample_sizes):
         """
@@ -848,13 +833,13 @@ class MLMCSimulator(object):
     def __check_get_model_inputs_to_run_for_each_level_params(sample_sizes):
         """
         Inspects parameters in get_model_inputs_to_run_for_each_level().
-        
+
         :param sample_sizes: List or np.ndarray of int specifying the number of
             sample sizes.
         """
         if not isinstance(sample_sizes, (list, np.ndarray)):
             raise TypeError('sample_sizes must be a list or np.ndarray.')
-        
+
         for level in range(len(sample_sizes)):
             if not isinstance(sample_sizes[level], int):
                 raise TypeError('sample_sizes[%s] must be an int.' % level)
@@ -863,7 +848,7 @@ class MLMCSimulator(object):
     def __check_store_model_params(sample_sizes, filenames=None):
         """
         Inspects parameters in store_model_inputs_to_run_for_each_level().
-        
+
         :param sample_sizes: List or np.ndarray of int specifying the number of
             sample sizes.
         :param filenames: Object that must contain strings of desired file names
@@ -871,7 +856,7 @@ class MLMCSimulator(object):
         """
         if not isinstance(sample_sizes, (list, np.ndarray)):
             raise TypeError('sample_sizes must be a list or np.ndarray.')
-        
+
         for level in range(len(sample_sizes)):
             if not isinstance(sample_sizes[level], int):
                 raise TypeError('sample_sizes[%s] must be an int.' % level)
@@ -880,6 +865,21 @@ class MLMCSimulator(object):
             for name in range(len(filenames)):
                 if not isinstance(filenames[name], str):
                     raise TypeError('filenames[%s] must be a string.' % name)
+
+    @staticmethod
+    def _check_compute_estimators_parameter(model_outputs):
+        """
+        Checks the parameter given to compute_estimators(), and ensures that it
+        is a np.ndarray.
+        """
+        if not isinstance(model_outputs, dict):
+            raise TypeError('model_outputs must be a dictionary of output' +
+                            'numpy arrays.')
+
+        for key in model_outputs:
+            if not isinstance(model_outputs[key], np.ndarray):
+                raise TypeError('model_outputs must be a dictionary of output' +
+                                'numpy arrays.')
 
     def _draw_samples(self, num_samples):
         """
