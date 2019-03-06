@@ -460,7 +460,11 @@ def test_modular_compute_estimators_exception(spring_mlmc_simulator):
         sim.compute_estimators(test_dict)
 
 
-def test_get_model_inputs_for_each_level_return_type(spring_mlmc_simulator):    
+def test_get_model_inputs_for_each_level_return_type(spring_mlmc_simulator):  
+    """
+    Ensures that the return type is a dictionary of numpy arrays with the 
+    correct sample sizes.
+    """  
     sample_sizes = [3, 2, 1]
     sim = spring_mlmc_simulator
 
@@ -475,7 +479,26 @@ def test_get_model_inputs_for_each_level_return_type(spring_mlmc_simulator):
     assert len(inputs['level2']) == 1
 
 
+def test_get_model_inputs_for_each_level_equal_array(spring_mlmc_simulator):
+    """
+    Ensures that each array has the correct values from the array that follows.
+    """
+    sample_sizes = [10, 6, 3, 1]
+    sim = spring_mlmc_simulator
+
+    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
+
+    assert np.array_equal(inputs['level0'][10:], inputs['level1'][:6])
+    assert np.array_equal(inputs['level1'][6:], inputs['level2'][:3])
+    assert np.array_equal(inputs['level2'][3:], inputs['level3'])
+
+
+
 def test_get_model_inputs_one_sample_expected_output(spring_mlmc_simulator):
+    """
+    Ensures that the get_model_inputs_to_run_for_each_level() can proceed with
+    one sample provided.
+    """
     np.random.seed(1)
     
     sample_sizes = [1]
@@ -487,6 +510,10 @@ def test_get_model_inputs_one_sample_expected_output(spring_mlmc_simulator):
 
 
 def test_get_model_inputs_two_samples_expected_output(spring_mlmc_simulator):
+    """
+    Ensures that the get_model_inputs_to_run_for_each_level() can proceed with
+    two samples provided.
+    """
     np.random.seed(1)
     
     sample_sizes = [3, 1]
@@ -500,6 +527,10 @@ def test_get_model_inputs_two_samples_expected_output(spring_mlmc_simulator):
 
 
 def test_get_model_inputs_three_samples_expected_output(spring_mlmc_simulator):
+    """
+    Ensures that the get_model_inputs_to_run_for_each_level() can proceed with
+    three samples provided.
+    """
     np.random.seed(1)
     
     sample_sizes = [3, 2, 1]
@@ -514,6 +545,10 @@ def test_get_model_inputs_three_samples_expected_output(spring_mlmc_simulator):
     assert np.isclose(inputs['level2'][0], 2.89126945)
 
 def test_get_model_inputs_five_samples_expected_output(spring_mlmc_simulator):
+    """
+    Ensures that the get_model_inputs_to_run_for_each_level() can proceed with
+    five samples provided.
+    """
     np.random.seed(1)
     
     sample_sizes = [5, 4, 3, 2, 1]
@@ -533,6 +568,10 @@ def test_get_model_inputs_five_samples_expected_output(spring_mlmc_simulator):
 
 
 def test_get_model_inputs_param_exceptions(spring_mlmc_simulator):
+    """
+    Ensures that exceptions are raised by 
+    get_model_inputs_to_run_for_each_level().
+    """
     sim = spring_mlmc_simulator
 
     with pytest.raises(TypeError):
@@ -546,6 +585,11 @@ def test_get_model_inputs_param_exceptions(spring_mlmc_simulator):
 
 
 def test_store_model_inputs_to_run_for_each_level_return_type(spring_mlmc_simulator):
+    """
+    Ensures that store_model_inputs_to_run_for_each_level() is properly storing
+    the inputs to text files using default file names and transitioning back to 
+    np.ndarray.
+    """
     sim = spring_mlmc_simulator
     sample_sizes = [3,2,1]
     sim.store_model_inputs_to_run_for_each_level(sample_sizes)
@@ -561,6 +605,11 @@ def test_store_model_inputs_to_run_for_each_level_return_type(spring_mlmc_simula
 
 
 def test_store_model_inputs_to_run_for_each_level_custom_filename(spring_mlmc_simulator):
+    """
+    Ensures that store_model_inputs_to_run_for_each_level() is properly storing
+    the inputs to text files using custom file names and transitioning back to 
+    np.ndarray.
+    """
     sim = spring_mlmc_simulator
     sample_sizes = [3, 2, 1]
     fnames = ['level0.txt', 'level1.txt', 'level2.txt']
@@ -576,6 +625,10 @@ def test_store_model_inputs_to_run_for_each_level_custom_filename(spring_mlmc_si
 
 
 def test_store_model_inputs_to_run_for_each_level_exceptions(spring_mlmc_simulator):
+    """
+    Ensures that store_model_inputs_to_run_for_each_level() is raising
+    exceptions.
+    """
     sim = spring_mlmc_simulator
 
     with pytest.raises(TypeError):
