@@ -268,9 +268,9 @@ class MLMCSimulator(object):
 
         if filenames is not None:
             if isinstance(filenames, list):
-                for i, filename in enumerate(filenames):
+                for level, filename in enumerate(filenames):
                     outputs = np.loadtxt('%s' % filename)
-                    outputs_dict.update({'level%s' % i: outputs})
+                    outputs_dict.update({'level%s' % level: outputs})
             else:
                 raise TypeError('filenames must be a list of strings.')
         else:
