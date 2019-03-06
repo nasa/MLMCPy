@@ -479,7 +479,7 @@ def test_get_model_inputs_one_sample_expected_output(spring_mlmc_simulator):
     sim = spring_mlmc_simulator
 
     inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
-
+    assert len(inputs['level0']) == 1
     assert np.isclose(inputs['level0'][0], 3.15880039)
 
 
@@ -490,7 +490,8 @@ def test_get_model_inputs_two_samples_expected_output(spring_mlmc_simulator):
     sim = spring_mlmc_simulator
 
     inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
-
+    assert len(inputs['level0']) == 4
+    assert len(inputs['level1']) == 1
     assert np.isclose(inputs['level0'][0], 3.15880039)
     assert np.isclose(inputs['level1'][0], 3.42888628)
 
@@ -502,20 +503,40 @@ def test_get_model_inputs_three_samples_expected_output(spring_mlmc_simulator):
     sim = spring_mlmc_simulator
 
     inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
-
+    assert len(inputs['level0']) == 5
+    assert len(inputs['level1']) == 3
+    assert len(inputs['level2']) == 1
     assert np.isclose(inputs['level0'][0], 3.15880039)
     assert np.isclose(inputs['level1'][0], 3.42888628)
     assert np.isclose(inputs['level2'][0], 2.89126945)
 
+def test_get_model_inputs_five_samples_expected_output(spring_mlmc_simulator):
+    np.random.seed(1)
+    
+    sample_sizes = [5, 4, 3, 2, 1]
+    sim = spring_mlmc_simulator
 
-def test_get_model_inputs_param_exception(spring_mlmc_simulator):
+    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
+    assert len(inputs['level0']) == 9
+    assert len(inputs['level1']) == 7
+    assert len(inputs['level2']) == 5
+    assert len(inputs['level3']) == 3
+    assert len(inputs['level4']) == 1
+    assert np.isclose(inputs['level0'][0], 3.15880039)
+    assert np.isclose(inputs['level1'][0], 2.89126945)
+    assert np.isclose(inputs['level2'][0], 2.70076945)
+    assert np.isclose(inputs['level3'][0], 2.84713918)
+    assert np.isclose(inputs['level4'][0], 2.79495595)
+
+
+def test_get_model_inputs_param_exceptions(spring_mlmc_simulator):
     sim = spring_mlmc_simulator
 
     with pytest.raises(TypeError):
         sim.get_model_inputs_to_run_for_each_level(5)
 
     with pytest.raises(TypeError):
-        sim.get_model_inputs_to_run_for_each_level(5.5)
+        sim.get_model_inputs_to_run_for_each_level([5.5])
 
     with pytest.raises(TypeError):
         sim.get_model_inputs_to_run_for_each_level('Not A List')
@@ -558,13 +579,16 @@ def test_store_model_inputs_to_run_for_each_level_exceptions(spring_mlmc_simulat
         sim.store_model_inputs_to_run_for_each_level(5)
     
     with pytest.raises(TypeError):
-        sim.store_model_inputs_to_run_for_each_level(10.5)
+        sim.store_model_inputs_to_run_for_each_level([10.5])
     
     with pytest.raises(TypeError):
         sim.store_model_inputs_to_run_for_each_level('Not sample sizes')
 
     with pytest.raises(TypeError):
         sim.store_model_inputs_to_run_for_each_level([3,2,1], 1)
+    
+    with pytest.raises(TypeError):
+        sim.store_model_inputs_to_run_for_each_level([3,2,1], ['string', 1])
 
 
 def test_load_model_outputs_for_each_level_one_output(spring_mlmc_simulator):
