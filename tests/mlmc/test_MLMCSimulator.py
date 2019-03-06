@@ -516,7 +516,6 @@ def test_get_model_inputs_for_each_level_equal_array(spring_mlmc_simulator):
     assert np.array_equal(inputs['level2'][3:], inputs['level3'])
 
 
-
 def test_get_model_inputs_one_sample_expected_output(spring_mlmc_simulator):
     """
     Ensures that the get_model_inputs_to_run_for_each_level() can proceed with
@@ -567,6 +566,7 @@ def test_get_model_inputs_three_samples_expected_output(spring_mlmc_simulator):
     assert np.isclose(inputs['level1'][0], 3.42888628)
     assert np.isclose(inputs['level2'][0], 2.89126945)
 
+
 def test_get_model_inputs_five_samples_expected_output(spring_mlmc_simulator):
     """
     Ensures that the get_model_inputs_to_run_for_each_level() can proceed with
@@ -589,6 +589,7 @@ def test_get_model_inputs_five_samples_expected_output(spring_mlmc_simulator):
     assert np.isclose(inputs['level3'][0], 2.84713918)
     assert np.isclose(inputs['level4'][0], 2.79495595)
 
+
 def test_simple_get_model_inputs_1D(dummy_arange_simulator):
 
     sample_sizes = [24]
@@ -598,6 +599,7 @@ def test_simple_get_model_inputs_1D(dummy_arange_simulator):
     
     assert len(inputs.keys()) == 1
     assert np.array_equal(inputs["level0"].flatten(), np.arange(24))
+
 
 def test_simple_get_model_inputs_4D(dummy_arange_simulator):
 
@@ -611,6 +613,7 @@ def test_simple_get_model_inputs_4D(dummy_arange_simulator):
     assert np.array_equal(inputs["level1"].flatten(), np.arange(5,11))
     assert np.array_equal(inputs["level2"].flatten(), np.arange(8,13))
     assert np.array_equal(inputs["level3"].flatten(), np.arange(11,13))
+
 
 def test_get_model_inputs_param_exceptions(spring_mlmc_simulator):
     """
