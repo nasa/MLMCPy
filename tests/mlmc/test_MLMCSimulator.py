@@ -446,6 +446,42 @@ def test_modular_compute_optimal_sample_sizes_models(spring_mlmc_simulator):
     assert np.all(np.array_equal(true_optimal_sizes, optimal_sample_sizes))
 
 
+def test_compute_differences_per_level_array_return_type(spring_mlmc_simulator):
+    sim = spring_mlmc_simulator
+    sample_sizes = [3, 2, 1]
+    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
+
+    test_model_outputs = \
+        sim._compute_differences_per_level(inputs, sim._models)
+
+    assert test_model_outputs[0][:3].shape == (3,1)
+    assert test_model_outputs[1][:2].shape == (2,1)
+    assert test_model_outputs[2][:1].shape == (1,1)
+
+
+def test_compute_differences_per_level_expected_output(spring_mlmc_simulator):
+    """
+    Ensures that the compute_estimators() helper function, 
+    _compute_differences_per_level() is subtracting and returning the correct
+    values.
+    
+    :param spring_mlmc_simulator: [description]
+    :type spring_mlmc_simulator: [type]
+    """
+    sim = spring_mlmc_simulator
+    sample_sizes = [3, 2, 1]
+    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
+
+    test_model_outputs = \
+        sim._compute_differences_per_level(inputs, sim._models)
+    subtracted_level1 = inputs['level1'][:2] - inputs['level0'][3:]
+    subtracted_level2 = inputs['level2'] - inputs['level1'][2:]
+
+    assert np.array_equal(test_model_outputs[0], inputs['level0'][:3])
+    assert np.array_equal(subtracted_level1, test_model_outputs[1])
+    assert np.array_equal(subtracted_level2, test_model_outputs[2])
+
+
 def test_modular_compute_estimators_expected_output(spring_mlmc_simulator):
     sim = spring_mlmc_simulator
     sample_sizes = [3, 2, 1]
@@ -454,8 +490,8 @@ def test_modular_compute_estimators_expected_output(spring_mlmc_simulator):
     estimates, variances = \
         sim.compute_estimators(inputs)
 
-    assert np.isclose(estimates, 9.4232859)
-    assert np.isclose(variances, 0.07005233)
+    assert np.isclose(estimates, 3.17248042)
+    assert np.isclose(variances, 0.01724233)
 
 
 def test_modular_compute_estimators_return_type(spring_mlmc_simulator):
