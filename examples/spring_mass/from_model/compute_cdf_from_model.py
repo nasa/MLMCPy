@@ -35,8 +35,7 @@ models = [model_level1, model_level2, model_level3]
 
 # Step 3 - Initialize the CDFWrapperModel object:
 grid = np.linspace(8, 25, 100)
-smoothing = True
-cdf_wrapper = CDFWrapperModel(grid, smoothing)
+cdf_wrapper = CDFWrapperModel(grid)
 
 # Step 4 - Initialize the MLMCSimulator and predict max displacement to
 # specified precision:

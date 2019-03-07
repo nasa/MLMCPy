@@ -29,7 +29,7 @@ models = [model_level1, model_level2, model_level3]
 
 # Step 3 - Initialize the CDFWrapperModel object:
 grid = np.linspace(8, 25, 100)
-cdf_wrapper = CDFWrapperModel(grid, smoothing)
+cdf_wrapper = CDFWrapperModel(grid)
 
 # Step 4 - Initialize the MLMCSimulator and predict max displacement to
 # specified precision:
@@ -44,9 +44,7 @@ mlmc_simulator = MLMCSimulator(data_input, models, cdf_wrapper)
                             verbose=False)
 
 # Step 5 - Summarize results:
-print 'Estimate: %s' % estimates
 print 'Sample sizes used: %s' % sample_sizes
-print 'Variance: %s' % variances
 
 # Step 6 - Plot CDFs:
 outputfile_level3 = "data/spring_mass_1D_outputs_0.01.txt"
