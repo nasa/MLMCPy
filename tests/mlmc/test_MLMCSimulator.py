@@ -447,6 +447,10 @@ def test_modular_compute_optimal_sample_sizes_models(spring_mlmc_simulator):
 
 
 def test_compute_differences_per_level_array_return_type(spring_mlmc_simulator):
+    """
+    Ensures that _compute_differences_per_level() is returning the correct
+    2D numpy array.
+    """
     sim = spring_mlmc_simulator
     sample_sizes = [3, 2, 1]
     inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
@@ -461,12 +465,8 @@ def test_compute_differences_per_level_array_return_type(spring_mlmc_simulator):
 
 def test_compute_differences_per_level_expected_output(spring_mlmc_simulator):
     """
-    Ensures that the compute_estimators() helper function, 
-    _compute_differences_per_level() is subtracting and returning the correct
-    values.
-    
-    :param spring_mlmc_simulator: [description]
-    :type spring_mlmc_simulator: [type]
+    Ensures that _compute_differences_per_level() is subtracting and returning 
+    the correct values.
     """
     sim = spring_mlmc_simulator
     sample_sizes = [3, 2, 1]
@@ -483,6 +483,9 @@ def test_compute_differences_per_level_expected_output(spring_mlmc_simulator):
 
 
 def test_modular_compute_estimators_expected_output(spring_mlmc_simulator):
+    """
+    Ensures that compute_estimators() is returning accurate values.
+    """
     sim = spring_mlmc_simulator
     sample_sizes = [3, 2, 1]
     inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
@@ -495,6 +498,9 @@ def test_modular_compute_estimators_expected_output(spring_mlmc_simulator):
 
 
 def test_modular_compute_estimators_return_type(spring_mlmc_simulator):
+    """
+    Ensures that compute_estimators() is returning a np.ndarray.
+    """
     sim = spring_mlmc_simulator
     sample_sizes = [3, 2, 1]
     inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
