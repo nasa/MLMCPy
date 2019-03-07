@@ -13,6 +13,7 @@ outputfile_level3 = "data/spring_mass_1D_outputs_0.01.txt"
 # Initialize random input & model objects
 data_input = InputFromData(inputfile)
 
+#NOTE - you must specify a cost with the ModelFromData class
 model_level1 = ModelFromData(inputfile, outputfile_level1, cost=1.0)
 model_level2 = ModelFromData(inputfile, outputfile_level2, cost=10.0)
 model_level3 = ModelFromData(inputfile, outputfile_level3, cost=100.0)
@@ -27,3 +28,4 @@ mlmc_simulator = MLMCSimulator(data_input, models)
 print 'Estimate: %s' % estimates
 print 'Sample sizes used: %s' % sample_sizes
 print 'Variance: %s' % variances
+

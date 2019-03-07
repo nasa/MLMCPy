@@ -29,7 +29,6 @@ models = [model_level1, model_level2, model_level3]
 
 # Step 3 - Initialize the CDFWrapperModel object:
 grid = np.linspace(8, 25, 100)
-smoothing = True
 cdf_wrapper = CDFWrapperModel(grid, smoothing)
 
 # Step 4 - Initialize the MLMCSimulator and predict max displacement to
@@ -42,7 +41,7 @@ mlmc_simulator = MLMCSimulator(data_input, models, cdf_wrapper)
 [estimates, sample_sizes, variances] = \
     mlmc_simulator.simulate(epsilon=precision,
                             initial_sample_sizes=initial_sample,
-                            verbose=True)
+                            verbose=False)
 
 # Step 5 - Summarize results:
 print 'Estimate: %s' % estimates
