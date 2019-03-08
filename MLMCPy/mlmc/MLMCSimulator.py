@@ -308,47 +308,52 @@ class MLMCSimulator(object):
         return estimates, variances
 
     @staticmethod
+    def _compute_true_sample_size(model_outputs):
+        """
+        Uses the size
+        
+        :param model_outputs: [description]
+        :type model_outputs: [type]
+        :return: [description]
+        :rtype: [type]
+        """
+        sizes = []
+        temp_size = 0
+
+        output_list = list(value for value in model_outputs.values())
+
+        for i in reversed(range(len(output_list))):
+            if i == len(output_list) - 1:
+                temp_size = len(output_list[i])
+            else:
+                temp_size = len(output_list[i]) - temp_size
+
+            sizes.append(temp_size)
+
+        sizes = sizes[::-1]
+
+        return sizes
+
+    @staticmethod
     def _compute_differences_per_level(model_outputs):
         """
         Uses model outputs to compute the differences per level, returns a list
         of arrays.
         """
         output_diffs_per_level = []
-
+        
+        true_sizes = MLMCSimulator._compute_true_sample_size(model_outputs)
+        
         for i, level in enumerate(model_outputs):
-            sample_size = len(model_outputs[level])
-            output_diffs = np.zeros((sample_size, 1))
-
             if i == 0:
-                if len(model_outputs) == 1:
-                    output_diffs = \
-                        model_outputs[level][:sample_size]
-                else:
-                    end_sample_length = sample_size
-
-                    for j in range(1, len(model_outputs)):
-                        next_model_sample_size = \
-                            len(model_outputs['level'+str(i+j)])
-
-                        if j % 2 == 0:
-                            end_sample_length += \
-                                next_model_sample_size
-                        else:
-                            end_sample_length -= \
-                                next_model_sample_size
-
-                    output_diffs = \
-                        model_outputs[level][:end_sample_length]
+                output_diffs = \
+                    model_outputs[level][:true_sizes[i]]
             else:
                 previous_level = 'level' + str(i-1)
-                previous_sample_length = len(output_diffs_per_level[i-1])
-
-                end_sample_length = \
-                    len(model_outputs[previous_level]) - previous_sample_length
 
                 output_diffs = \
-                    model_outputs[level][:end_sample_length] - \
-                        model_outputs[previous_level][previous_sample_length:]
+                    model_outputs[level][:true_sizes[i]] - \
+                        model_outputs[previous_level][true_sizes[i-1]:]
 
             output_diffs_per_level.append(output_diffs)
 
