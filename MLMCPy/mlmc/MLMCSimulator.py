@@ -310,12 +310,8 @@ class MLMCSimulator(object):
     @staticmethod
     def _compute_true_sample_size(model_outputs):
         """
-        Uses the size
-        
-        :param model_outputs: [description]
-        :type model_outputs: [type]
-        :return: [description]
-        :rtype: [type]
+        Prepares the desired sample sizes for each model level and returns in a
+        list.
         """
         sizes = []
         temp_size = 0
@@ -341,11 +337,11 @@ class MLMCSimulator(object):
         of arrays.
         """
         output_diffs_per_level = []
-        
+
         true_sizes = MLMCSimulator._compute_true_sample_size(model_outputs)
-        
+
         for i, level in enumerate(model_outputs):
-#Tried refactoring with a condition if i>0 output_diffs -= model_outputs[sizes] 
+#Tried refactoring with a condition if i>0 output_diffs -= model_outputs[sizes]
 # but getting different values (TODO)
             output_diffs = \
                 model_outputs[level][:true_sizes[i]]
