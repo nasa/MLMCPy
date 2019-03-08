@@ -282,16 +282,16 @@ class MLMCSimulator(object):
 
     def compute_estimators(self, model_outputs):
         """
-        Computes the differences per level and then the estimates and variances.
+        Uses the differences per level to compute the estimates and variances.
 
-        :param model_outputs: Model outputs.
+        :param model_outputs: Model outputs generated through model evaluate().
         :type outputs: dict
-        :return: Returns the estimates and variances as an ndarray.
+        :return: Returns the estimates and variances as ndarrays.
         """
         self._check_compute_estimators_parameter(model_outputs)
 
         differences_per_level = \
-            self._compute_differences_per_level(model_outputs, self._models)
+            self._compute_differences_per_level(model_outputs)
 
         estimates = 0
         variances = 0
@@ -308,39 +308,50 @@ class MLMCSimulator(object):
         return estimates, variances
 
     @staticmethod
-    def _compute_differences_per_level(model_outputs, models):
+    def _compute_true_sample_size(model_outputs):
+        """
+        Prepares the desired sample sizes for each model level and returns in a
+        list.
+        """
+        sizes = []
+        temp_size = 0
+
+        output_list = list(value for value in model_outputs.values())
+
+        for i in reversed(range(len(output_list))):
+            if i == len(output_list) - 1:
+                temp_size = len(output_list[i])
+            else:
+                temp_size = len(output_list[i]) - temp_size
+
+            sizes.append(temp_size)
+
+        sizes = sizes[::-1]
+
+        return sizes
+
+    @staticmethod
+    def _compute_differences_per_level(model_outputs):
         """
         Uses model outputs to compute the differences per level, returns a list
         of arrays.
         """
         output_diffs_per_level = []
 
+        true_sizes = MLMCSimulator._compute_true_sample_size(model_outputs)
+
         for i, level in enumerate(model_outputs):
-            sample_size = len(model_outputs[level])
-            output_diffs = np.zeros((sample_size, 1))
+#Tried refactoring with a condition if i>0 output_diffs -= model_outputs[sizes]
+# but getting different values (TODO)
+            output_diffs = \
+                model_outputs[level][:true_sizes[i]]
 
-            if i == 0:
-                next_sample_length = \
-                    sample_size - len(model_outputs['level'+str(i+1)])
-                    
-                if len(model_outputs) > 2:
-                    next_sample_length += len(model_outputs['level'+str(i+2)])
-
-                output_diffs = \
-                    model_outputs[level][:next_sample_length]
-            else:
-                previous_level = 'level' + str(i-1)
-                previous_sample_length = len(output_diffs_per_level[i - 1])
-
-                next_sample_length = \
-                    len(model_outputs[previous_level]) - previous_sample_length
-
-                output_diffs = \
-                    model_outputs[level][:next_sample_length] - \
-                        model_outputs[previous_level][previous_sample_length:]
+            if i > 0:
+                output_diffs = output_diffs - \
+                        model_outputs['level'+str(i-1)][true_sizes[i-1]:]
 
             output_diffs_per_level.append(output_diffs)
-            
+
         return output_diffs_per_level
 
     def _setup_simulation(self, epsilon, initial_sample_sizes, sample_sizes):

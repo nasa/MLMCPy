@@ -76,49 +76,38 @@ print 'Optimal sample sizes: ', np.array2string(sample_sizes)
 
 # Optional - Call simulate now using the sample_sizes:
 
-estimates, sample_count, variances = \
-    mlmc_simulator.simulate(epsilon, sample_sizes=sample_sizes)
+# estimates, sample_count, variances = \
+#     mlmc_simulator.simulate(epsilon, sample_sizes=sample_sizes)
 
-print
-print 'Estimates: ', estimates
-print 'Sample count: ', sample_count
-print 'Variances: ', variances
+# print
+# print 'Estimates: ', estimates
+# print 'Sample count: ', sample_count
+# print 'Variances: ', variances
 
 # Step 6 - Run the model on each level the specified number of times in
 # sample_sizes to calculate the output differences for levels greater than 1
-def reshape_differences_per_level(outputs):
-    outputs_array = np.asarray(outputs)
-    for i in range(3):
-        outputs_reshaped = \
-            outputs_array[i].reshape(-1, 1)
-        
-        outputs_array[i] = outputs_reshaped
-    
-    return outputs_array
 
-output_diffs_per_level = []
+# Use get_model_inputs_to_run_for_each_level() to get the inputs that will be
+# evaluated on each level:
+model_inputs_per_level = \
+        mlmc_simulator.get_model_inputs_to_run_for_each_level(sample_sizes)
 
+# Run the model on each level for inputs - it must retain the 'levelx' format:
+model_outputs_per_level = {}
 for level, model in enumerate(models):
 
-    sample_size = sample_sizes[level]
-    output_diffs = np.zeros((sample_size))
-    stiffness_samples = stiffness_distribution.draw_samples(sample_size)
+    levelkey = "level" + str(level)
+    inputsamples = model_inputs_per_level[levelkey]
 
-    for i, sample in enumerate(stiffness_samples):
-
-        if level == 0:
-            output_diffs[i] = model.evaluate([sample])
-        else:
-            output_diffs[i] = model.evaluate([sample]) - \
-                                    models[level-1].evaluate([sample])
-
-    output_diffs_per_level.append(output_diffs)
-
-outputs = reshape_differences_per_level(output_diffs_per_level)
+    outputs = []
+    for i, inputsample in enumerate(inputsamples):
+        outputs.append(model.evaluate(inputsample))
+    
+    model_outputs_per_level[levelkey] = np.array(outputs)
 
 # Step 7 - Aggregate model outputs to compute estimators:
 estimates, variances = \
-    mlmc_simulator.compute_estimators(outputs)
+    mlmc_simulator.compute_estimators(model_outputs_per_level)
 
 #mlmc_total_cost = timeit.default_timer() - start_mlmc
 
