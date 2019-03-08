@@ -313,26 +313,34 @@ class MLMCSimulator(object):
         Uses model outputs to compute the differences per level, returns a list
         of arrays.
         """
-        outputs = []
-
-        for level in model_outputs:
-            outputs.append(model_outputs[level])
-
         output_diffs_per_level = []
 
-        for level, model in enumerate(models):
-            sample_size = len(outputs[level])
+        for i, level in enumerate(model_outputs):
+            sample_size = len(model_outputs[level])
             output_diffs = np.zeros((sample_size, 1))
 
-            for i, sample in enumerate(outputs[level]):
-                if level == 0:
-                    output_diffs[i] = model.evaluate(sample)
-                else:
-                    output_diffs[i] = model.evaluate(sample) - \
-                                            models[level-1].evaluate(sample)
+            if i == 0:
+                next_sample_length = \
+                    sample_size - len(model_outputs['level'+str(i+1)])
+                    
+                if len(model_outputs) > 2:
+                    next_sample_length += len(model_outputs['level'+str(i+2)])
+
+                output_diffs = \
+                    model_outputs[level][:next_sample_length]
+            else:
+                previous_level = 'level' + str(i-1)
+                previous_sample_length = len(output_diffs_per_level[i - 1])
+
+                next_sample_length = \
+                    len(model_outputs[previous_level]) - previous_sample_length
+
+                output_diffs = \
+                    model_outputs[level][:next_sample_length] - \
+                        model_outputs[previous_level][previous_sample_length:]
 
             output_diffs_per_level.append(output_diffs)
-
+            
         return output_diffs_per_level
 
     def _setup_simulation(self, epsilon, initial_sample_sizes, sample_sizes):
