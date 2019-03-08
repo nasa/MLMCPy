@@ -345,15 +345,14 @@ class MLMCSimulator(object):
         true_sizes = MLMCSimulator._compute_true_sample_size(model_outputs)
         
         for i, level in enumerate(model_outputs):
-            if i == 0:
-                output_diffs = \
-                    model_outputs[level][:true_sizes[i]]
-            else:
-                previous_level = 'level' + str(i-1)
+#Tried refactoring with a condition if i>0 output_diffs -= model_outputs[sizes] 
+# but getting different values (TODO)
+            output_diffs = \
+                model_outputs[level][:true_sizes[i]]
 
-                output_diffs = \
-                    model_outputs[level][:true_sizes[i]] - \
-                        model_outputs[previous_level][true_sizes[i-1]:]
+            if i > 0:
+                output_diffs = output_diffs - \
+                        model_outputs['level'+str(i-1)][true_sizes[i-1]:]
 
             output_diffs_per_level.append(output_diffs)
 
