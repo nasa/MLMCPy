@@ -456,11 +456,97 @@ def test_compute_differences_per_level_array_return_type(spring_mlmc_simulator):
     inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
 
     test_model_outputs = \
-        sim._compute_differences_per_level(inputs, sim._models)
+        sim._compute_differences_per_level(inputs)
 
     assert test_model_outputs[0][:3].shape == (3,1)
     assert test_model_outputs[1][:2].shape == (2,1)
     assert test_model_outputs[2][:1].shape == (1,1)
+
+
+def test_compute_differences_per_level_simple_1D(spring_mlmc_simulator):
+    outputs = {'level0':np.array([1])
+               }
+    
+    sim = spring_mlmc_simulator
+    test_model_outputs = sim._compute_differences_per_level(outputs)
+
+    assert np.array_equal(test_model_outputs[0], outputs['level0'][:])
+
+
+def test_compute_differences_per_level_simple_2D(spring_mlmc_simulator):
+    outputs = {'level0':np.array([1,2]),
+               'level1':np.array([3])
+               }
+    
+    sim = spring_mlmc_simulator
+    test_model_outputs = sim._compute_differences_per_level(outputs)
+
+    subtracted_level1 = outputs['level1'][:] - outputs['level0'][1:]
+
+    assert np.array_equal(test_model_outputs[0], outputs['level0'][:1])
+    assert np.array_equal(subtracted_level1, test_model_outputs[1])
+
+
+def test_compute_differences_per_level_simple_3D(spring_mlmc_simulator):
+    outputs = {'level0':np.array([1,2,3,4,5]),
+               'level1':np.array([6,7,8]),
+               'level2':np.array([9])}
+    
+    sim = spring_mlmc_simulator
+    test_model_outputs = sim._compute_differences_per_level(outputs)
+
+    subtracted_level1 = outputs['level1'][:2] - outputs['level0'][3:]
+    subtracted_level2 = outputs['level2'] - outputs['level1'][2:]
+
+    assert np.array_equal(test_model_outputs[0], outputs['level0'][:3])
+    assert np.array_equal(subtracted_level1, test_model_outputs[1])
+    assert np.array_equal(subtracted_level2, test_model_outputs[2])
+
+
+def test_compute_differences_per_level_simple_4D(spring_mlmc_simulator):
+    outputs = {'level0':np.array([1,2,3,4,5,6,7]),
+               'level1':np.array([8,9,10,11,12]),
+               'level2':np.array([13,14,15]),
+               'level3':np.array([16])}
+    
+    sim = spring_mlmc_simulator
+
+    test_model_outputs = \
+        sim._compute_differences_per_level(outputs)
+
+    subtracted_level1 = outputs['level1'][:3] - outputs['level0'][4:]
+    subtracted_level2 = outputs['level2'][:2] - outputs['level1'][3:]
+    subtracted_level3 = outputs['level3'] - outputs['level2'][2:]
+
+    assert np.array_equal(test_model_outputs[0], outputs['level0'][:4])
+    assert np.array_equal(subtracted_level1, test_model_outputs[1])
+    assert np.array_equal(subtracted_level2, test_model_outputs[2])
+    assert np.array_equal(subtracted_level3, test_model_outputs[3])
+
+
+def test_compute_differences_per_level_simple_5D(spring_mlmc_simulator):
+    outputs = {'level0':np.array([1,2,3,4,5,6,7,8,9]),
+               'level1':np.array([10,11,12,13,14,15,16]),
+               'level2':np.array([17,18,19,20,21]),
+               'level3':np.array([22,23,24]),
+               'level4':np.array([25])
+               }
+    
+    sim = spring_mlmc_simulator
+
+    test_model_outputs = \
+        sim._compute_differences_per_level(outputs)
+
+    subtracted_level1 = outputs['level1'][:4] - outputs['level0'][5:]
+    subtracted_level2 = outputs['level2'][:3] - outputs['level1'][4:]
+    subtracted_level3 = outputs['level3'][:2] - outputs['level2'][3:]
+    subtracted_level4 = outputs['level4'] - outputs['level3'][2:]
+
+    assert np.array_equal(test_model_outputs[0], outputs['level0'][:5])
+    assert np.array_equal(subtracted_level1, test_model_outputs[1])
+    assert np.array_equal(subtracted_level2, test_model_outputs[2])
+    assert np.array_equal(subtracted_level3, test_model_outputs[3])
+    assert np.array_equal(subtracted_level4, test_model_outputs[4])
 
 
 def test_compute_differences_per_level_3D_expected_output(spring_mlmc_simulator):
@@ -473,7 +559,7 @@ def test_compute_differences_per_level_3D_expected_output(spring_mlmc_simulator)
     inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
 
     test_model_outputs = \
-        sim._compute_differences_per_level(inputs, sim._models)
+        sim._compute_differences_per_level(inputs)
     subtracted_level1 = inputs['level1'][:2] - inputs['level0'][3:]
     subtracted_level2 = inputs['level2'] - inputs['level1'][2:]
 
@@ -492,7 +578,7 @@ def test_compute_differences_per_level_4D_expected_output(spring_mlmc_simulator)
     inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
 
     test_model_outputs = \
-        sim._compute_differences_per_level(inputs, sim._models)
+        sim._compute_differences_per_level(inputs)
     subtracted_level1 = inputs['level1'][:3] - inputs['level0'][4:]
     subtracted_level2 = inputs['level2'][:2] - inputs['level1'][3:]
     subtracted_level3 = inputs['level3'] - inputs['level2'][2:]
@@ -513,7 +599,7 @@ def test_compute_differences_per_level_5D_expected_output(spring_mlmc_simulator)
     inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
 
     test_model_outputs = \
-        sim._compute_differences_per_level(inputs, sim._models)
+        sim._compute_differences_per_level(inputs)
     subtracted_level1 = inputs['level1'][:4] - inputs['level0'][5:]
     subtracted_level2 = inputs['level2'][:3] - inputs['level1'][4:]
     subtracted_level3 = inputs['level3'][:2] - inputs['level2'][3:]
@@ -524,7 +610,101 @@ def test_compute_differences_per_level_5D_expected_output(spring_mlmc_simulator)
     assert np.array_equal(subtracted_level2, test_model_outputs[2])
     assert np.array_equal(subtracted_level3, test_model_outputs[3])
     assert np.array_equal(subtracted_level4, test_model_outputs[4])
+
+
+def test_modular_compute_estimators_simple_1D(spring_mlmc_simulator):
+    """
+    Ensures that compute_estimators() is returning accurate values.
+    """
+    outputs = {'level0':np.array([1,2,3])
+            }
+
+    sim = spring_mlmc_simulator
     
+
+    estimates, variances = \
+        sim.compute_estimators(outputs)
+
+    assert np.isclose(estimates, 2)
+    assert np.isclose(variances, 0.222222222222)
+
+
+def test_modular_compute_estimators_simple_2D(spring_mlmc_simulator):
+    """
+    Ensures that compute_estimators() is returning accurate values.
+    """
+    outputs = {'level0':np.array([1,2,3]),
+               'level1':np.array([4])
+            }
+
+    sim = spring_mlmc_simulator
+    
+
+    estimates, variances = \
+        sim.compute_estimators(outputs)
+
+    assert np.isclose(estimates, 2.5)
+    assert np.isclose(variances, 0.125)
+
+
+def test_modular_compute_estimators_simple_3D(spring_mlmc_simulator):
+    """
+    Ensures that compute_estimators() is returning accurate values.
+    """
+    outputs = {'level0':np.array([1,2,3,4,5]),
+               'level1':np.array([6,7,8]),
+               'level2':np.array([9])
+            }
+
+    sim = spring_mlmc_simulator
+    
+
+    estimates, variances = \
+        sim.compute_estimators(outputs)
+
+    assert np.isclose(estimates, 5.0)
+    assert np.isclose(variances, 0.222222222222)
+
+
+def test_modular_compute_estimators_simple_4D(spring_mlmc_simulator):
+    """
+    Ensures that compute_estimators() is returning accurate values.
+    """
+    outputs = {'level0':np.array([1,2,3,4,5,6,7]),
+               'level1':np.array([8,9,10,11,12]),
+               'level2':np.array([13,14,15]),
+               'level3':np.array([16])
+            }
+
+    sim = spring_mlmc_simulator
+    
+
+    estimates, variances = \
+        sim.compute_estimators(outputs)
+
+    assert np.isclose(estimates, 8.5)
+    assert np.isclose(variances, 0.3125)
+
+def test_modular_compute_estimators_simple_5D(spring_mlmc_simulator):
+    """
+    Ensures that compute_estimators() is returning accurate values.
+    """
+    outputs = {'level0':np.array([1,2,3,4,5,6,7,8,9]),
+               'level1':np.array([10,11,12,13,14,15,16]),
+               'level2':np.array([17,18,19,20,21]),
+               'level3':np.array([22,23,24]),
+               'level4':np.array([25])
+            }
+
+    sim = spring_mlmc_simulator
+    
+
+    estimates, variances = \
+        sim.compute_estimators(outputs)
+
+    assert np.isclose(estimates, 13.0)
+    assert np.isclose(variances, 0.4)
+
 
 def test_modular_compute_estimators_1D_expected_output(spring_mlmc_simulator):
     """

@@ -291,7 +291,7 @@ class MLMCSimulator(object):
         self._check_compute_estimators_parameter(model_outputs)
 
         differences_per_level = \
-            self._compute_differences_per_level(model_outputs, self._models)
+            self._compute_differences_per_level(model_outputs)
 
         estimates = 0
         variances = 0
@@ -308,7 +308,7 @@ class MLMCSimulator(object):
         return estimates, variances
 
     @staticmethod
-    def _compute_differences_per_level(model_outputs, models):
+    def _compute_differences_per_level(model_outputs):
         """
         Uses model outputs to compute the differences per level, returns a list
         of arrays.
