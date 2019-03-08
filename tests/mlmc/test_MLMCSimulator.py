@@ -463,7 +463,7 @@ def test_compute_differences_per_level_array_return_type(spring_mlmc_simulator):
     assert test_model_outputs[2][:1].shape == (1,1)
 
 
-def test_compute_differences_per_level_expected_output(spring_mlmc_simulator):
+def test_compute_differences_per_level_3D_expected_output(spring_mlmc_simulator):
     """
     Ensures that _compute_differences_per_level() is subtracting and returning 
     the correct values.
@@ -482,7 +482,81 @@ def test_compute_differences_per_level_expected_output(spring_mlmc_simulator):
     assert np.array_equal(subtracted_level2, test_model_outputs[2])
 
 
-def test_modular_compute_estimators_expected_output(spring_mlmc_simulator):
+def test_compute_differences_per_level_4D_expected_output(spring_mlmc_simulator):
+    """
+    Ensures that _compute_differences_per_level() is subtracting and returning 
+    the correct values.
+    """
+    sim = spring_mlmc_simulator
+    sample_sizes = [4, 3, 2, 1]
+    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
+
+    test_model_outputs = \
+        sim._compute_differences_per_level(inputs, sim._models)
+    subtracted_level1 = inputs['level1'][:3] - inputs['level0'][4:]
+    subtracted_level2 = inputs['level2'][:2] - inputs['level1'][3:]
+    subtracted_level3 = inputs['level3'] - inputs['level2'][2:]
+
+    assert np.array_equal(test_model_outputs[0], inputs['level0'][:4])
+    assert np.array_equal(subtracted_level1, test_model_outputs[1])
+    assert np.array_equal(subtracted_level2, test_model_outputs[2])
+    assert np.array_equal(subtracted_level3, test_model_outputs[3])
+
+
+def test_compute_differences_per_level_5D_expected_output(spring_mlmc_simulator):
+    """
+    Ensures that _compute_differences_per_level() is subtracting and returning 
+    the correct values.
+    """
+    sim = spring_mlmc_simulator
+    sample_sizes = [5, 4, 3, 2, 1]
+    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
+
+    test_model_outputs = \
+        sim._compute_differences_per_level(inputs, sim._models)
+    subtracted_level1 = inputs['level1'][:4] - inputs['level0'][5:]
+    subtracted_level2 = inputs['level2'][:3] - inputs['level1'][4:]
+    subtracted_level3 = inputs['level3'][:2] - inputs['level2'][3:]
+    subtracted_level4 = inputs['level4'] - inputs['level3'][2:]
+
+    assert np.array_equal(test_model_outputs[0], inputs['level0'][:5])
+    assert np.array_equal(subtracted_level1, test_model_outputs[1])
+    assert np.array_equal(subtracted_level2, test_model_outputs[2])
+    assert np.array_equal(subtracted_level3, test_model_outputs[3])
+    assert np.array_equal(subtracted_level4, test_model_outputs[4])
+    
+
+def test_modular_compute_estimators_1D_expected_output(spring_mlmc_simulator):
+    """
+    Ensures that compute_estimators() is returning accurate values.
+    """
+    sim = spring_mlmc_simulator
+    sample_sizes = [3]
+    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
+
+    estimates, variances = \
+        sim.compute_estimators(inputs)
+
+    assert np.isclose(estimates, 3.17248042)
+    assert np.isclose(variances, 0.01724233)
+
+
+def test_modular_compute_estimators_2D_expected_output(spring_mlmc_simulator):
+    """
+    Ensures that compute_estimators() is returning accurate values.
+    """
+    sim = spring_mlmc_simulator
+    sample_sizes = [3, 2]
+    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
+
+    estimates, variances = \
+        sim.compute_estimators(inputs)
+
+    assert np.isclose(estimates, 3.17248042)
+    assert np.isclose(variances, 0.01724233)
+
+
+def test_modular_compute_estimators_3D_expected_output(spring_mlmc_simulator):
     """
     Ensures that compute_estimators() is returning accurate values.
     """
@@ -495,6 +569,36 @@ def test_modular_compute_estimators_expected_output(spring_mlmc_simulator):
 
     assert np.isclose(estimates, 3.17248042)
     assert np.isclose(variances, 0.01724233)
+
+
+def test_modular_compute_estimators_4D_expected_output(spring_mlmc_simulator):
+    """
+    Ensures that compute_estimators() is returning accurate values.
+    """
+    sim = spring_mlmc_simulator
+    sample_sizes = [4, 3, 2, 1]
+    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
+
+    estimates, variances = \
+        sim.compute_estimators(inputs)
+
+    assert np.isclose(estimates, 3.18597516)
+    assert np.isclose(variances, 0.00983539)
+
+
+def test_modular_compute_estimators_5D_expected_output(spring_mlmc_simulator):
+    """
+    Ensures that compute_estimators() is returning accurate values.
+    """
+    sim = spring_mlmc_simulator
+    sample_sizes = [5, 4, 3, 2, 1]
+    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
+
+    estimates, variances = \
+        sim.compute_estimators(inputs)
+
+    assert np.isclose(estimates, 3.12703401)
+    assert np.isclose(variances, 0.0090739)
 
 
 def test_modular_compute_estimators_return_type(spring_mlmc_simulator):
@@ -745,6 +849,9 @@ def test_store_model_inputs_to_run_for_each_level_except(spring_mlmc_simulator):
 
 
 def test_load_model_outputs_for_each_level_one_output(spring_mlmc_simulator):
+    """
+    Ensures that load model is correctly loading data from files.
+    """
     sim = spring_mlmc_simulator
     sample_sizes = [3]
     fnames = ['level0_outputs.txt']
@@ -758,6 +865,9 @@ def test_load_model_outputs_for_each_level_one_output(spring_mlmc_simulator):
 
 
 def test_load_model_outputs_for_each_level_two_outputs(spring_mlmc_simulator):
+    """
+    Ensures that load model is correctly loading data from files.
+    """
     sim = spring_mlmc_simulator
     sample_sizes = [3, 2]
     fnames = ['level0_outputs.txt', 'level1_outputs.txt']
@@ -772,6 +882,10 @@ def test_load_model_outputs_for_each_level_two_outputs(spring_mlmc_simulator):
 
 
 def test_load_model_outputs_for_each_level_three_outputs(spring_mlmc_simulator):
+    """
+    Ensures that load_model_outputs_for_each_level() is correctly loading data 
+    from files.
+    """
     sim = spring_mlmc_simulator
     sample_sizes = [3, 2, 1]
     fnames = ['level0_outputs.txt', 'level1_outputs.txt', 'level2_outputs.txt']
@@ -787,6 +901,10 @@ def test_load_model_outputs_for_each_level_three_outputs(spring_mlmc_simulator):
 
 
 def test_load_model_outputs_for_each_level_return_type(spring_mlmc_simulator):
+    """
+    Ensures that load_model_outputs_for_each_level() is correctly loading data 
+    from files.
+    """
     sim = spring_mlmc_simulator
     sample_sizes = [3, 2, 1]
     fnames = ['level0_outputs.txt', 'level1_outputs.txt', 'level2_outputs.txt']
@@ -803,6 +921,10 @@ def test_load_model_outputs_for_each_level_return_type(spring_mlmc_simulator):
 
 
 def test_load_model_outputs_for_each_level_custom_fname(spring_mlmc_simulator):
+    """
+    Ensures that load_model_outputs_for_each_level() is correctly loading data 
+    from files with custom file names.
+    """
     sim = spring_mlmc_simulator
     sample_sizes = [3, 2, 1]
     fnames = ['level0.txt', 'level1.txt', 'level2.txt']
@@ -820,6 +942,9 @@ def test_load_model_outputs_for_each_level_custom_fname(spring_mlmc_simulator):
 
 
 def test_load_model_outputs_for_each_level_exception():
+    """
+    Ensures that load_model_outputs_for_each_level() throws its exceptions.
+    """
     with pytest.raises(TypeError):
         MLMCSimulator.load_model_outputs_for_each_level(5.5)
     

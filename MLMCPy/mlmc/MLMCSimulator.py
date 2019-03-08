@@ -320,14 +320,28 @@ class MLMCSimulator(object):
             output_diffs = np.zeros((sample_size, 1))
 
             if i == 0:
-                next_sample_length = \
-                    sample_size - len(model_outputs['level'+str(i+1)])
-                    
-                if len(model_outputs) > 2:
-                    next_sample_length += len(model_outputs['level'+str(i+2)])
+                if len(model_outputs) == 1:
+                    output_diffs = \
+                        model_outputs[level][:sample_size]
+                
+                else:
+                    next_sample_length = 0
 
-                output_diffs = \
-                    model_outputs[level][:next_sample_length]
+                    for j in range(1, len(model_outputs)):
+                        if j == 1:
+                            next_sample_length = \
+                                sample_size - len(model_outputs['level'+str(i+j)])
+
+                        elif j % 2 == 0:
+                            next_sample_length += \
+                                len(model_outputs['level'+str(i+j)])
+
+                        elif j > 1 and j % 2 != 0:
+                            next_sample_length -= \
+                                len(model_outputs['level'+str(i+j)])
+
+                    output_diffs = \
+                        model_outputs[level][:next_sample_length]
             else:
                 previous_level = 'level' + str(i-1)
                 previous_sample_length = len(output_diffs_per_level[i - 1])
