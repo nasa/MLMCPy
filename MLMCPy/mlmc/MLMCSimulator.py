@@ -285,7 +285,7 @@ class MLMCSimulator(object):
         Uses the differences per level to compute the estimates and variances.
 
         :param model_outputs: Model outputs generated through model evaluate().
-        :type outputs: list
+        :type outputs: dict
         :return: Returns the estimates and variances as ndarrays.
         """
         self._check_compute_estimators_parameter(model_outputs)
@@ -341,7 +341,7 @@ class MLMCSimulator(object):
                         model_outputs[level][:end_sample_length]
             else:
                 previous_level = 'level' + str(i-1)
-                previous_sample_length = len(output_diffs_per_level[i - 1])
+                previous_sample_length = len(output_diffs_per_level[i-1])
 
                 end_sample_length = \
                     len(model_outputs[previous_level]) - previous_sample_length
