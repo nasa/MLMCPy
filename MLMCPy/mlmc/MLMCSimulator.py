@@ -282,11 +282,11 @@ class MLMCSimulator(object):
 
     def compute_estimators(self, model_outputs):
         """
-        Computes the differences per level and then the estimates and variances.
+        Uses the differences per level to compute the estimates and variances.
 
-        :param model_outputs: Model outputs.
-        :type outputs: dict
-        :return: Returns the estimates and variances as an ndarray.
+        :param model_outputs: Model outputs generated through model evaluate().
+        :type outputs: list
+        :return: Returns the estimates and variances as ndarrays.
         """
         self._check_compute_estimators_parameter(model_outputs)
 
@@ -323,38 +323,35 @@ class MLMCSimulator(object):
                 if len(model_outputs) == 1:
                     output_diffs = \
                         model_outputs[level][:sample_size]
-                
                 else:
-                    next_sample_length = 0
+                    end_sample_length = sample_size
 
                     for j in range(1, len(model_outputs)):
-                        if j == 1:
-                            next_sample_length = \
-                                sample_size - len(model_outputs['level'+str(i+j)])
+                        next_model_sample_size = \
+                            len(model_outputs['level'+str(i+j)])
 
-                        elif j % 2 == 0:
-                            next_sample_length += \
-                                len(model_outputs['level'+str(i+j)])
-
-                        elif j > 1 and j % 2 != 0:
-                            next_sample_length -= \
-                                len(model_outputs['level'+str(i+j)])
+                        if j % 2 == 0:
+                            end_sample_length += \
+                                next_model_sample_size
+                        else:
+                            end_sample_length -= \
+                                next_model_sample_size
 
                     output_diffs = \
-                        model_outputs[level][:next_sample_length]
+                        model_outputs[level][:end_sample_length]
             else:
                 previous_level = 'level' + str(i-1)
                 previous_sample_length = len(output_diffs_per_level[i - 1])
 
-                next_sample_length = \
+                end_sample_length = \
                     len(model_outputs[previous_level]) - previous_sample_length
 
                 output_diffs = \
-                    model_outputs[level][:next_sample_length] - \
+                    model_outputs[level][:end_sample_length] - \
                         model_outputs[previous_level][previous_sample_length:]
 
             output_diffs_per_level.append(output_diffs)
-            
+
         return output_diffs_per_level
 
     def _setup_simulation(self, epsilon, initial_sample_sizes, sample_sizes):
