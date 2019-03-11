@@ -24,7 +24,7 @@ class MLMCSimulator(object):
         # Detect whether we have access to multiple CPUs.
         self.__detect_parallelization()
 
-        self.__check_init_parameters(random_input, models)
+        self._check_init_parameters(random_input, models)
 
         self._data = random_input
         self._models = models
@@ -90,7 +90,7 @@ class MLMCSimulator(object):
         """
         self._verbose = verbose and self._cpu_rank == 0
 
-        self.__check_simulate_parameters(target_cost)
+        self._check_simulate_parameters(target_cost)
 
         self._process_target_cost(target_cost)
 
@@ -191,37 +191,23 @@ class MLMCSimulator(object):
         :return: A dictionary with model inputs.
         :rtype: dict
         """
-        self.__check_get_model_inputs_to_run_for_each_level_params(sample_sizes)
+        self._check_get_model_inputs_to_run_for_each_level_params(sample_sizes)
 
         inputs_dict = {}
         total_samples_sum = np.sum(sample_sizes)
         inputs = self._data.draw_samples(total_samples_sum)
-        samples_sum = 0
+        index_sum = 0
 
         for level in range(len(sample_sizes)):
-            if level == 0:
-                if len(sample_sizes) > 1:
-                    samples_added = sample_sizes[level] + sample_sizes[level+1]
+            final_index = index_sum + sample_sizes[level]
 
-                    inputs_dict.update({'level'+str(level): \
-                                        inputs[:samples_added]})
+            if level != len(sample_sizes) - 1:
+                final_index += sample_sizes[level+1]
 
-                    samples_sum += sample_sizes[level]
-                else:
-                    inputs_dict.update({'level'+str(level): inputs})
+            inputs_dict.update({'level'+str(level): \
+                                inputs[index_sum: final_index]})
 
-            elif level == len(sample_sizes) - 1:
-                inputs_dict.update({'level'+str(level): \
-                    inputs[total_samples_sum-sample_sizes[level]:]})
-
-            else:
-                samples_added = \
-                    samples_sum + sample_sizes[level] + sample_sizes[level+1]
-
-                inputs_dict.update({'level'+str(level): \
-                    inputs[samples_sum: samples_added]})
-
-                samples_sum += sample_sizes[level]
+            index_sum += sample_sizes[level]
 
         return inputs_dict
 
@@ -237,7 +223,7 @@ class MLMCSimulator(object):
         :param filenames: Custom file names that must match the number of
             models(levels) provided.
         """
-        self.__check_store_model_params(sample_sizes, filenames)
+        self._check_store_model_params(sample_sizes, filenames)
 
         inputs = self.get_model_inputs_to_run_for_each_level(sample_sizes)
 
@@ -800,7 +786,7 @@ class MLMCSimulator(object):
             self._target_cost = float(target_cost)
 
     @staticmethod
-    def __check_init_parameters(data, models):
+    def _check_init_parameters(data, models):
         """
         Inspect parameters given to init method.
         :param data: Input object provided to init().
@@ -833,7 +819,7 @@ class MLMCSimulator(object):
                              "dimensions.")
 
     @staticmethod
-    def __check_simulate_parameters(target_cost):
+    def _check_simulate_parameters(target_cost):
         """
         Inspect parameters to simulate method.
         :param target_cost: float or int specifying desired simulation cost.
@@ -848,7 +834,7 @@ class MLMCSimulator(object):
                 raise ValueError("maximum cost must be greater than zero.")
 
     @staticmethod
-    def __check_get_model_inputs_to_run_for_each_level_params(sample_sizes):
+    def _check_get_model_inputs_to_run_for_each_level_params(sample_sizes):
         """
         Inspects parameters in get_model_inputs_to_run_for_each_level().
 
@@ -863,7 +849,7 @@ class MLMCSimulator(object):
                 raise TypeError('sample_sizes[%s] must be an int.' % level)
 
     @staticmethod
-    def __check_store_model_params(sample_sizes, filenames=None):
+    def _check_store_model_params(sample_sizes, filenames=None):
         """
         Inspects parameters in store_model_inputs_to_run_for_each_level().
 
