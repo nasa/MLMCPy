@@ -280,7 +280,8 @@ class MLMCSimulator(object):
 
         return outputs_dict
 
-    def compute_estimators(self, model_outputs):
+    @staticmethod
+    def compute_estimators(model_outputs):
         """
         Uses the differences per level to compute the estimates and variances.
 
@@ -288,10 +289,10 @@ class MLMCSimulator(object):
         :type outputs: dict
         :return: Returns the estimates and variances as ndarrays.
         """
-        self._check_compute_estimators_parameter(model_outputs)
+        MLMCSimulator._check_compute_estimators_parameter(model_outputs)
 
         differences_per_level = \
-            self._compute_differences_per_level(model_outputs)
+            MLMCSimulator._compute_differences_per_level(model_outputs)
 
         estimates = 0
         variances = 0
@@ -341,8 +342,6 @@ class MLMCSimulator(object):
         true_sizes = MLMCSimulator._compute_true_sample_size(model_outputs)
 
         for i, level in enumerate(model_outputs):
-#Tried refactoring with a condition if i>0 output_diffs -= model_outputs[sizes]
-# but getting different values (TODO)
             output_diffs = \
                 model_outputs[level][:true_sizes[i]]
 

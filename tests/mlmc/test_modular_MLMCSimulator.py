@@ -348,6 +348,7 @@ def test_modular_compute_estimators_simple_4D(spring_mlmc_simulator):
     assert np.isclose(estimates, 8.5)
     assert np.isclose(variances, 0.3125)
 
+
 def test_modular_compute_estimators_simple_5D(spring_mlmc_simulator):
     """
     Ensures that compute_estimators() is returning accurate values.
@@ -911,3 +912,4 @@ def test_load_model_outputs_for_each_level_exception():
 
     with pytest.raises(TypeError):
         MLMCSimulator.load_model_outputs_for_each_level(3, 1)
+
