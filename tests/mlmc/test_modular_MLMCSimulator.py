@@ -621,6 +621,121 @@ def test_get_model_inputs_param_exceptions(spring_mlmc_simulator):
         sim.get_model_inputs_to_run_for_each_level('Not A List')
 
 
+def test_simple_1D_store_model_inputs_for_each_level(dummy_arange_simulator):
+    """
+    Ensures the store_model_inputs_to_run_for_each_level method is properly
+    allocating values in the array by using a simple arange function.  
+    """
+    sample_sizes = [24]
+
+    sim = dummy_arange_simulator
+
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes)
+
+    level0 = np.loadtxt('level0_inputs.txt')
+
+    assert np.array_equal(level0.flatten(), np.arange(24))
+
+    for i in range(len(sample_sizes)):
+        os.remove('level%s_inputs.txt' % i)
+
+
+def test_simple_2D_store_model_inputs_for_each_level(dummy_arange_simulator):
+    """
+    Ensures the store_model_inputs_to_run_for_each_level method is properly
+    allocating values in the array by using a simple arange function.  
+    """
+    sample_sizes = [5, 3]
+
+    sim = dummy_arange_simulator
+
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes)
+
+    level0 = np.loadtxt('level0_inputs.txt')
+    level1 = np.loadtxt('level1_inputs.txt')
+
+    assert np.array_equal(level0.flatten(), np.arange(8))
+    assert np.array_equal(level1.flatten(), np.arange(5, 8))
+
+    for i in range(len(sample_sizes)):
+        os.remove('level%s_inputs.txt' % i)
+
+
+def test_simple_3D_store_model_inputs_for_each_level(dummy_arange_simulator):
+    """
+    Ensures the store_model_inputs_to_run_for_each_level method is properly
+    allocating values in the array by using a simple arange function.  
+    """
+    sample_sizes = [5, 3, 2]
+
+    sim = dummy_arange_simulator
+
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes)
+
+    level0 = np.loadtxt('level0_inputs.txt')
+    level1 = np.loadtxt('level1_inputs.txt')
+    level2 = np.loadtxt('level2_inputs.txt')
+
+    assert np.array_equal(level0.flatten(), np.arange(8))
+    assert np.array_equal(level1.flatten(), np.arange(5, 10))
+    assert np.array_equal(level2.flatten(), np.arange(8, 10))
+
+    for i in range(len(sample_sizes)):
+        os.remove('level%s_inputs.txt' % i)
+
+
+def test_simple_4D_store_model_inputs_for_each_level(dummy_arange_simulator):
+    """
+    Ensures the store_model_inputs_to_run_for_each_level method is properly
+    allocating values in the array by using a simple arange function.  
+    """
+    sample_sizes = [5, 3, 3, 2]
+
+    sim = dummy_arange_simulator
+
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes)
+
+    level0 = np.loadtxt('level0_inputs.txt')
+    level1 = np.loadtxt('level1_inputs.txt')
+    level2 = np.loadtxt('level2_inputs.txt')
+    level3 = np.loadtxt('level3_inputs.txt')
+
+    assert np.array_equal(level0.flatten(), np.arange(8))
+    assert np.array_equal(level1.flatten(), np.arange(5, 11))
+    assert np.array_equal(level2.flatten(), np.arange(8, 13))
+    assert np.array_equal(level3.flatten(), np.arange(11, 13))
+
+    for i in range(len(sample_sizes)):
+        os.remove('level%s_inputs.txt' % i)
+
+
+def test_simple_5D_store_model_inputs_for_each_level(dummy_arange_simulator):
+    """
+    Ensures the store_model_inputs_to_run_for_each_level method is properly
+    allocating values in the array by using a simple arange function.  
+    """
+    sample_sizes = [5, 4, 3, 3, 2]
+
+    sim = dummy_arange_simulator
+
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes)
+
+    level0 = np.loadtxt('level0_inputs.txt')
+    level1 = np.loadtxt('level1_inputs.txt')
+    level2 = np.loadtxt('level2_inputs.txt')
+    level3 = np.loadtxt('level3_inputs.txt')
+    level4 = np.loadtxt('level4_inputs.txt')
+
+    assert np.array_equal(level0.flatten(), np.arange(9))
+    assert np.array_equal(level1.flatten(), np.arange(5, 12))
+    assert np.array_equal(level2.flatten(), np.arange(9, 15))
+    assert np.array_equal(level3.flatten(), np.arange(12, 17))
+    assert np.array_equal(level4.flatten(), np.arange(15, 17))
+
+    for i in range(len(sample_sizes)):
+        os.remove('level%s_inputs.txt' % i)
+
+
 def test_store_model_inputs_to_run_for_each_level_return(spring_mlmc_simulator):
     """
     Ensures that store_model_inputs_to_run_for_each_level() is properly storing
