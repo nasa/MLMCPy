@@ -193,6 +193,8 @@ class MLMCSimulator(object):
         """
         self._check_get_model_inputs_to_run_for_each_level_params(sample_sizes)
 
+        #Implement fix to remove reset_sampling() (TODO)
+        self._data.reset_sampling()
         inputs_dict = {}
         total_samples_sum = np.sum(sample_sizes)
         inputs = self._data.draw_samples(total_samples_sum)
@@ -663,6 +665,7 @@ class MLMCSimulator(object):
         sample_indices = np.empty(0)
         if self._caching_enabled:
             sample_indices = np.argwhere(sample == self._cached_inputs[level])
+            print 'sample_indices: ', sample_indices
 
         if len(sample_indices) == 1:
             output = self._cached_outputs[level, sample_indices[0]][0]
