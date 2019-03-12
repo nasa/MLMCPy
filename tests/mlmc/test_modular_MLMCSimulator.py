@@ -90,16 +90,20 @@ def test_modular_compute_optimal_sample_sizes_models(spring_mlmc_simulator):
     assert np.all(np.array_equal(true_optimal_sizes, optimal_sample_sizes))
 
 #Rename this test when function name is decided (TODO)
-def test_compute_true_sample_size(spring_mlmc_simulator):
-    d = {'level0':np.arange(1600),
-         'level1':np.arange(900),
-         'level2':np.arange(400), 
-         'level3':np.arange(150),
-         'level4':np.arange(60),
-         'level5':np.arange(10)
-        }
+def test_compute_output_sample_sizes(spring_mlmc_simulator):
+    """
+    Ensures that _compute_output_sample_sizes() is returning the appropriate
+    sample sizes per level.
+    """
+    outputs = {'level0':np.arange(1600),
+               'level1':np.arange(900),
+               'level2':np.arange(400), 
+               'level3':np.arange(150),
+               'level4':np.arange(60),
+               'level5':np.arange(10)
+            }
     
-    sizes = MLMCSimulator._compute_true_sample_size(d)
+    sizes = MLMCSimulator._compute_output_sample_sizes(outputs)
 
     assert sizes[0] == 1000
     assert sizes[1] == 600
@@ -127,6 +131,10 @@ def test_compute_differences_per_level_array_return_type(spring_mlmc_simulator):
 
 
 def test_compute_differences_per_level_simple_1D(spring_mlmc_simulator):
+    """
+    Ensures that _compute_differences_per_level() is returning correct values
+    using simple arrays.
+    """
     outputs = {'level0':np.array([1])
                }
     
@@ -137,6 +145,10 @@ def test_compute_differences_per_level_simple_1D(spring_mlmc_simulator):
 
 
 def test_compute_differences_per_level_simple_2D(spring_mlmc_simulator):
+    """
+    Ensures that _compute_differences_per_level() is returning correct values
+    using simple arrays.
+    """
     outputs = {'level0':np.array([1,2]),
                'level1':np.array([3])
                }
@@ -151,6 +163,10 @@ def test_compute_differences_per_level_simple_2D(spring_mlmc_simulator):
 
 
 def test_compute_differences_per_level_simple_3D(spring_mlmc_simulator):
+    """
+    Ensures that _compute_differences_per_level() is returning correct values
+    using simple arrays.
+    """
     outputs = {'level0':np.array([1,2,3,4,5]),
                'level1':np.array([6,7,8]),
                'level2':np.array([9])}
@@ -167,6 +183,10 @@ def test_compute_differences_per_level_simple_3D(spring_mlmc_simulator):
 
 
 def test_compute_differences_per_level_simple_4D(spring_mlmc_simulator):
+    """
+    Ensures that _compute_differences_per_level() is returning correct values
+    using simple arrays.
+    """
     outputs = {'level0':np.array([1,2,3,4,5,6,7]),
                'level1':np.array([8,9,10,11,12]),
                'level2':np.array([13,14,15]),
@@ -188,6 +208,10 @@ def test_compute_differences_per_level_simple_4D(spring_mlmc_simulator):
 
 
 def test_compute_differences_per_level_simple_5D(spring_mlmc_simulator):
+    """
+    Ensures that _compute_differences_per_level() is returning correct values
+    using simple arrays.
+    """
     outputs = {'level0':np.array([1,2,3,4,5,6,7,8,9]),
                'level1':np.array([10,11,12,13,14,15,16]),
                'level2':np.array([17,18,19,20,21]),
@@ -212,7 +236,7 @@ def test_compute_differences_per_level_simple_5D(spring_mlmc_simulator):
     assert np.array_equal(subtracted_level4, test_model_outputs[4])
 
 
-def test_compute_differences_per_level_3D_expected_output(spring_mlmc_simulator):
+def test_compute_differences_per_level_3D_output(spring_mlmc_simulator):
     """
     Ensures that _compute_differences_per_level() is subtracting and returning 
     the correct values.
@@ -231,7 +255,7 @@ def test_compute_differences_per_level_3D_expected_output(spring_mlmc_simulator)
     assert np.array_equal(subtracted_level2, test_model_outputs[2])
 
 
-def test_compute_differences_per_level_4D_expected_output(spring_mlmc_simulator):
+def test_compute_differences_per_level_4D_output(spring_mlmc_simulator):
     """
     Ensures that _compute_differences_per_level() is subtracting and returning 
     the correct values.
@@ -252,7 +276,7 @@ def test_compute_differences_per_level_4D_expected_output(spring_mlmc_simulator)
     assert np.array_equal(subtracted_level3, test_model_outputs[3])
 
 
-def test_compute_differences_per_level_5D_expected_output(spring_mlmc_simulator):
+def test_compute_differences_per_level_5D_output(spring_mlmc_simulator):
     """
     Ensures that _compute_differences_per_level() is subtracting and returning 
     the correct values.
@@ -581,7 +605,10 @@ def test_get_model_inputs_five_samples_expected_output(spring_mlmc_simulator):
 
 
 def test_simple_get_model_inputs_1D(dummy_arange_simulator):
-
+    """
+    Ensures get_model_inputs_to_run_for_each_level() is returning the correct
+    values using a simple arrays.
+    """
     sample_sizes = [24]
     
     sim = dummy_arange_simulator
@@ -592,7 +619,10 @@ def test_simple_get_model_inputs_1D(dummy_arange_simulator):
 
 
 def test_simple_get_model_inputs_4D(dummy_arange_simulator):
-
+    """
+    Ensures get_model_inputs_to_run_for_each_level() is returning the correct
+    values using a simple arrays.
+    """
     sample_sizes = [5, 3, 3, 2]
     
     sim = dummy_arange_simulator
@@ -761,7 +791,7 @@ def test_store_model_inputs_to_run_for_each_level_return(spring_mlmc_simulator):
         os.remove('level%s_inputs.txt' % i)
 
 
-def test_store_model_inputs_to_run_for_each_level_custom_filename(spring_mlmc_simulator):
+def test_store_model_inputs_custom_file_names(spring_mlmc_simulator):
     """
     Ensures that store_model_inputs_to_run_for_each_level() is properly storing
     the inputs to text files using custom file names and transitioning back to 
@@ -906,5 +936,4 @@ def test_load_model_outputs_for_each_level_exception():
     """
     with pytest.raises(TypeError):
         MLMCSimulator.load_model_outputs_for_each_level('Not an Integer.')
-
 

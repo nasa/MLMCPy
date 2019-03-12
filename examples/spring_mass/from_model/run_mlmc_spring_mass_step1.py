@@ -44,7 +44,9 @@ mlmc_simulator = MLMCSimulator(stiffness_distribution, models)
 #Optional - compute cost and variances of model (or user knows these beforehand)
 initial_sample_size = 100
 epsilon = np.sqrt(0.00170890122096)
-costs, variances = mlmc_simulator.compute_costs_and_variances(initial_sample_size)
+
+costs, variances = \
+    mlmc_simulator.compute_costs_and_variances(initial_sample_size)
 
 # Calculate optimal sample size for each level from cost/variance/error:
 sample_sizes = mlmc_simulator.compute_optimal_sample_sizes(costs, variances,
