@@ -89,7 +89,7 @@ def test_modular_compute_optimal_sample_sizes_models(spring_mlmc_simulator):
 
     assert np.all(np.array_equal(true_optimal_sizes, optimal_sample_sizes))
 
-#Rename this test when function name is decided (TODO)
+
 def test_compute_output_sample_sizes(spring_mlmc_simulator):
     """
     Ensures that _compute_output_sample_sizes() is returning the appropriate
