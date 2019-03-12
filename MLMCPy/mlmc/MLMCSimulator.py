@@ -401,6 +401,7 @@ class MLMCSimulator(object):
             num_samples = user_samples[level]
         else:
             num_samples = self._initial_sample_sizes[level]
+
         input_samples = self._draw_samples(num_samples)
 
         # To cache these samples, we have to account for the possibility
@@ -665,7 +666,6 @@ class MLMCSimulator(object):
         sample_indices = np.empty(0)
         if self._caching_enabled:
             sample_indices = np.argwhere(sample == self._cached_inputs[level])
-            print 'sample_indices: ', sample_indices
 
         if len(sample_indices) == 1:
             output = self._cached_outputs[level, sample_indices[0]][0]
