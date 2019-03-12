@@ -238,7 +238,7 @@ class MLMCSimulator(object):
                 np.savetxt('%s_inputs.txt' % key, inputs[key])
 
     @staticmethod
-    def load_model_outputs_for_each_level(num_models, filenames=None):
+    def load_model_outputs_for_each_level(filenames=None):
         """
         Loads model outputs from text file provided.
 
@@ -251,9 +251,6 @@ class MLMCSimulator(object):
         """
         outputs_dict = {}
 
-        if not isinstance(num_models, int):
-            raise TypeError('num_models must be an integer of models(levels).')
-
         if filenames is not None:
             if isinstance(filenames, list):
                 for level, filename in enumerate(filenames):
@@ -262,9 +259,15 @@ class MLMCSimulator(object):
             else:
                 raise TypeError('filenames must be a list of strings.')
         else:
-            for level in range(num_models):
-                outputs = np.loadtxt('level%s_outputs.txt' % level)
-                outputs_dict.update({'level%s' % level: outputs})
+            level = 0
+
+            while True:
+                try:
+                    outputs = np.loadtxt('level%s_outputs.txt' % level)
+                    outputs_dict.update({'level%s' % level: outputs})
+                    level += 1
+                except:
+                    break
 
         return outputs_dict
 

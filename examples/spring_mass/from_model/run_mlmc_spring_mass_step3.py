@@ -16,7 +16,7 @@ using previously calculated model outputs by loading them from file
 '''
 
 model_outputs_per_level = \
-    MLMCSimulator.load_model_outputs_for_each_level(3)
+    MLMCSimulator.load_model_outputs_for_each_level()
 
 #Step 6 - Aggregate model outputs to compute estimators:
 mlmc_start = timeit.default_timer()

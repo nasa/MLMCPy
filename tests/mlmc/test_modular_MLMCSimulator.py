@@ -815,7 +815,7 @@ def test_load_model_outputs_for_each_level_one_output(spring_mlmc_simulator):
     sample_sizes = [3]
     fnames = ['level0_outputs.txt']
     sim.store_model_inputs_to_run_for_each_level(sample_sizes, fnames)
-    model_outputs = sim.load_model_outputs_for_each_level(1)
+    model_outputs = sim.load_model_outputs_for_each_level()
 
     assert np.isclose(model_outputs['level0'][0], 2.87610342)
 
@@ -831,7 +831,7 @@ def test_load_model_outputs_for_each_level_two_outputs(spring_mlmc_simulator):
     sample_sizes = [3, 2]
     fnames = ['level0_outputs.txt', 'level1_outputs.txt']
     sim.store_model_inputs_to_run_for_each_level(sample_sizes, fnames)
-    model_outputs = sim.load_model_outputs_for_each_level(2)
+    model_outputs = sim.load_model_outputs_for_each_level()
 
     assert np.isclose(model_outputs['level0'][0], 2.87610342)
     assert np.isclose(model_outputs['level1'][0], 3.22645934)
@@ -849,7 +849,7 @@ def test_load_model_outputs_for_each_level_three_outputs(spring_mlmc_simulator):
     sample_sizes = [3, 2, 1]
     fnames = ['level0_outputs.txt', 'level1_outputs.txt', 'level2_outputs.txt']
     sim.store_model_inputs_to_run_for_each_level(sample_sizes, fnames)
-    model_outputs = sim.load_model_outputs_for_each_level(3)
+    model_outputs = sim.load_model_outputs_for_each_level()
 
     assert np.isclose(model_outputs['level0'][0], 2.87610342)
     assert np.isclose(model_outputs['level1'][0], 3.22645934)
@@ -868,7 +868,7 @@ def test_load_model_outputs_for_each_level_return_type(spring_mlmc_simulator):
     sample_sizes = [3, 2, 1]
     fnames = ['level0_outputs.txt', 'level1_outputs.txt', 'level2_outputs.txt']
     sim.store_model_inputs_to_run_for_each_level(sample_sizes, fnames)
-    model_outputs = sim.load_model_outputs_for_each_level(3)
+    model_outputs = sim.load_model_outputs_for_each_level()
 
     assert isinstance(model_outputs, dict)
     assert isinstance(model_outputs['level0'], np.ndarray)
@@ -889,7 +889,7 @@ def test_load_model_outputs_for_each_level_custom_fname(spring_mlmc_simulator):
     fnames = ['level0.txt', 'level1.txt', 'level2.txt']
     sim.store_model_inputs_to_run_for_each_level(sample_sizes, fnames)
 
-    model_outputs = sim.load_model_outputs_for_each_level(3, fnames)
+    model_outputs = sim.load_model_outputs_for_each_level(fnames)
 
     assert isinstance(model_outputs, dict)
     assert isinstance(model_outputs['level0'], np.ndarray)
@@ -905,11 +905,6 @@ def test_load_model_outputs_for_each_level_exception():
     Ensures that load_model_outputs_for_each_level() throws its exceptions.
     """
     with pytest.raises(TypeError):
-        MLMCSimulator.load_model_outputs_for_each_level(5.5)
-    
-    with pytest.raises(TypeError):
         MLMCSimulator.load_model_outputs_for_each_level('Not an Integer.')
 
-    with pytest.raises(TypeError):
-        MLMCSimulator.load_model_outputs_for_each_level(3, 1)
 
