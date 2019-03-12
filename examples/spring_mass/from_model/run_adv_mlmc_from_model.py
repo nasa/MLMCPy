@@ -59,7 +59,7 @@ initial_sample_size = 100
 epsilon = np.sqrt(precision_mc)
 
 # Optional - Compute cost and variances of model:
-#start_mlmc = timeit.default_timer()
+start_mlmc = timeit.default_timer()
 
 costs, variances = \
     mlmc_simulator.compute_costs_and_variances(initial_sample_size)
@@ -109,13 +109,13 @@ for level, model in enumerate(models):
 estimates, variances = \
     mlmc_simulator.compute_estimators(model_outputs_per_level)
 
-#mlmc_total_cost = timeit.default_timer() - start_mlmc
+mlmc_total_cost = timeit.default_timer() - start_mlmc
 
 # # Step 8 - Summarize results:
 print
 print 'MLMC estimate: %s' % estimates[0]
 print 'MLMC precision: %s' % variances[0]
-# print 'MLMC total cost: %s' % mlmc_total_cost
+print 'MLMC total cost: %s' % mlmc_total_cost
 
 print
 print "MC # samples: %s" % num_samples
@@ -123,4 +123,4 @@ print "MC estimate: %s" % mean_mc
 print "MC precision: %s" % precision_mc
 print "MC total cost: %s" % mc_total_cost
 print
-# print "MLMC computational speedup: %s" %  (mc_total_cost / mlmc_total_cost)
+print "MLMC computational speedup: %s" %  (mc_total_cost / mlmc_total_cost)

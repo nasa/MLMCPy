@@ -12,7 +12,10 @@ displacement using multi-level Monte Carlo. Here, we use Model and RandomInput
 objects with functional forms as inputs to MLMCPy. See the
 /examples/spring_mass/from_data/ for an example of using precomputed data
 in files as inputs.
-p
+
+Demonstrates the modular ("advanced") usage of MLMCPy where a user splits the
+analysis into multiple steps within one script. For an implementation using
+steps across multiple scripts, see the files run_mlmc_spring_mass_step(1-3).py.
 '''
 
 
