@@ -791,7 +791,7 @@ def test_store_model_inputs_to_run_for_each_level_return(spring_mlmc_simulator):
         os.remove('level%s_inputs.txt' % i)
 
 
-def test_store_model_inputs_custom_file_names(spring_mlmc_simulator):
+def test_store_model_inputs_custom_file_names(spring_mlmc_simulator, temp_files):
     """
     Ensures that store_model_inputs_to_run_for_each_level() is properly storing
     the inputs to text files using custom file names and transitioning back to 
@@ -799,19 +799,16 @@ def test_store_model_inputs_custom_file_names(spring_mlmc_simulator):
     """
     sim = spring_mlmc_simulator
     sample_sizes = [3, 2, 1]
-    fnames = ['level0.txt', 'level1.txt', 'level2.txt']
+    fnames = temp_files
     sim.store_model_inputs_to_run_for_each_level(sample_sizes, fnames)
     
-    level0 = np.loadtxt('level0.txt')
-    level1 = np.loadtxt('level1.txt')
-    level2 = np.loadtxt('level2.txt')
+    level0 = np.loadtxt(temp_files[0])
+    level1 = np.loadtxt(temp_files[1])
+    level2 = np.loadtxt(temp_files[2])
 
     assert isinstance(level0, np.ndarray)
     assert isinstance(level1, np.ndarray)
     assert isinstance(level2, np.ndarray)
-
-    for i in range(len(sample_sizes)):
-        os.remove('level%s.txt' % i)
 
 
 def test_store_model_inputs_to_run_for_each_level_except(spring_mlmc_simulator):
@@ -909,14 +906,15 @@ def test_load_model_outputs_for_each_level_return_type(spring_mlmc_simulator):
         os.remove('level%s_outputs.txt' % i)
 
 
-def test_load_model_outputs_for_each_level_custom_fname(spring_mlmc_simulator):
+def test_load_model_outputs_for_each_level_custom_fname(spring_mlmc_simulator,
+                                                        temp_files):
     """
     Ensures that load_model_outputs_for_each_level() is correctly loading data 
     from files with custom file names.
     """
     sim = spring_mlmc_simulator
     sample_sizes = [3, 2, 1]
-    fnames = ['level0.txt', 'level1.txt', 'level2.txt']
+    fnames = temp_files
     sim.store_model_inputs_to_run_for_each_level(sample_sizes, fnames)
 
     model_outputs = sim.load_model_outputs_for_each_level(fnames)
@@ -925,9 +923,6 @@ def test_load_model_outputs_for_each_level_custom_fname(spring_mlmc_simulator):
     assert isinstance(model_outputs['level0'], np.ndarray)
     assert isinstance(model_outputs['level1'], np.ndarray)
     assert isinstance(model_outputs['level2'], np.ndarray)
-
-    for i in range(len(sample_sizes)):
-        os.remove('level%s.txt' % i)
 
 
 def test_load_model_outputs_for_each_level_exception():

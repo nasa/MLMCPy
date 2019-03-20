@@ -194,3 +194,11 @@ def dummy_arange_simulator(dummy_arange_random_input, spring_models):
                         random_input=dummy_arange_random_input)
     return sim
     
+@pytest.fixture
+def temp_files(tmpdir):
+    p = tmpdir.mkdir('sub')
+    path0 = str(p.join('level0_outputs.txt'))
+    path1 = str(p.join('level1_outputs.txt'))
+    path2 = str(p.join('level2_outputs.txt'))
+
+    return [path0, path1, path2]
