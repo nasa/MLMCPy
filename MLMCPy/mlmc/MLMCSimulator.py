@@ -26,7 +26,7 @@ class MLMCSimulator(object):
 
         self._check_init_parameters(random_input, models)
 
-        self._data = random_input
+        self._random_input = random_input
         self._models = models
         self._num_levels = len(self._models)
 
@@ -192,9 +192,9 @@ class MLMCSimulator(object):
         :rtype: dict
         """
         self._check_get_model_inputs_to_run_for_each_level_params(sample_sizes)
-        self._data.reset_sampling()
+        self._random_input.reset_sampling()
 
-        inputs = self._data.draw_samples(np.sum(sample_sizes))
+        inputs = self._random_input.draw_samples(np.sum(sample_sizes))
 
         inputs_dict = {}
         index_sum = 0
@@ -567,7 +567,7 @@ class MLMCSimulator(object):
         """
         # Sampling needs to be restarted from beginning due to sampling
         # having been performed in setup phase.
-        self._data.reset_sampling()
+        self._random_input.reset_sampling()
 
         start_time = timeit.default_timer()
         estimates, variances = self._run_simulation_loop()
@@ -708,7 +708,7 @@ class MLMCSimulator(object):
         Runs first model on a small test sample to determine
         shapes of input and output.
         """
-        self._data.reset_sampling()
+        self._random_input.reset_sampling()
         test_sample = self._draw_samples(self._num_cpus)
 
         if test_sample.shape[0] == 0:
@@ -718,7 +718,7 @@ class MLMCSimulator(object):
             raise ValueError(message)
 
         test_sample = test_sample[0]
-        self._data.reset_sampling()
+        self._random_input.reset_sampling()
 
         test_output = self._models[0].evaluate(test_sample)
 
@@ -795,7 +795,7 @@ class MLMCSimulator(object):
         :param num_samples: Total number of samples to draw over all CPUs.
         :return: ndarray of samples sliced according to number of CPUs.
         """
-        samples = self._data.draw_samples(num_samples)
+        samples = self._random_input.draw_samples(num_samples)
         if self._num_cpus == 1:
             return samples
 
