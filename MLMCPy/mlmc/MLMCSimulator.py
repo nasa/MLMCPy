@@ -326,17 +326,19 @@ class MLMCSimulator(object):
         list.
         """
         sizes = []
-        temp_size = 0
+        updated_size = 0
 
         output_list = list(value for value in model_outputs.values())
 
         for i in reversed(range(len(output_list))):
-            if i == len(output_list) - 1:
-                temp_size = len(output_list[i])
-            else:
-                temp_size = len(output_list[i]) - temp_size
+            sample_size = len(output_list[i])
 
-            sizes.append(temp_size)
+            if i == len(output_list) - 1:
+                updated_size = sample_size
+            else:
+                updated_size = sample_size - updated_size
+
+            sizes.append(updated_size)
 
         sizes = sizes[::-1]
 
