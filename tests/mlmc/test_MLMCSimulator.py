@@ -457,7 +457,7 @@ def test_output_caching(data_input, models_from_data, cache_size):
 
     # Collect same data with caching disabled.
     sim._caching_enabled = False
-    sim._data.reset_sampling()
+    sim._random_input.reset_sampling()
 
     for level in range(num_levels):
         num_samples = sim._sample_sizes[level]
