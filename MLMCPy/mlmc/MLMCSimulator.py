@@ -114,6 +114,7 @@ class MLMCSimulator(object):
 
         if user_sample_size is not None:
             user_samples = self._verify_sample_sizes(user_sample_size)
+            self._determine_input_output_size()
             self._initialize_cache(user_samples)
         else:
             self._initialize_cache()
