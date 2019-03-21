@@ -24,7 +24,7 @@ model_level0 = SpringMassModel(mass=1.5, time_step=1.0, cost=0.00034791)
 model_level1 = SpringMassModel(mass=1.5, time_step=0.1, cost=0.00073748)
 model_level2 = SpringMassModel(mass=1.5, time_step=0.01, cost=0.00086135)
 
-#Generate outputs for model on level 0:
+# Generate outputs for model on level 0:
 samples_level0 = np.genfromtxt("level0_inputs.txt")
 outputs_level0 = []
 
@@ -33,7 +33,7 @@ for inputsample in samples_level0:
 
 np.savetxt("level0_outputs.txt", np.array(outputs_level0))
 
-#Generate outputs for model on level 1:
+# Generate outputs for model on level 1:
 samples_level1 = np.genfromtxt("level1_inputs.txt")
 outputs_level1 = []
 
@@ -42,7 +42,7 @@ for inputsample in samples_level1:
 
 np.savetxt("level1_outputs.txt", np.array(outputs_level1))
 
-#Generate outputs for model on level 2:
+# Generate outputs for model on level 2:
 samples_level2 = np.genfromtxt("level2_inputs.txt")
 outputs_level2 = []
 

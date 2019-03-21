@@ -90,7 +90,7 @@ print 'Optimal sample sizes: ', np.array2string(sample_sizes)
 # Use get_model_inputs_to_run_for_each_level() to get the inputs that will be
 # evaluated on each level:
 model_inputs_per_level = \
-        mlmc_simulator.get_model_inputs_to_run_for_each_level(sample_sizes)
+    mlmc_simulator.get_model_inputs_to_run_for_each_level(sample_sizes)
 
 # Run the model on each level for inputs - it must retain the 'levelx' format:
 model_outputs_per_level = {}
@@ -102,7 +102,7 @@ for level, model in enumerate(models):
     outputs = []
     for i, inputsample in enumerate(inputsamples):
         outputs.append(model.evaluate(inputsample))
-    
+
     model_outputs_per_level[levelkey] = np.array(outputs)
 
 # Step 7 - Aggregate model outputs to compute estimators:
