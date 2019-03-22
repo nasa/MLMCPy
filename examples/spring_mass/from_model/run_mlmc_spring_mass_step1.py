@@ -40,8 +40,8 @@ models = [model_level1, model_level2, model_level3]
 # Step 3 - Initialize MLMCSimulator:
 mlmc_simulator = MLMCSimulator(stiffness_distribution, models)
 
-#Step 4 - Calculate optimal sample size for each level:
-#Optional - compute cost and variances of model (or user knows these beforehand)
+# Step 4 - Calculate optimal sample size for each level:
+# Optional - compute cost and variances of model (or user knows these beforehand)
 initial_sample_size = 100
 epsilon = np.sqrt(0.00170890122096)
 
@@ -52,4 +52,5 @@ costs, variances = \
 sample_sizes = mlmc_simulator.compute_optimal_sample_sizes(costs, variances,
                                                            epsilon)
 
+# Step 5 - Store inputs to be used in model evaluation step:
 mlmc_simulator.store_model_inputs_to_run_for_each_level(sample_sizes)
