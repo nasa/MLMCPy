@@ -309,6 +309,9 @@ class MLMCSimulator(object):
         true_sizes = MLMCSimulator._compute_output_sample_sizes(model_outputs)
 
         for i, level in enumerate(model_outputs):
+            if len(model_outputs[level]) == 0:
+                break
+
             output_diffs = \
                 model_outputs[level][:true_sizes[i]]
 
