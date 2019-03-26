@@ -2,6 +2,7 @@ import imp
 from datetime import timedelta
 import timeit
 import numpy as np
+import matplotlib.pyplot as plt
 
 from MLMCPy.input import Input
 from MLMCPy.model import Model
@@ -271,7 +272,7 @@ class MLMCSimulator(object):
         return outputs_dict
 
     @staticmethod
-    def compute_estimators(model_outputs):
+    def compute_estimators(model_outputs, diffs_to_file=False):
         """
         Uses the differences per level to compute the estimates and variances.
 
@@ -282,7 +283,8 @@ class MLMCSimulator(object):
         MLMCSimulator._check_compute_estimators_parameter(model_outputs)
 
         differences_per_level = \
-            MLMCSimulator._compute_differences_per_level(model_outputs)
+            MLMCSimulator._compute_differences_per_level(model_outputs,
+                                                         diffs_to_file)
 
         estimates = 0
         variances = 0
@@ -299,7 +301,7 @@ class MLMCSimulator(object):
         return estimates, variances
 
     @staticmethod
-    def _compute_differences_per_level(model_outputs):
+    def _compute_differences_per_level(model_outputs, write_to_file=False):
         """
         Uses model outputs to compute the differences per level, returns a list
         of arrays.
@@ -320,6 +322,9 @@ class MLMCSimulator(object):
                         model_outputs['level'+str(i-1)][true_sizes[i-1]:]
 
             output_diffs_per_level.append(output_diffs)
+
+        if write_to_file:
+            MLMCSimulator._write_output_diffs_to_file(output_diffs_per_level)
 
         return output_diffs_per_level
 
@@ -347,6 +352,39 @@ class MLMCSimulator(object):
         sizes = sizes[::-1]
 
         return sizes
+
+    @staticmethod
+    def _write_output_diffs_to_file(output_diffs, filenames=None):
+        """
+        Takes the output differences per level computed by
+        _compute_differences_per_level() and writes to each level to a file.
+        """
+        if isinstance(filenames, list):
+            for i in range(len(output_diffs)):
+                np.savetxt('%s' % filenames[i], np.asarray(output_diffs[i]))
+        else:
+            for i in range(len(output_diffs)):
+                np.savetxt('level%s_output_diffs.txt' % i, output_diffs[i])
+
+    @staticmethod
+    def plot_output_diffs(x, y, diffs_files, cmap='coolwarm', levels=7):
+        X, Y = np.meshgrid(x, y)
+        Z = []
+        
+        for filename in diffs_files:
+            Z.append(np.genfromtxt(filename).reshape(-1, len(x), order='F'))
+
+        num_plots = len(Z)
+        plt.figure()
+        
+        for i in range(num_plots):
+            if num_plots > 1:
+                plt.subplot(num_plots, 1, i+1)
+
+            plt.contourf(X, Y, Z[i], levels, cmap=cmap)
+            plt.colorbar()
+
+        plt.show()
 
     def _setup_simulation(self, epsilon, initial_sample_sizes, sample_sizes):
         """

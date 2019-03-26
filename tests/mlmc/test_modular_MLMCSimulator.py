@@ -932,3 +932,90 @@ def test_load_model_outputs_for_each_level_exception():
     with pytest.raises(TypeError):
         MLMCSimulator.load_model_outputs_for_each_level('Not an Integer.')
 
+
+def test_write_output_diffs_to_file():
+    """
+    Ensures that write_output_diffs_to_file() is properly writing to file.    
+    """
+    output_diffs_list = [np.arange(5)]
+
+    MLMCSimulator._write_output_diffs_to_file(output_diffs_list)
+
+    output_diffs = np.genfromtxt('level0_output_diffs.txt')
+    
+    assert np.array_equal(output_diffs, np.arange(5))
+
+    os.remove('level0_output_diffs.txt')
+
+
+def test_write_output_diffs_to_multiple_files():
+    """
+    Ensures that write_output_diffs_to_file() is properly writing to file.    
+    """
+    output_diffs = [np.arange(5), np.arange(10), np.arange(20)]
+
+    MLMCSimulator._write_output_diffs_to_file(output_diffs)
+
+    output_diffs1 = np.genfromtxt('level0_output_diffs.txt')
+    output_diffs2 = np.genfromtxt('level1_output_diffs.txt')
+    output_diffs3 = np.genfromtxt('level2_output_diffs.txt')
+    
+    assert np.array_equal(output_diffs1, np.arange(5))
+    assert np.array_equal(output_diffs2, np.arange(10))
+    assert np.array_equal(output_diffs3, np.arange(20))
+
+    for i in range(5):
+        os.remove('level%s_output_diffs.txt' % i)
+
+
+def test_write_output_diffs_to_custom_file(tmpdir):
+    """
+    Ensures that write_output_diffs_to_file() is properly writing to file.    
+    """
+    p = tmpdir.mkdir('sub')
+    file_path = str(p.join('output_diffsx.txt'))
+
+    output_diffs_list = [np.arange(5)]
+
+    MLMCSimulator._write_output_diffs_to_file(output_diffs_list,
+                                              [file_path])
+
+    output_diffs = np.genfromtxt(file_path)
+    
+    assert np.array_equal(output_diffs, np.arange(5))
+    
+
+def test_plot_output_diffs(tmpdir):
+    p = tmpdir.mkdir('sub')
+    file_path = p.join('output_diffs.txt')
+    np.savetxt(str(file_path), np.linspace(-3, 3, 25))
+
+    x = np.linspace(-3, 3, 5)
+    y = x.copy()
+
+    MLMCSimulator.plot_output_diffs(x, y, [str(file_path)])
+
+    assert file_path.exists()
+
+
+def test_plot_output_diffs_multiple_files(tmpdir):    
+    p = tmpdir.mkdir('sub')
+    file_paths = \
+        [p.join('output_diffs_1.txt'),
+         p.join('output_diffs_2.txt'),
+         p.join('output_diffs_3.txt')]
+
+    np.savetxt(str(file_paths[0]), np.linspace(-5, 5, 25))
+    np.savetxt(str(file_paths[1]), np.linspace(-4, 4, 25))
+    np.savetxt(str(file_paths[2]), np.linspace(-3, 3, 25))
+
+    x = np.linspace(-5, 5, 5)
+    y = x.copy()
+
+    MLMCSimulator.plot_output_diffs(x, y, map(str, file_paths))
+
+    assert file_paths[0].exists()
+    assert file_paths[1].exists()
+    assert file_paths[2].exists()
+
+    
