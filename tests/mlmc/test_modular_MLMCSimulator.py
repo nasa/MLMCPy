@@ -67,25 +67,25 @@ def test_modular_costs_and_initial_variances_from_data(data_input,
     assert np.all(np.isclose(true_variances, variances, rtol=.1))
 
 
-def test_modular_compute_optimal_sample_sizes_models(spring_mlmc_simulator):
+def test_modular_compute_optimal_sample_sizes_models(dummy_arange_simulator):
     """
     Tests optimal sample sizes computed by simulator's modular
     compute_optimal_sample_sizes() against expected values based on a
     beta distribution.
     """
-    sim = spring_mlmc_simulator
+    sim = dummy_arange_simulator
 
     np.random.seed(1)
 
-    initial_sample_sizes = np.array([100,100,100])
-    costs, variances = sim.compute_costs_and_variances(initial_sample_sizes)
-    epsilon = np.sqrt(0.00170890122096)
+    costs = np.array([1, 10, 100])
+    variances = np.array([[150], [120], [100]])
+    epsilon = 1.0
 
     optimal_sample_sizes = sim.compute_optimal_sample_sizes(costs,
                                                             variances,
                                                             epsilon)
 
-    true_optimal_sizes = np.array([6506, 200, 0])
+    true_optimal_sizes = np.array([1799, 508, 146])
 
     assert np.all(np.array_equal(true_optimal_sizes, optimal_sample_sizes))
 
@@ -964,7 +964,7 @@ def test_write_output_diffs_to_multiple_files():
     assert np.array_equal(output_diffs2, np.arange(10))
     assert np.array_equal(output_diffs3, np.arange(20))
 
-    for i in range(5):
+    for i in range(3):
         os.remove('level%s_output_diffs.txt' % i)
 
 
