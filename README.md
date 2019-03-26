@@ -40,7 +40,6 @@ import SpringMassModel
 
 # Step 1 - Define random variable for spring stiffness:
 # Need to provide a sampleable function to create RandomInput instance in MLMCPy
-
 def beta_distribution(shift, scale, alpha, beta, size):
     return shift + scale*np.random.beta(alpha, beta, size)
 
@@ -49,14 +48,12 @@ stiffness_distribution = RandomInput(distribution_function=beta_distribution,
 
 # Step 2 - Initialize spring-mass models. Here using three levels with MLMC.
 # defined by different time steps
-
 model_level1 = SpringMassModel(mass=1.5, time_step=1.0)
 model_level2 = SpringMassModel(mass=1.5, time_step=0.1)
 model_level3 = SpringMassModel(mass=1.5, time_step=0.01)
 models = [model_level1, model_level2, model_level3]
 
 # Step 3 - Initialize MLMC & predict max displacement to specified error (0.1).
-
 mlmc_simulator = MLMCSimulator(stiffness_distribution, models)
 [estimates, sample_sizes, variances] = mlmc_simulator.simulate(epsilon=1e-1)
 
@@ -64,7 +61,7 @@ mlmc_simulator = MLMCSimulator(stiffness_distribution, models)
 
 Getting Started
 ----------------
-The best way to get started with MLMCPy is to take a look at the scripts in the examples/ directory. A simple example of propagating uncertainty through a spring mass system can be found in the examples/spring_mass/from_model directory. There is a second example that demonstrates the case where a user has access to input-output data from multiple levels of models (rather than a model they can directly evaluate) in the examples/spring_mass/from_data/ directory. For more information, see the source code documentation in docs/MLMCPy_documentation.pdf (a work in progress).
+The best way to get started with MLMCPy is to take a look at the scripts in the examples/ directory. A simple example of propagating uncertainty through a spring mass system can be found in the ``examples/spring_mass/from_model`` directory. There is a second example that demonstrates the case where a user has access to input-output data from multiple levels of models (rather than a model they can directly evaluate) in the ``examples/spring_mass/from_data/`` directory. For more information, see the source code documentation in ``docs/MLMCPy_documentation.pdf`` (a work in progress).
 
 Tests
 ------
