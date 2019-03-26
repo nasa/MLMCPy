@@ -989,7 +989,7 @@ def test_write_output_diffs_to_custom_file(tmpdir):
 def test_plot_output_diffs(tmpdir):
     p = tmpdir.mkdir('sub')
     file_path = p.join('output_diffs.txt')
-    np.savetxt(str(file_path), np.linspace(-3, 3, 25))
+    np.savetxt(str(file_path), np.linspace(-3, 3, 50).reshape(2, -1))
 
     x = np.linspace(-3, 3, 5)
     y = x.copy()
@@ -1007,9 +1007,9 @@ def test_plot_output_diffs_multiple_files(tmpdir):
          p.join('output_diffs_2.txt'),
          p.join('output_diffs_3.txt')]
 
-    np.savetxt(str(file_paths[0]), np.linspace(-5, 5, 25))
-    np.savetxt(str(file_paths[1]), np.linspace(-4, 4, 25))
-    np.savetxt(str(file_paths[2]), np.linspace(-3, 3, 25))
+    np.savetxt(str(file_paths[0]), np.linspace(-5, 5, 50).reshape(2, -1))
+    np.savetxt(str(file_paths[1]), np.linspace(-4, 4, 50).reshape(2, -1))
+    np.savetxt(str(file_paths[2]), np.linspace(-3, 3, 50).reshape(2, -1))
 
     x = np.linspace(-5, 5, 5)
     y = x.copy()

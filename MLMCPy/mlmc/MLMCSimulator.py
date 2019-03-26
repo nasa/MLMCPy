@@ -288,7 +288,6 @@ class MLMCSimulator(object):
 
         estimates = 0
         variances = 0
-        num_samples = 0
 
         for level in range(len(differences_per_level)):
             num_samples = float(len(differences_per_level[level]))
@@ -367,12 +366,9 @@ class MLMCSimulator(object):
                 np.savetxt('level%s_output_diffs.txt' % i, output_diffs[i])
 
     @staticmethod
-    def plot_output_diffs(x, y, diffs_files, cmap='coolwarm', levels=7):
+    def plot_output_diffs(x, y, diffs_files, cmap='coolwarm', levels=6):
         X, Y = np.meshgrid(x, y)
-        Z = []
-        
-        for filename in diffs_files:
-            Z.append(np.genfromtxt(filename).reshape(-1, len(x), order='F'))
+        Z = MLMCSimulator._output_diffs_averages(diffs_files)
 
         num_plots = len(Z)
         plt.figure()
@@ -381,8 +377,28 @@ class MLMCSimulator(object):
             if num_plots > 1:
                 plt.subplot(num_plots, 1, i+1)
 
-            plt.contourf(X, Y, Z[i], levels, cmap=cmap)
+            plt.contourf(X, Y, Z[i].reshape(-1, len(x), order='F'), levels, cmap=cmap)
             plt.colorbar()
+
+    @staticmethod
+    def _output_diffs_averages(diffs_files):
+        """
+        Used by plot_output_diffs() to compute the averages of the output
+        differences per level. Then returns a list of numpy arrays.
+        """
+        output_avgs = []
+
+        for filename in diffs_files:
+            data = np.genfromtxt(filename)
+            if data.ndim == 1:
+                data = data.reshape(1, -1)
+
+            num_samples = float(len(data))
+            sums = np.sum(data, axis=0) / num_samples
+
+            output_avgs.append(sums)
+        
+        return output_avgs
 
     def _setup_simulation(self, epsilon, initial_sample_sizes, sample_sizes):
         """
