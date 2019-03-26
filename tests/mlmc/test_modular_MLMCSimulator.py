@@ -2,6 +2,7 @@ import os
 import pytest
 import sys
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Needed when running mpiexec. Be sure to run from tests directory.
 if 'PYTHONPATH' not in os.environ:
@@ -994,6 +995,7 @@ def test_plot_output_diffs(tmpdir):
     y = x.copy()
 
     MLMCSimulator.plot_output_diffs(x, y, [str(file_path)])
+    plt.show()
 
     assert file_path.exists()
 
@@ -1013,6 +1015,7 @@ def test_plot_output_diffs_multiple_files(tmpdir):
     y = x.copy()
 
     MLMCSimulator.plot_output_diffs(x, y, map(str, file_paths))
+    plt.show()
 
     assert file_paths[0].exists()
     assert file_paths[1].exists()

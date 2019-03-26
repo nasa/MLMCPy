@@ -384,8 +384,6 @@ class MLMCSimulator(object):
             plt.contourf(X, Y, Z[i], levels, cmap=cmap)
             plt.colorbar()
 
-        plt.show()
-
     def _setup_simulation(self, epsilon, initial_sample_sizes, sample_sizes):
         """
         Performs any necessary manipulation of epsilon and initial_sample_sizes.
