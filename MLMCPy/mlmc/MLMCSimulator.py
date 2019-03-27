@@ -366,20 +366,31 @@ class MLMCSimulator(object):
                 np.savetxt('level%s_output_diffs.txt' % i, output_diffs[i])
 
     @staticmethod
-    def plot_output_diffs(x, y, diffs_files, cmap='coolwarm', levels=6):
+    def plot_output_diffs(x, y, diffs_files, cmap='coolwarm', levels=6,
+                          crack_data=None):
         X, Y = np.meshgrid(x, y)
         Z = MLMCSimulator._output_diffs_averages(diffs_files)
 
         num_plots = len(Z)
-        plt.figure()
         
         for i in range(num_plots):
+            # Decide on using separate figures or one subplot (TODO)
             if num_plots > 1:
                 plt.subplot(num_plots, 1, i+1)
+            
+            if crack_data is not None:
+                MLMCSimulator._plot_crack(crack_data)
 
-            plt.contourf(X, Y, Z[i].reshape(-1, len(x), order='F'), levels, cmap=cmap)
+            plt.contourf(X, Y, Z[i].reshape(-1, len(x), order='F'), levels,
+                         cmap=cmap)
+            plt.title('Level%s' % i)
+            
             plt.colorbar()
 
+    @staticmethod
+    def _plot_crack(crack_data):
+        plt.plot(crack_data[0], crack_data[1], crack_data[2])
+    
     @staticmethod
     def _output_diffs_averages(diffs_files):
         """

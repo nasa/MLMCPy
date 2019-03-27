@@ -1021,4 +1021,36 @@ def test_plot_output_diffs_multiple_files(tmpdir):
     assert file_paths[1].exists()
     assert file_paths[2].exists()
 
+
+def test_plot_crack():
+    crack_data = [np.linspace(-2,2,2),[0,0], 'black']
+    
+    MLMCSimulator._plot_crack(crack_data)
+    plt.show()
+
+    assert np.array_equal(crack_data[0], np.linspace(-2,2,2))
+
+
+def test_plot_output_diffs_and_crack(tmpdir):    
+    p = tmpdir.mkdir('sub')
+    file_paths = \
+        [p.join('output_diffs_1.txt'),
+         p.join('output_diffs_2.txt'),
+         p.join('output_diffs_3.txt')]
+
+    np.savetxt(str(file_paths[0]), np.linspace(-5, 5, 50).reshape(2, -1))
+    np.savetxt(str(file_paths[1]), np.linspace(-4, 4, 50).reshape(2, -1))
+    np.savetxt(str(file_paths[2]), np.linspace(-3, 3, 50).reshape(2, -1))
+
+    x = np.linspace(-5, 5, 5)
+    y = x.copy()
+    crack_data = [np.linspace(-2,2,2),[0,0], 'black']
+    MLMCSimulator.plot_output_diffs(x, y, map(str, file_paths),
+                                    crack_data=crack_data)
+    plt.show()
+
+    assert file_paths[0].exists()
+    assert file_paths[1].exists()
+    assert file_paths[2].exists()
+    
     
