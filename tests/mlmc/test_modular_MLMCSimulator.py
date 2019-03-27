@@ -91,7 +91,7 @@ def test_modular_compute_optimal_sample_sizes_models(dummy_arange_simulator):
     assert np.all(np.array_equal(true_optimal_sizes, optimal_sample_sizes))
 
 
-def test_compute_output_sample_sizes(spring_mlmc_simulator):
+def test_compute_output_sample_sizes():
     """
     Ensures that _compute_output_sample_sizes() is returning the appropriate
     sample sizes per level.
@@ -114,24 +114,24 @@ def test_compute_output_sample_sizes(spring_mlmc_simulator):
     assert sizes[5] == 10
 
 
-def test_compute_differences_per_level_array_return_type(spring_mlmc_simulator):
+def test_compute_differences_per_level_array_return_type():
     """
     Ensures that _compute_differences_per_level() is returning the correct
     2D numpy array.
     """
-    sim = spring_mlmc_simulator
-    sample_sizes = [3, 2, 1]
-    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
+    outputs = {'level0':np.array([1,2,3,4,5]),
+               'level1':np.array([6,7,8]),
+               'level2':np.array([9])}
 
     test_model_outputs = \
-        sim._compute_differences_per_level(inputs)
+        MLMCSimulator._compute_differences_per_level(outputs)
 
-    assert test_model_outputs[0][:3].shape == (3,1)
-    assert test_model_outputs[1][:2].shape == (2,1)
-    assert test_model_outputs[2][:1].shape == (1,1)
+    assert test_model_outputs[0][:3].shape == (3,)
+    assert test_model_outputs[1][:2].shape == (2,)
+    assert test_model_outputs[2][:1].shape == (1,)
 
 
-def test_compute_differences_per_level_simple_1D(spring_mlmc_simulator):
+def test_compute_differences_per_level_simple_1D():
     """
     Ensures that _compute_differences_per_level() is returning correct values
     using simple arrays.
@@ -183,7 +183,7 @@ def test_compute_differences_per_level_simple_3D():
     assert np.array_equal(subtracted_level2, test_model_outputs[2])
 
 
-def test_compute_differences_per_level_simple_4D(spring_mlmc_simulator):
+def test_compute_differences_per_level_simple_4D():
     """
     Ensures that _compute_differences_per_level() is returning correct values
     using simple arrays.
@@ -206,7 +206,7 @@ def test_compute_differences_per_level_simple_4D(spring_mlmc_simulator):
     assert np.array_equal(subtracted_level3, test_model_outputs[3])
 
 
-def test_compute_differences_per_level_simple_5D(spring_mlmc_simulator):
+def test_compute_differences_per_level_simple_5D():
     """
     Ensures that _compute_differences_per_level() is returning correct values
     using simple arrays.
@@ -325,61 +325,52 @@ def test_compute_differences_write_to_file(tmpdir):
     assert np.array_equal(test_output_diffs3, true_level2)
 
 
-def test_modular_compute_estimators_simple_1D(spring_mlmc_simulator):
+def test_modular_compute_estimators_simple_1D():
     """
     Ensures that compute_estimators() is returning accurate values.
     """
     outputs = {'level0':np.array([1,2,3])
-            }
-
-    sim = spring_mlmc_simulator
-    
+            }    
 
     estimates, variances = \
-        sim.compute_estimators(outputs)
+        MLMCSimulator.compute_estimators(outputs)
 
     assert np.isclose(estimates, 2)
     assert np.isclose(variances, 0.222222222222)
 
 
-def test_modular_compute_estimators_simple_2D(spring_mlmc_simulator):
+def test_modular_compute_estimators_simple_2D():
     """
     Ensures that compute_estimators() is returning accurate values.
     """
     outputs = {'level0':np.array([1,2,3]),
                'level1':np.array([4])
-            }
-
-    sim = spring_mlmc_simulator
-    
+            }    
 
     estimates, variances = \
-        sim.compute_estimators(outputs)
+        MLMCSimulator.compute_estimators(outputs)
 
     assert np.isclose(estimates, 2.5)
     assert np.isclose(variances, 0.125)
 
 
-def test_modular_compute_estimators_simple_3D(spring_mlmc_simulator):
+def test_modular_compute_estimators_simple_3D():
     """
     Ensures that compute_estimators() is returning accurate values.
     """
     outputs = {'level0':np.array([1,2,3,4,5]),
                'level1':np.array([6,7,8]),
                'level2':np.array([9])
-            }
-
-    sim = spring_mlmc_simulator
-    
+            }    
 
     estimates, variances = \
-        sim.compute_estimators(outputs)
+        MLMCSimulator.compute_estimators(outputs)
 
     assert np.isclose(estimates, 5.0)
     assert np.isclose(variances, 0.222222222222)
 
 
-def test_modular_compute_estimators_simple_4D(spring_mlmc_simulator):
+def test_modular_compute_estimators_simple_4D():
     """
     Ensures that compute_estimators() is returning accurate values.
     """
@@ -387,19 +378,16 @@ def test_modular_compute_estimators_simple_4D(spring_mlmc_simulator):
                'level1':np.array([8,9,10,11,12]),
                'level2':np.array([13,14,15]),
                'level3':np.array([16])
-            }
-
-    sim = spring_mlmc_simulator
-    
+            }    
 
     estimates, variances = \
-        sim.compute_estimators(outputs)
+        MLMCSimulator.compute_estimators(outputs)
 
     assert np.isclose(estimates, 8.5)
     assert np.isclose(variances, 0.3125)
 
 
-def test_modular_compute_estimators_simple_5D(spring_mlmc_simulator):
+def test_modular_compute_estimators_simple_5D():
     """
     Ensures that compute_estimators() is returning accurate values.
     """
@@ -408,13 +396,10 @@ def test_modular_compute_estimators_simple_5D(spring_mlmc_simulator):
                'level2':np.array([17,18,19,20,21]),
                'level3':np.array([22,23,24]),
                'level4':np.array([25])
-            }
-
-    sim = spring_mlmc_simulator
-    
+            }    
 
     estimates, variances = \
-        sim.compute_estimators(outputs)
+        MLMCSimulator.compute_estimators(outputs)
 
     assert np.isclose(estimates, 13.0)
     assert np.isclose(variances, 0.4)
@@ -510,26 +495,25 @@ def test_modular_compute_estimators_return_type(spring_mlmc_simulator):
     assert isinstance(estimates, np.ndarray)
 
 
-def test_modular_compute_estimators_exception(spring_mlmc_simulator):
+def test_modular_compute_estimators_exception():
     """
     Ensures the outputs parameter is of type np.ndarray.
     """                                          
-    sim = spring_mlmc_simulator
     test_dict = {'level0': 10, 'level1': 100.5}
     with pytest.raises(TypeError):
-        sim.compute_estimators([3, 2, 1])
+        MLMCSimulator.compute_estimators([3, 2, 1])
     
     with pytest.raises(TypeError):
-        sim.compute_estimators(test_dict)
+        MLMCSimulator.compute_estimators(test_dict)
 
 
-def test_get_model_inputs_for_each_level_return_type(spring_mlmc_simulator):  
+def test_get_model_inputs_for_each_level_return_type(dummy_arange_simulator):  
     """
     Ensures that the return type is a dictionary of numpy arrays with the 
     correct sample sizes.
     """  
     sample_sizes = [3, 2, 1]
-    sim = spring_mlmc_simulator
+    sim = dummy_arange_simulator
 
     inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
 
@@ -542,12 +526,12 @@ def test_get_model_inputs_for_each_level_return_type(spring_mlmc_simulator):
     assert len(inputs['level2']) == 1
 
 
-def test_get_model_inputs_for_each_level_equal_array(spring_mlmc_simulator):
+def test_get_model_inputs_for_each_level_equal_array(dummy_arange_simulator):
     """
     Ensures that each array has the correct values from the array that follows.
     """
     sample_sizes = [10, 6, 3, 1]
-    sim = spring_mlmc_simulator
+    sim = dummy_arange_simulator
 
     inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
 
@@ -556,66 +540,67 @@ def test_get_model_inputs_for_each_level_equal_array(spring_mlmc_simulator):
     assert np.array_equal(inputs['level2'][3:], inputs['level3'])
 
 
-def test_get_model_inputs_one_sample_expected_output(spring_mlmc_simulator):
+def test_get_model_inputs_one_sample_expected_output(dummy_arange_simulator):
     """
-    Ensures that the get_model_inputs_to_run_for_each_level() can proceed with
-    one sample provided.
+    Ensures get_model_inputs_to_run_for_each_level() is returning the correct
+    values using simple arrays.
     """
     np.random.seed(1)
     
     sample_sizes = [1]
-    sim = spring_mlmc_simulator
+    sim = dummy_arange_simulator
 
     inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
     assert len(inputs['level0']) == 1
-    assert np.isclose(inputs['level0'][0], 3.15880039)
+    assert np.isclose(inputs['level0'][0], 0)
 
 
-def test_get_model_inputs_two_samples_expected_output(spring_mlmc_simulator):
+def test_get_model_inputs_two_samples_expected_output(dummy_arange_simulator):
     """
-    Ensures that the get_model_inputs_to_run_for_each_level() can proceed with
-    two samples provided.
+    Ensures get_model_inputs_to_run_for_each_level() is returning the correct
+    values using simple arrays.
     """
     np.random.seed(1)
     
     sample_sizes = [3, 1]
-    sim = spring_mlmc_simulator
+    sim = dummy_arange_simulator
 
     inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
     assert len(inputs['level0']) == 4
     assert len(inputs['level1']) == 1
-    assert np.isclose(inputs['level0'][0], 3.15880039)
-    assert np.isclose(inputs['level1'][0], 3.42888628)
+    assert np.array_equal(inputs['level0'].ravel(), np.arange(4))
+    assert np.array_equal(inputs['level1'].ravel(), np.arange(3,4))
 
 
-def test_get_model_inputs_three_samples_expected_output(spring_mlmc_simulator):
+def test_get_model_inputs_three_samples_expected_output(dummy_arange_simulator):
     """
-    Ensures that the get_model_inputs_to_run_for_each_level() can proceed with
-    three samples provided.
+    Ensures get_model_inputs_to_run_for_each_level() is returning the correct
+    values using simple arrays.
     """
     np.random.seed(1)
     
     sample_sizes = [3, 2, 1]
-    sim = spring_mlmc_simulator
+    sim = dummy_arange_simulator
 
     inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
     assert len(inputs['level0']) == 5
     assert len(inputs['level1']) == 3
     assert len(inputs['level2']) == 1
-    assert np.isclose(inputs['level0'][0], 3.15880039)
-    assert np.isclose(inputs['level1'][0], 3.42888628)
-    assert np.isclose(inputs['level2'][0], 2.89126945)
+    assert np.array_equal(inputs['level0'].ravel(), np.arange(5))
+    assert np.array_equal(inputs['level1'].ravel(), np.arange(3,6))
+    assert np.array_equal(inputs['level2'].ravel(), np.arange(5,6))
 
 
-def test_get_model_inputs_five_samples_expected_output(spring_mlmc_simulator):
+
+def test_get_model_inputs_five_samples_expected_output(dummy_arange_simulator):
     """
-    Ensures that the get_model_inputs_to_run_for_each_level() can proceed with
-    five samples provided.
+    Ensures get_model_inputs_to_run_for_each_level() is returning the correct
+    values using simple arrays.
     """
     np.random.seed(1)
     
     sample_sizes = [5, 4, 3, 2, 1]
-    sim = spring_mlmc_simulator
+    sim = dummy_arange_simulator
 
     inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
     assert len(inputs['level0']) == 9
@@ -623,42 +608,11 @@ def test_get_model_inputs_five_samples_expected_output(spring_mlmc_simulator):
     assert len(inputs['level2']) == 5
     assert len(inputs['level3']) == 3
     assert len(inputs['level4']) == 1
-    assert np.isclose(inputs['level0'][0], 3.15880039)
-    assert np.isclose(inputs['level1'][0], 2.89126945)
-    assert np.isclose(inputs['level2'][0], 2.70076945)
-    assert np.isclose(inputs['level3'][0], 2.84713918)
-    assert np.isclose(inputs['level4'][0], 2.79495595)
-
-
-def test_simple_get_model_inputs_1D(dummy_arange_simulator):
-    """
-    Ensures get_model_inputs_to_run_for_each_level() is returning the correct
-    values using a simple arrays.
-    """
-    sample_sizes = [24]
-    
-    sim = dummy_arange_simulator
-    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
-    
-    assert len(inputs.keys()) == 1
-    assert np.array_equal(inputs["level0"].flatten(), np.arange(24))
-
-
-def test_simple_get_model_inputs_4D(dummy_arange_simulator):
-    """
-    Ensures get_model_inputs_to_run_for_each_level() is returning the correct
-    values using a simple arrays.
-    """
-    sample_sizes = [5, 3, 3, 2]
-    
-    sim = dummy_arange_simulator
-    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
- 
-    assert len(inputs.keys()) == 4   
-    assert np.array_equal(inputs["level0"].flatten(), np.arange(8))
-    assert np.array_equal(inputs["level1"].flatten(), np.arange(5,11))
-    assert np.array_equal(inputs["level2"].flatten(), np.arange(8,13))
-    assert np.array_equal(inputs["level3"].flatten(), np.arange(11,13))
+    assert np.array_equal(inputs['level0'].ravel(), np.arange(9))
+    assert np.array_equal(inputs['level1'].ravel(), np.arange(5,12))
+    assert np.array_equal(inputs['level2'].ravel(), np.arange(9,14))
+    assert np.array_equal(inputs['level3'].ravel(), np.arange(12,15))
+    assert np.array_equal(inputs['level4'].ravel(), np.arange(14,15))
 
 
 def test_get_model_inputs_param_exceptions(spring_mlmc_simulator):
