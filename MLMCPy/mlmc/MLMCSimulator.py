@@ -310,9 +310,6 @@ class MLMCSimulator(object):
         true_sizes = MLMCSimulator._compute_output_sample_sizes(model_outputs)
 
         for i, level in enumerate(model_outputs):
-            if len(model_outputs[level]) == 0:
-                break
-
             output_diffs = \
                 model_outputs[level][:true_sizes[i]]
 
@@ -323,7 +320,8 @@ class MLMCSimulator(object):
             output_diffs_per_level.append(output_diffs)
 
         if write_to_file:
-            MLMCSimulator._write_output_diffs_to_file(output_diffs_per_level)
+            MLMCSimulator._write_output_diffs_to_file(output_diffs_per_level,
+                                                      write_to_file)
 
         return output_diffs_per_level
 

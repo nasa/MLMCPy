@@ -139,13 +139,13 @@ def test_compute_differences_per_level_simple_1D(spring_mlmc_simulator):
     outputs = {'level0':np.array([1])
                }
     
-    sim = spring_mlmc_simulator
-    test_model_outputs = sim._compute_differences_per_level(outputs)
+    test_model_outputs = \
+        MLMCSimulator._compute_differences_per_level(outputs)
 
     assert np.array_equal(test_model_outputs[0], outputs['level0'][:])
 
 
-def test_compute_differences_per_level_simple_2D(spring_mlmc_simulator):
+def test_compute_differences_per_level_simple_2D():
     """
     Ensures that _compute_differences_per_level() is returning correct values
     using simple arrays.
@@ -154,8 +154,8 @@ def test_compute_differences_per_level_simple_2D(spring_mlmc_simulator):
                'level1':np.array([3])
                }
     
-    sim = spring_mlmc_simulator
-    test_model_outputs = sim._compute_differences_per_level(outputs)
+    test_model_outputs = \
+        MLMCSimulator._compute_differences_per_level(outputs)
 
     subtracted_level1 = outputs['level1'][:] - outputs['level0'][1:]
 
@@ -163,7 +163,7 @@ def test_compute_differences_per_level_simple_2D(spring_mlmc_simulator):
     assert np.array_equal(subtracted_level1, test_model_outputs[1])
 
 
-def test_compute_differences_per_level_simple_3D(spring_mlmc_simulator):
+def test_compute_differences_per_level_simple_3D():
     """
     Ensures that _compute_differences_per_level() is returning correct values
     using simple arrays.
@@ -172,8 +172,8 @@ def test_compute_differences_per_level_simple_3D(spring_mlmc_simulator):
                'level1':np.array([6,7,8]),
                'level2':np.array([9])}
     
-    sim = spring_mlmc_simulator
-    test_model_outputs = sim._compute_differences_per_level(outputs)
+    test_model_outputs = \
+        MLMCSimulator._compute_differences_per_level(outputs)
 
     subtracted_level1 = outputs['level1'][:2] - outputs['level0'][3:]
     subtracted_level2 = outputs['level2'] - outputs['level1'][2:]
@@ -192,11 +192,9 @@ def test_compute_differences_per_level_simple_4D(spring_mlmc_simulator):
                'level1':np.array([8,9,10,11,12]),
                'level2':np.array([13,14,15]),
                'level3':np.array([16])}
-    
-    sim = spring_mlmc_simulator
 
     test_model_outputs = \
-        sim._compute_differences_per_level(outputs)
+        MLMCSimulator._compute_differences_per_level(outputs)
 
     subtracted_level1 = outputs['level1'][:3] - outputs['level0'][4:]
     subtracted_level2 = outputs['level2'][:2] - outputs['level1'][3:]
@@ -220,10 +218,8 @@ def test_compute_differences_per_level_simple_5D(spring_mlmc_simulator):
                'level4':np.array([25])
                }
     
-    sim = spring_mlmc_simulator
-
     test_model_outputs = \
-        sim._compute_differences_per_level(outputs)
+        MLMCSimulator._compute_differences_per_level(outputs)
 
     subtracted_level1 = outputs['level1'][:4] - outputs['level0'][5:]
     subtracted_level2 = outputs['level2'][:3] - outputs['level1'][4:]
@@ -298,6 +294,35 @@ def test_compute_differences_per_level_5D_output(spring_mlmc_simulator):
     assert np.array_equal(subtracted_level2, test_model_outputs[2])
     assert np.array_equal(subtracted_level3, test_model_outputs[3])
     assert np.array_equal(subtracted_level4, test_model_outputs[4])
+
+
+def test_compute_differences_write_to_file(tmpdir):
+    """
+    Ensures that _compute_differences_per_level() is properly writing the data
+    to file.
+    """
+    p = tmpdir.mkdir('sub')
+    file_paths = [p.join('level0.txt'), p.join('level1.txt'),
+                  p.join('level2.txt')]
+
+    outputs = {'level0':np.array([1,2,3,4,5]),
+               'level1':np.array([6,7,8]),
+               'level2':np.array([9])}
+    
+    _ = \
+        MLMCSimulator._compute_differences_per_level(outputs,
+                                                     map(str, file_paths))
+    true_level0 = outputs['level0'][:3].reshape(1, -1)
+    true_level1 = outputs['level1'][:2] - outputs['level0'][3:].reshape(1, -1)
+    true_level2 = outputs['level2'] - outputs['level1'][2:].reshape(1, -1)
+
+    test_output_diffs1 = np.genfromtxt(str(file_paths[0])).reshape(1, -1)
+    test_output_diffs2 = np.genfromtxt(str(file_paths[1])).reshape(1, -1)
+    test_output_diffs3 = np.genfromtxt(str(file_paths[2])).reshape(1, -1)
+
+    assert np.array_equal(test_output_diffs1, true_level0)
+    assert np.array_equal(test_output_diffs2, true_level1)
+    assert np.array_equal(test_output_diffs3, true_level2)
 
 
 def test_modular_compute_estimators_simple_1D(spring_mlmc_simulator):
@@ -984,7 +1009,7 @@ def test_write_output_diffs_to_custom_file(tmpdir):
     output_diffs = np.genfromtxt(file_path)
     
     assert np.array_equal(output_diffs, np.arange(5))
-    
+
 
 def test_plot_output_diffs(tmpdir):
     p = tmpdir.mkdir('sub')
