@@ -628,8 +628,7 @@ def test_get_model_inputs_param_exceptions(spring_mlmc_simulator):
         sim.get_model_inputs_to_run_for_each_level('Not A List')
 
 
-def test_simple_1D_store_model_inputs_for_each_level(dummy_arange_simulator,
-                                                     temp_files):
+def test_simple_1D_store_model_inputs_for_each_level(dummy_arange_simulator):
     """
     Ensures the store_model_inputs_to_run_for_each_level method is properly
     allocating values in the array by using a simple arange function.  
@@ -638,13 +637,13 @@ def test_simple_1D_store_model_inputs_for_each_level(dummy_arange_simulator,
 
     sim = dummy_arange_simulator
 
-    sim.store_model_inputs_to_run_for_each_level(sample_sizes, temp_files)
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes, True)
 
-    level = []
-    for i in range(1):
-        level.append(np.loadtxt(temp_files[i]))
+    level0 = np.loadtxt('level0_inputs.txt')
 
-    assert np.array_equal(level[0].flatten(), np.arange(24))
+    assert np.array_equal(level0.flatten(), np.arange(24))
+
+    os.remove('level0_inputs.txt')
 
 
 def test_simple_2D_store_model_inputs_for_each_level(dummy_arange_simulator,
@@ -967,26 +966,18 @@ def test_plot_output_diffs(tmpdir):
     assert file_path.exists()
 
 
-def test_plot_output_diffs_multiple_files(tmpdir):    
-    p = tmpdir.mkdir('sub')
-    file_paths = \
-        [p.join('output_diffs_1.txt'),
-         p.join('output_diffs_2.txt'),
-         p.join('output_diffs_3.txt')]
-
-    np.savetxt(str(file_paths[0]), np.linspace(-5, 5, 50).reshape(2, -1))
-    np.savetxt(str(file_paths[1]), np.linspace(-4, 4, 50).reshape(2, -1))
-    np.savetxt(str(file_paths[2]), np.linspace(-3, 3, 50).reshape(2, -1))
+def test_plot_output_diffs_multiple_files(temp_files):    
+    np.savetxt(temp_files[0], np.linspace(-5, 5, 50).reshape(2, -1))
+    np.savetxt(temp_files[1], np.linspace(-4, 4, 50).reshape(2, -1))
+    np.savetxt(temp_files[2], np.linspace(-3, 3, 50).reshape(2, -1))
 
     x = np.linspace(-5, 5, 5)
     y = x.copy()
 
-    MLMCSimulator.plot_output_diffs(x, y, map(str, file_paths))
+    MLMCSimulator.plot_output_diffs(x, y, temp_files[:3])
     plt.show()
 
-    assert file_paths[0].exists()
-    assert file_paths[1].exists()
-    assert file_paths[2].exists()
+    assert True
 
 
 def test_plot_crack():

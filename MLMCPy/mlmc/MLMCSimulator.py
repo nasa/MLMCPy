@@ -230,14 +230,10 @@ class MLMCSimulator(object):
 
         inputs = self.get_model_inputs_to_run_for_each_level(sample_sizes)
 
-        if isinstance(filenames, list):
-            self._write_data_to_file(inputs, filenames)
-        else:
-            file_names = []
-            for i in range(len(inputs)):
-                file_names.append('%s_inputs.txt' % i)
+        if not isinstance(filenames, list):    
+            filenames = self._create_file_name('_inputs.txt', len(inputs))
             
-            self._write_data_to_file(inputs, file_names)
+        self._write_data_to_file(inputs, filenames)
 
     @staticmethod
     def load_model_outputs_for_each_level(filenames=None):
@@ -322,10 +318,27 @@ class MLMCSimulator(object):
             output_diffs_per_level.append(output_diffs)
 
         if write_to_file:
+            if not isinstance(write_to_file, list):
+                write_to_file = \
+                    MLMCSimulator._create_file_name('_output_diffs.txt',
+                                                    len(output_diffs_per_level))
+
             MLMCSimulator._write_data_to_file(output_diffs_per_level,
-                                                      write_to_file)
+                                              write_to_file)
 
         return output_diffs_per_level
+
+    @staticmethod
+    def _create_file_name(suffix, size):
+        """
+        Helper function that generates a standardized file name.
+        """
+        file_names = []
+
+        for i in range(size):
+            file_names.append('level%s' % i + suffix)
+        
+        return file_names
 
     @staticmethod
     def _compute_output_sample_sizes(model_outputs):
@@ -376,10 +389,7 @@ class MLMCSimulator(object):
         num_plots = len(Z)
 
         for i in range(num_plots):
-            # Decide on using separate figures or one subplot (TODO)
-            if num_plots > 1:
-                plt.subplot(num_plots, 1, i+1)
-
+            plt.figure(figsize=(8, 6))
             if crack_data is not None:
                 MLMCSimulator._plot_crack(crack_data)
 
@@ -1070,6 +1080,8 @@ class MLMCSimulator(object):
                 raise TypeError('sample_sizes[%s] must be an int.' % level)
 
         if filenames is not None:
+            if isinstance(filenames, bool) and filenames == True:
+                return
             for name in range(len(filenames)):
                 if not isinstance(filenames[name], str):
                     raise TypeError('filenames[%s] must be a string.' % name)
