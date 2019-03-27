@@ -230,12 +230,14 @@ class MLMCSimulator(object):
 
         inputs = self.get_model_inputs_to_run_for_each_level(sample_sizes)
 
-        if filenames is not None:
-            for i, key in enumerate(inputs):
-                np.savetxt('%s' % filenames[i], inputs[key])
+        if isinstance(filenames, list):
+            self._write_data_to_file(inputs, filenames)
         else:
-            for key in inputs:
-                np.savetxt('%s_inputs.txt' % key, inputs[key])
+            file_names = []
+            for i in range(len(inputs)):
+                file_names.append('%s_inputs.txt' % i)
+            
+            self._write_data_to_file(inputs, file_names)
 
     @staticmethod
     def load_model_outputs_for_each_level(filenames=None):
@@ -320,7 +322,7 @@ class MLMCSimulator(object):
             output_diffs_per_level.append(output_diffs)
 
         if write_to_file:
-            MLMCSimulator._write_output_diffs_to_file(output_diffs_per_level,
+            MLMCSimulator._write_data_to_file(output_diffs_per_level,
                                                       write_to_file)
 
         return output_diffs_per_level
@@ -351,17 +353,15 @@ class MLMCSimulator(object):
         return sizes
 
     @staticmethod
-    def _write_output_diffs_to_file(output_diffs, filenames=None):
+    def _write_data_to_file(data, filenames=None):
         """
         Takes the output differences per level computed by
         _compute_differences_per_level() and writes to each level to a file.
         """
-        if isinstance(filenames, list):
-            for i in range(len(output_diffs)):
-                np.savetxt('%s' % filenames[i], np.asarray(output_diffs[i]))
-        else:
-            for i in range(len(output_diffs)):
-                np.savetxt('level%s_output_diffs.txt' % i, output_diffs[i])
+        for i, values in enumerate(data.values()) if \
+            isinstance(data, dict) else enumerate(data):
+
+            np.savetxt('%s' % filenames[i], values)
 
     @staticmethod
     def plot_output_diffs(x, y, diffs_files, cmap='coolwarm', levels=6,

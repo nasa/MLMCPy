@@ -296,29 +296,25 @@ def test_compute_differences_per_level_5D_output(spring_mlmc_simulator):
     assert np.array_equal(subtracted_level4, test_model_outputs[4])
 
 
-def test_compute_differences_write_to_file(tmpdir):
+def test_compute_differences_write_to_file(temp_files):
     """
     Ensures that _compute_differences_per_level() is properly writing the data
     to file.
     """
-    p = tmpdir.mkdir('sub')
-    file_paths = [p.join('level0.txt'), p.join('level1.txt'),
-                  p.join('level2.txt')]
-
     outputs = {'level0':np.array([1,2,3,4,5]),
                'level1':np.array([6,7,8]),
                'level2':np.array([9])}
     
     _ = \
-        MLMCSimulator._compute_differences_per_level(outputs,
-                                                     map(str, file_paths))
+        MLMCSimulator._compute_differences_per_level(outputs, temp_files)
+
     true_level0 = outputs['level0'][:3].reshape(1, -1)
     true_level1 = outputs['level1'][:2] - outputs['level0'][3:].reshape(1, -1)
     true_level2 = outputs['level2'] - outputs['level1'][2:].reshape(1, -1)
 
-    test_output_diffs1 = np.genfromtxt(str(file_paths[0])).reshape(1, -1)
-    test_output_diffs2 = np.genfromtxt(str(file_paths[1])).reshape(1, -1)
-    test_output_diffs3 = np.genfromtxt(str(file_paths[2])).reshape(1, -1)
+    test_output_diffs1 = np.genfromtxt(temp_files[0]).reshape(1, -1)
+    test_output_diffs2 = np.genfromtxt(temp_files[1]).reshape(1, -1)
+    test_output_diffs3 = np.genfromtxt(temp_files[2]).reshape(1, -1)
 
     assert np.array_equal(test_output_diffs1, true_level0)
     assert np.array_equal(test_output_diffs2, true_level1)
@@ -632,7 +628,8 @@ def test_get_model_inputs_param_exceptions(spring_mlmc_simulator):
         sim.get_model_inputs_to_run_for_each_level('Not A List')
 
 
-def test_simple_1D_store_model_inputs_for_each_level(dummy_arange_simulator):
+def test_simple_1D_store_model_inputs_for_each_level(dummy_arange_simulator,
+                                                     temp_files):
     """
     Ensures the store_model_inputs_to_run_for_each_level method is properly
     allocating values in the array by using a simple arange function.  
@@ -641,17 +638,17 @@ def test_simple_1D_store_model_inputs_for_each_level(dummy_arange_simulator):
 
     sim = dummy_arange_simulator
 
-    sim.store_model_inputs_to_run_for_each_level(sample_sizes)
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes, temp_files)
 
-    level0 = np.loadtxt('level0_inputs.txt')
+    level = []
+    for i in range(1):
+        level.append(np.loadtxt(temp_files[i]))
 
-    assert np.array_equal(level0.flatten(), np.arange(24))
-
-    for i in range(len(sample_sizes)):
-        os.remove('level%s_inputs.txt' % i)
+    assert np.array_equal(level[0].flatten(), np.arange(24))
 
 
-def test_simple_2D_store_model_inputs_for_each_level(dummy_arange_simulator):
+def test_simple_2D_store_model_inputs_for_each_level(dummy_arange_simulator,
+                                                     temp_files):
     """
     Ensures the store_model_inputs_to_run_for_each_level method is properly
     allocating values in the array by using a simple arange function.  
@@ -660,19 +657,18 @@ def test_simple_2D_store_model_inputs_for_each_level(dummy_arange_simulator):
 
     sim = dummy_arange_simulator
 
-    sim.store_model_inputs_to_run_for_each_level(sample_sizes)
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes, temp_files)
 
-    level0 = np.loadtxt('level0_inputs.txt')
-    level1 = np.loadtxt('level1_inputs.txt')
+    level = []
+    for i in range(2):
+        level.append(np.loadtxt(temp_files[i]))
 
-    assert np.array_equal(level0.flatten(), np.arange(8))
-    assert np.array_equal(level1.flatten(), np.arange(5, 8))
-
-    for i in range(len(sample_sizes)):
-        os.remove('level%s_inputs.txt' % i)
+    assert np.array_equal(level[0].flatten(), np.arange(8))
+    assert np.array_equal(level[1].flatten(), np.arange(5, 8))
 
 
-def test_simple_3D_store_model_inputs_for_each_level(dummy_arange_simulator):
+def test_simple_3D_store_model_inputs_for_each_level(dummy_arange_simulator,
+                                                     temp_files):
     """
     Ensures the store_model_inputs_to_run_for_each_level method is properly
     allocating values in the array by using a simple arange function.  
@@ -681,21 +677,19 @@ def test_simple_3D_store_model_inputs_for_each_level(dummy_arange_simulator):
 
     sim = dummy_arange_simulator
 
-    sim.store_model_inputs_to_run_for_each_level(sample_sizes)
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes, temp_files)
 
-    level0 = np.loadtxt('level0_inputs.txt')
-    level1 = np.loadtxt('level1_inputs.txt')
-    level2 = np.loadtxt('level2_inputs.txt')
+    level = []
+    for i in range(3):
+        level.append(np.loadtxt(temp_files[i]))
 
-    assert np.array_equal(level0.flatten(), np.arange(8))
-    assert np.array_equal(level1.flatten(), np.arange(5, 10))
-    assert np.array_equal(level2.flatten(), np.arange(8, 10))
-
-    for i in range(len(sample_sizes)):
-        os.remove('level%s_inputs.txt' % i)
+    assert np.array_equal(level[0].flatten(), np.arange(8))
+    assert np.array_equal(level[1].flatten(), np.arange(5, 10))
+    assert np.array_equal(level[2].flatten(), np.arange(8, 10))
 
 
-def test_simple_4D_store_model_inputs_for_each_level(dummy_arange_simulator):
+def test_simple_4D_store_model_inputs_for_each_level(dummy_arange_simulator,
+                                                     temp_files):
     """
     Ensures the store_model_inputs_to_run_for_each_level method is properly
     allocating values in the array by using a simple arange function.  
@@ -704,23 +698,20 @@ def test_simple_4D_store_model_inputs_for_each_level(dummy_arange_simulator):
 
     sim = dummy_arange_simulator
 
-    sim.store_model_inputs_to_run_for_each_level(sample_sizes)
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes, temp_files)
 
-    level0 = np.loadtxt('level0_inputs.txt')
-    level1 = np.loadtxt('level1_inputs.txt')
-    level2 = np.loadtxt('level2_inputs.txt')
-    level3 = np.loadtxt('level3_inputs.txt')
+    level = []
+    for i in range(4):
+        level.append(np.loadtxt(temp_files[i]))
 
-    assert np.array_equal(level0.flatten(), np.arange(8))
-    assert np.array_equal(level1.flatten(), np.arange(5, 11))
-    assert np.array_equal(level2.flatten(), np.arange(8, 13))
-    assert np.array_equal(level3.flatten(), np.arange(11, 13))
-
-    for i in range(len(sample_sizes)):
-        os.remove('level%s_inputs.txt' % i)
+    assert np.array_equal(level[0].flatten(), np.arange(8))
+    assert np.array_equal(level[1].flatten(), np.arange(5, 11))
+    assert np.array_equal(level[2].flatten(), np.arange(8, 13))
+    assert np.array_equal(level[3].flatten(), np.arange(11, 13))
 
 
-def test_simple_5D_store_model_inputs_for_each_level(dummy_arange_simulator):
+def test_simple_5D_store_model_inputs_for_each_level(dummy_arange_simulator,
+                                                     temp_files):
     """
     Ensures the store_model_inputs_to_run_for_each_level method is properly
     allocating values in the array by using a simple arange function.  
@@ -729,25 +720,21 @@ def test_simple_5D_store_model_inputs_for_each_level(dummy_arange_simulator):
 
     sim = dummy_arange_simulator
 
-    sim.store_model_inputs_to_run_for_each_level(sample_sizes)
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes, temp_files)
 
-    level0 = np.loadtxt('level0_inputs.txt')
-    level1 = np.loadtxt('level1_inputs.txt')
-    level2 = np.loadtxt('level2_inputs.txt')
-    level3 = np.loadtxt('level3_inputs.txt')
-    level4 = np.loadtxt('level4_inputs.txt')
+    level = []
+    for i in range(5):
+        level.append(np.loadtxt(temp_files[i]))
 
-    assert np.array_equal(level0.flatten(), np.arange(9))
-    assert np.array_equal(level1.flatten(), np.arange(5, 12))
-    assert np.array_equal(level2.flatten(), np.arange(9, 15))
-    assert np.array_equal(level3.flatten(), np.arange(12, 17))
-    assert np.array_equal(level4.flatten(), np.arange(15, 17))
-
-    for i in range(len(sample_sizes)):
-        os.remove('level%s_inputs.txt' % i)
+    assert np.array_equal(level[0].flatten(), np.arange(9))
+    assert np.array_equal(level[1].flatten(), np.arange(5, 12))
+    assert np.array_equal(level[2].flatten(), np.arange(9, 15))
+    assert np.array_equal(level[3].flatten(), np.arange(12, 17))
+    assert np.array_equal(level[4].flatten(), np.arange(15, 17))
 
 
-def test_store_model_inputs_to_run_for_each_level_return(spring_mlmc_simulator):
+def test_store_model_inputs_to_run_for_each_level_return(spring_mlmc_simulator,
+                                                         temp_files):
     """
     Ensures that store_model_inputs_to_run_for_each_level() is properly storing
     the inputs to text files using default file names and transitioning back to 
@@ -756,19 +743,16 @@ def test_store_model_inputs_to_run_for_each_level_return(spring_mlmc_simulator):
     sim = spring_mlmc_simulator
     sample_sizes = [3,2,1]
 
-    sim.store_model_inputs_to_run_for_each_level(sample_sizes)
+    sim.store_model_inputs_to_run_for_each_level(sample_sizes, temp_files)
 
-    level0 = np.loadtxt('level0_inputs.txt')
-    level1 = np.loadtxt('level1_inputs.txt')
-    level2 = np.loadtxt('level2_inputs.txt')
+    level0 = np.loadtxt(temp_files[0])
+    level1 = np.loadtxt(temp_files[1])
+    level2 = np.loadtxt(temp_files[2])
 
 
     assert isinstance(level0, np.ndarray)
     assert isinstance(level1, np.ndarray)
     assert isinstance(level2, np.ndarray)
-
-    for i in range(len(sample_sizes)):
-        os.remove('level%s_inputs.txt' % i)
 
 
 def test_store_model_inputs_custom_file_names(spring_mlmc_simulator, temp_files):
@@ -894,7 +878,7 @@ def test_load_model_outputs_for_each_level_custom_fname(spring_mlmc_simulator,
     """
     sim = spring_mlmc_simulator
     sample_sizes = [3, 2, 1]
-    fnames = temp_files
+    fnames = temp_files[:3]
     sim.store_model_inputs_to_run_for_each_level(sample_sizes, fnames)
 
     model_outputs = sim.load_model_outputs_for_each_level(fnames)
@@ -935,51 +919,33 @@ def test_output_diffs_averages(tmpdir):
     assert np.array_equal(output_avgs[2], np.arange(4))
 
 
-def test_write_output_diffs_to_file():
+def test_write_data_to_files(temp_files):
     """
-    Ensures that write_output_diffs_to_file() is properly writing to file.    
-    """
-    output_diffs_list = [np.arange(5)]
-
-    MLMCSimulator._write_output_diffs_to_file(output_diffs_list)
-
-    output_diffs = np.genfromtxt('level0_output_diffs.txt')
-    
-    assert np.array_equal(output_diffs, np.arange(5))
-
-    os.remove('level0_output_diffs.txt')
-
-
-def test_write_output_diffs_to_multiple_files():
-    """
-    Ensures that write_output_diffs_to_file() is properly writing to file.    
+    Ensures that write_data_to_file() is properly writing to file.    
     """
     output_diffs = [np.arange(5), np.arange(10), np.arange(20)]
 
-    MLMCSimulator._write_output_diffs_to_file(output_diffs)
+    MLMCSimulator._write_data_to_file(output_diffs, temp_files)
 
-    output_diffs1 = np.genfromtxt('level0_output_diffs.txt')
-    output_diffs2 = np.genfromtxt('level1_output_diffs.txt')
-    output_diffs3 = np.genfromtxt('level2_output_diffs.txt')
+    output_diffs1 = np.genfromtxt(temp_files[0])
+    output_diffs2 = np.genfromtxt(temp_files[1])
+    output_diffs3 = np.genfromtxt(temp_files[2])
     
     assert np.array_equal(output_diffs1, np.arange(5))
     assert np.array_equal(output_diffs2, np.arange(10))
     assert np.array_equal(output_diffs3, np.arange(20))
 
-    for i in range(3):
-        os.remove('level%s_output_diffs.txt' % i)
-
 
 def test_write_output_diffs_to_custom_file(tmpdir):
     """
-    Ensures that write_output_diffs_to_file() is properly writing to file.    
+    Ensures that write_data_to_file() is properly writing to file.    
     """
     p = tmpdir.mkdir('sub')
     file_path = str(p.join('output_diffsx.txt'))
 
     output_diffs_list = [np.arange(5)]
 
-    MLMCSimulator._write_output_diffs_to_file(output_diffs_list,
+    MLMCSimulator._write_data_to_file(output_diffs_list,
                                               [file_path])
 
     output_diffs = np.genfromtxt(file_path)
