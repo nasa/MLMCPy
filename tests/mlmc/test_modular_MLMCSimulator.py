@@ -913,6 +913,28 @@ def test_load_model_outputs_for_each_level_exception():
         MLMCSimulator.load_model_outputs_for_each_level('Not an Integer.')
 
 
+def test_output_diffs_averages(tmpdir):
+    """
+    Ensures that _output_diffs_averages() is properly computing the averages
+    across the correct axis, and reshaping if necessary.
+    """
+    p = tmpdir.mkdir('sub')
+    file_paths = [p.join('level0.txt'),
+                  p.join('level1.txt'),
+                  p.join('level2.txt')]
+
+    np.savetxt(str(file_paths[0]), np.arange(6))
+    np.savetxt(str(file_paths[1]), np.arange(5))
+    np.savetxt(str(file_paths[2]), np.arange(4))
+
+    output_avgs = \
+        MLMCSimulator._output_diffs_averages(map(str, file_paths))
+    
+    assert np.array_equal(output_avgs[0], np.arange(6))
+    assert np.array_equal(output_avgs[1], np.arange(5))
+    assert np.array_equal(output_avgs[2], np.arange(4))
+
+
 def test_write_output_diffs_to_file():
     """
     Ensures that write_output_diffs_to_file() is properly writing to file.    
@@ -1031,5 +1053,4 @@ def test_plot_output_diffs_and_crack(tmpdir):
     assert file_paths[0].exists()
     assert file_paths[1].exists()
     assert file_paths[2].exists()
-    
     
