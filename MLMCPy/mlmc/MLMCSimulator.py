@@ -230,10 +230,7 @@ class MLMCSimulator(object):
 
         inputs = self.get_model_inputs_to_run_for_each_level(sample_sizes)
 
-        if not isinstance(filenames, list):    
-            filenames = self._create_file_name('_inputs.txt', len(inputs))
-            
-        self._write_data_to_file(inputs, filenames)
+        self._write_to_file('_inputs.txt', filenames, len(inputs), inputs)
 
     @staticmethod
     def load_model_outputs_for_each_level(filenames=None):
@@ -308,8 +305,7 @@ class MLMCSimulator(object):
         true_sizes = MLMCSimulator._compute_output_sample_sizes(model_outputs)
 
         for i, level in enumerate(model_outputs):
-            output_diffs = \
-                model_outputs[level][:true_sizes[i]]
+            output_diffs = model_outputs[level][:true_sizes[i]]
 
             if i > 0:
                 output_diffs = output_diffs - \
@@ -317,34 +313,34 @@ class MLMCSimulator(object):
 
             output_diffs_per_level.append(output_diffs)
 
-        if write_to_file:
-            if not isinstance(write_to_file, list):
-                write_to_file = \
-                    MLMCSimulator._create_file_name('_output_diffs.txt',
-                                                    len(output_diffs_per_level))
-
-            MLMCSimulator._write_data_to_file(output_diffs_per_level,
-                                              write_to_file)
+        if write_to_file is not None:
+            MLMCSimulator._write_to_file('_output_diffs.txt', write_to_file,
+                                         len(output_diffs_per_level),
+                                         output_diffs_per_level)
 
         return output_diffs_per_level
 
     @staticmethod
-    def _create_file_name(suffix, size):
+    def _write_to_file(suffix, filenames, size, data):
         """
-        Helper function that generates a standardized file name.
+        Writes data to txt file, if filenames is not a list, it creates a list
+        of standardized files in form of 'levelx' + suffix.
         """
-        file_names = []
+        if not isinstance(filenames, list):
+            filenames = []
 
-        for i in range(size):
-            file_names.append('level%s' % i + suffix)
-        
-        return file_names
+            for i in range(size):
+                filenames.append('level%s' % i + suffix)
+
+        for i, values in enumerate(data.values()) if isinstance(data, dict) \
+            else enumerate(data):
+
+            np.savetxt('%s' % filenames[i], values)
 
     @staticmethod
     def _compute_output_sample_sizes(model_outputs):
         """
-        Computes the actual sample sizes for each model level and returns in a
-        list.
+        Computes the actual sample sizes for each model level and returns list.
         """
         sizes = []
         updated_size = 0
@@ -366,17 +362,6 @@ class MLMCSimulator(object):
         return sizes
 
     @staticmethod
-    def _write_data_to_file(data, filenames=None):
-        """
-        Takes the output differences per level computed by
-        _compute_differences_per_level() and writes to each level to a file.
-        """
-        for i, values in enumerate(data.values()) if \
-            isinstance(data, dict) else enumerate(data):
-
-            np.savetxt('%s' % filenames[i], values)
-
-    @staticmethod
     def plot_output_diffs(x, y, diffs_files, cmap='coolwarm', levels=6,
                           crack_data=None):
         """
@@ -391,21 +376,13 @@ class MLMCSimulator(object):
         for i in range(num_plots):
             plt.figure(figsize=(8, 6))
             if crack_data is not None:
-                MLMCSimulator._plot_crack(crack_data)
+                plt.plot(crack_data[0], crack_data[1], crack_data[2])
 
             plt.contourf(X, Y, Z[i].reshape(-1, len(x), order='F'), levels,
                          cmap=cmap)
             plt.title('Level%s' % i)
 
             plt.colorbar()
-
-    @staticmethod
-    def _plot_crack(crack_data):
-        """
-        Uses the crack_data from plot_output_diffs() to plot a crack on each
-        contour plot.
-        """
-        plt.plot(crack_data[0], crack_data[1], crack_data[2])
 
     @staticmethod
     def _output_diffs_averages(diffs_files):
@@ -417,6 +394,7 @@ class MLMCSimulator(object):
 
         for filename in diffs_files:
             data = np.genfromtxt(filename)
+
             if data.ndim == 1:
                 data = data.reshape(1, -1)
 

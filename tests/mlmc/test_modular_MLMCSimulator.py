@@ -948,30 +948,33 @@ def test_write_data_to_files(temp_files):
     """
     output_diffs = [np.arange(5), np.arange(10), np.arange(20)]
 
-    MLMCSimulator._write_data_to_file(output_diffs, temp_files)
+    MLMCSimulator._write_to_file('suffix.txt', True,
+                                 len(output_diffs), output_diffs)
 
-    output_diffs1 = np.genfromtxt(temp_files[0])
-    output_diffs2 = np.genfromtxt(temp_files[1])
-    output_diffs3 = np.genfromtxt(temp_files[2])
+    output_diffs1 = np.genfromtxt('level0suffix.txt')
+    output_diffs2 = np.genfromtxt('level1suffix.txt')
+    output_diffs3 = np.genfromtxt('level2suffix.txt')
     
     assert np.array_equal(output_diffs1, np.arange(5))
     assert np.array_equal(output_diffs2, np.arange(10))
     assert np.array_equal(output_diffs3, np.arange(20))
 
+    for i in range(3):
+        os.remove('level%ssuffix.txt' % i)
 
-def test_write_output_diffs_to_custom_file(tmpdir):
+
+def test_write_output_diffs_to_custom_file(temp_files):
     """
     Ensures that write_data_to_file() is properly writing to file.    
     """
-    p = tmpdir.mkdir('sub')
-    file_path = str(p.join('output_diffsx.txt'))
-
     output_diffs_list = [np.arange(5)]
 
-    MLMCSimulator._write_data_to_file(output_diffs_list,
-                                              [file_path])
+    MLMCSimulator._write_to_file('suffix.txt',
+                                 temp_files,
+                                 len(output_diffs_list),
+                                 output_diffs_list)
 
-    output_diffs = np.genfromtxt(file_path)
+    output_diffs = np.genfromtxt(temp_files[0])
     
     assert np.array_equal(output_diffs, np.arange(5))
 
@@ -1002,15 +1005,6 @@ def test_plot_output_diffs_multiple_files(temp_files):
     plt.show()
 
     assert True
-
-
-def test_plot_crack():
-    crack_data = [np.linspace(-2,2,2),[0,0], 'black']
-    
-    MLMCSimulator._plot_crack(crack_data)
-    plt.show()
-
-    assert np.array_equal(crack_data[0], np.linspace(-2,2,2))
 
 
 def test_plot_output_diffs_and_crack(tmpdir):    
