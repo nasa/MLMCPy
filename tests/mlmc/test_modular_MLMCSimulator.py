@@ -296,7 +296,31 @@ def test_compute_differences_per_level_5D_output(spring_mlmc_simulator):
     assert np.array_equal(subtracted_level4, test_model_outputs[4])
 
 
-def test_compute_differences_write_to_file(temp_files):
+def test_compute_differences_write_to_file():
+    outputs = {'level0':np.array([1,2,3,4,5]),
+               'level1':np.array([6,7,8]),
+               'level2':np.array([9])}
+    
+    _ = \
+        MLMCSimulator._compute_differences_per_level(outputs, True)
+
+    true_level0 = outputs['level0'][:3].reshape(1, -1)
+    true_level1 = outputs['level1'][:2] - outputs['level0'][3:].reshape(1, -1)
+    true_level2 = outputs['level2'] - outputs['level1'][2:].reshape(1, -1)
+
+    test_output_diffs1 = np.genfromtxt('level0_output_diffs.txt').reshape(1, -1)
+    test_output_diffs2 = np.genfromtxt('level1_output_diffs.txt').reshape(1, -1)
+    test_output_diffs3 = np.genfromtxt('level2_output_diffs.txt').reshape(1, -1)
+
+    assert np.array_equal(test_output_diffs1, true_level0)
+    assert np.array_equal(test_output_diffs2, true_level1)
+    assert np.array_equal(test_output_diffs3, true_level2)
+
+    for i in range(3):
+        os.remove('level%s_output_diffs.txt' % i)
+
+
+def test_compute_differences_write_to_custom_file(temp_files):
     """
     Ensures that _compute_differences_per_level() is properly writing the data
     to file.
