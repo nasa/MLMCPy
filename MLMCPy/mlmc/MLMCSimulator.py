@@ -201,8 +201,8 @@ class MLMCSimulator(object):
         inputs_dict = {}
         index_sum = 0
 
-        for level in range(len(sample_sizes)):
-            final_index = index_sum + sample_sizes[level]
+        for level, num_samples in enumerate(sample_sizes):
+            final_index = index_sum + num_samples
 
             if level != len(sample_sizes) - 1:
                 final_index += sample_sizes[level+1]
@@ -210,7 +210,7 @@ class MLMCSimulator(object):
             inputs_dict.update({'level'+str(level): \
                                 inputs[index_sum: final_index]})
 
-            index_sum += sample_sizes[level]
+            index_sum += num_samples
 
         return inputs_dict
 
@@ -284,13 +284,13 @@ class MLMCSimulator(object):
         estimates = 0
         variances = 0
 
-        for level in range(len(differences_per_level)):
-            num_samples = float(len(differences_per_level[level]))
+        for _, differences in enumerate(differences_per_level):
+            num_samples = float(len(differences))
 
             estimates += \
-                np.sum(differences_per_level[level], axis=0) / num_samples
+                np.sum(differences, axis=0) / num_samples
             variances += \
-                np.var(differences_per_level[level], axis=0) / num_samples
+                np.var(differences, axis=0) / num_samples
 
         return estimates, variances
 
@@ -313,7 +313,7 @@ class MLMCSimulator(object):
 
             output_diffs_per_level.append(output_diffs)
 
-        if write_to_file is not None:
+        if write_to_file:
             MLMCSimulator._write_to_file('_output_diffs.txt', write_to_file,
                                          len(output_diffs_per_level),
                                          output_diffs_per_level)
@@ -350,20 +350,15 @@ class MLMCSimulator(object):
         for i in reversed(range(len(output_list))):
             sample_size = len(output_list[i])
 
-            if i == len(output_list) - 1:
-                updated_size = sample_size
-            else:
-                updated_size = sample_size - updated_size
+            updated_size = sample_size - updated_size
 
             sizes.append(updated_size)
 
-        sizes = sizes[::-1]
-
-        return sizes
+        return sizes[::-1]
 
     @staticmethod
     def plot_output_diffs(x, y, diffs_files, cmap='coolwarm', levels=6,
-                          crack_data=None):
+                          crack_data=None, vmax=None, vmin=None):
         """
         Uses the output differences per level files generated in
         compute_estimators and plots them using matplotlib's contourf function.
@@ -374,14 +369,13 @@ class MLMCSimulator(object):
         num_plots = len(Z)
 
         for i in range(num_plots):
-            plt.figure(figsize=(8, 6))
+            plt.figure(figsize=(6, 4))
+            plt.title('Level%s' % i)
             if crack_data is not None:
-                plt.plot(crack_data[0], crack_data[1], crack_data[2])
+                plt.plot(*crack_data)
 
             plt.contourf(X, Y, Z[i].reshape(-1, len(x), order='F'), levels,
-                         cmap=cmap)
-            plt.title('Level%s' % i)
-
+                         cmap=cmap, vmax=vmax, vmin=vmin)
             plt.colorbar()
 
     @staticmethod
@@ -390,7 +384,7 @@ class MLMCSimulator(object):
         Used by plot_output_diffs() to compute the averages of the output
         differences per level. Then returns a list of numpy arrays.
         """
-        output_avgs = []
+        output_diff_avgs = []
 
         for filename in diffs_files:
             data = np.genfromtxt(filename)
@@ -399,11 +393,11 @@ class MLMCSimulator(object):
                 data = data.reshape(1, -1)
 
             num_samples = float(len(data))
-            sums = np.sum(data, axis=0) / num_samples
+            avg = np.sum(data, axis=0) / num_samples
 
-            output_avgs.append(sums)
+            output_diff_avgs.append(avg)
 
-        return output_avgs
+        return output_diff_avgs
 
     def _setup_simulation(self, epsilon, initial_sample_sizes, sample_sizes):
         """

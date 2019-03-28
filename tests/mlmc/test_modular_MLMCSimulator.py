@@ -1005,7 +1005,7 @@ def test_plot_output_diffs_multiple_files(temp_files):
     plt.show()
 
     assert True
-
+    
 
 def test_plot_output_diffs_and_crack(tmpdir):    
     p = tmpdir.mkdir('sub')
