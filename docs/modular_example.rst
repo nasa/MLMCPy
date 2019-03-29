@@ -186,6 +186,7 @@ With ``sample_sizes`` defined in Step 4, MLMC can now be used to generate inputs
 The ``model_outputs_per_level`` are then used to estimate the maximum displacement using the ``compute_estimators`` method. Here, MLMC is able to obtain an estimate with the same level of precision that was calculated using the Monte Carlo Step 2.
 
 .. code-block:: python
+
   # Step 6 - Run the model on each level the specified number of times in
   # sample_sizes to calculate the output differences for levels greater than 1
 
@@ -234,7 +235,7 @@ Finally, the MLMC estimate is compared to the Monte Carlo reference solution.
   print "MLMC computational speedup: %s" %  (mc_total_cost / mlmc_total_cost)
 
 
-For one particular execution of this script in a single-core environment, the following results were obtained. Note that MLMC used 5542, 391, and 3 samples (model evaluations) on levels 1, 2, and 3, respectively, compared with 5000 samples of level 3 used by Monte Carlo simulation. The resulting computational speed up was 2.62
+For one particular execution of this script in a single-core environment, the following results were obtained. Note that MLMC used 5703, 329, and 2 samples (model evaluations) on levels 1, 2, and 3, respectively, compared with 5000 samples of level 3 used by Monte Carlo simulation. The resulting computational speed up was 2.69
 
 ====================     =====================     =====================
 Description              MLMC Value                MC Value
