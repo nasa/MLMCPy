@@ -233,69 +233,6 @@ def test_compute_differences_per_level_simple_5D():
     assert np.array_equal(subtracted_level4, test_model_outputs[4])
 
 
-def test_compute_differences_per_level_3D_output(spring_mlmc_simulator):
-    """
-    Ensures that _compute_differences_per_level() is subtracting and returning 
-    the correct values.
-    """
-    sim = spring_mlmc_simulator
-    sample_sizes = [3, 2, 1]
-    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
-
-    test_model_outputs = \
-        sim._compute_differences_per_level(inputs)
-    subtracted_level1 = inputs['level1'][:2] - inputs['level0'][3:]
-    subtracted_level2 = inputs['level2'] - inputs['level1'][2:]
-
-    assert np.array_equal(test_model_outputs[0], inputs['level0'][:3])
-    assert np.array_equal(subtracted_level1, test_model_outputs[1])
-    assert np.array_equal(subtracted_level2, test_model_outputs[2])
-
-
-def test_compute_differences_per_level_4D_output(spring_mlmc_simulator):
-    """
-    Ensures that _compute_differences_per_level() is subtracting and returning 
-    the correct values.
-    """
-    sim = spring_mlmc_simulator
-    sample_sizes = [4, 3, 2, 1]
-    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
-
-    test_model_outputs = \
-        sim._compute_differences_per_level(inputs)
-    subtracted_level1 = inputs['level1'][:3] - inputs['level0'][4:]
-    subtracted_level2 = inputs['level2'][:2] - inputs['level1'][3:]
-    subtracted_level3 = inputs['level3'] - inputs['level2'][2:]
-
-    assert np.array_equal(test_model_outputs[0], inputs['level0'][:4])
-    assert np.array_equal(subtracted_level1, test_model_outputs[1])
-    assert np.array_equal(subtracted_level2, test_model_outputs[2])
-    assert np.array_equal(subtracted_level3, test_model_outputs[3])
-
-
-def test_compute_differences_per_level_5D_output(spring_mlmc_simulator):
-    """
-    Ensures that _compute_differences_per_level() is subtracting and returning 
-    the correct values.
-    """
-    sim = spring_mlmc_simulator
-    sample_sizes = [5, 4, 3, 2, 1]
-    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
-
-    test_model_outputs = \
-        sim._compute_differences_per_level(inputs)
-    subtracted_level1 = inputs['level1'][:4] - inputs['level0'][5:]
-    subtracted_level2 = inputs['level2'][:3] - inputs['level1'][4:]
-    subtracted_level3 = inputs['level3'][:2] - inputs['level2'][3:]
-    subtracted_level4 = inputs['level4'] - inputs['level3'][2:]
-
-    assert np.array_equal(test_model_outputs[0], inputs['level0'][:5])
-    assert np.array_equal(subtracted_level1, test_model_outputs[1])
-    assert np.array_equal(subtracted_level2, test_model_outputs[2])
-    assert np.array_equal(subtracted_level3, test_model_outputs[3])
-    assert np.array_equal(subtracted_level4, test_model_outputs[4])
-
-
 def test_compute_differences_write_to_file():
     outputs = {'level0':np.array([1,2,3,4,5]),
                'level1':np.array([6,7,8]),
@@ -425,86 +362,11 @@ def test_modular_compute_estimators_simple_5D():
     assert np.isclose(variances, 0.4)
 
 
-def test_modular_compute_estimators_1D_expected_output(spring_mlmc_simulator):
-    """
-    Ensures that compute_estimators() is returning accurate values.
-    """
-    sim = spring_mlmc_simulator
-    sample_sizes = [3]
-    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
-
-    estimates, variances = \
-        sim.compute_estimators(inputs)
-
-    assert np.isclose(estimates, 3.17248042)
-    assert np.isclose(variances, 0.01724233)
-
-
-def test_modular_compute_estimators_2D_expected_output(spring_mlmc_simulator):
-    """
-    Ensures that compute_estimators() is returning accurate values.
-    """
-    sim = spring_mlmc_simulator
-    sample_sizes = [3, 2]
-    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
-
-    estimates, variances = \
-        sim.compute_estimators(inputs)
-
-    assert np.isclose(estimates, 3.17248042)
-    assert np.isclose(variances, 0.01724233)
-
-
-def test_modular_compute_estimators_3D_expected_output(spring_mlmc_simulator):
-    """
-    Ensures that compute_estimators() is returning accurate values.
-    """
-    sim = spring_mlmc_simulator
-    sample_sizes = [3, 2, 1]
-    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
-
-    estimates, variances = \
-        sim.compute_estimators(inputs)
-
-    assert np.isclose(estimates, 3.17248042)
-    assert np.isclose(variances, 0.01724233)
-
-
-def test_modular_compute_estimators_4D_expected_output(spring_mlmc_simulator):
-    """
-    Ensures that compute_estimators() is returning accurate values.
-    """
-    sim = spring_mlmc_simulator
-    sample_sizes = [4, 3, 2, 1]
-    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
-
-    estimates, variances = \
-        sim.compute_estimators(inputs)
-
-    assert np.isclose(estimates, 3.18597516)
-    assert np.isclose(variances, 0.00983539)
-
-
-def test_modular_compute_estimators_5D_expected_output(spring_mlmc_simulator):
-    """
-    Ensures that compute_estimators() is returning accurate values.
-    """
-    sim = spring_mlmc_simulator
-    sample_sizes = [5, 4, 3, 2, 1]
-    inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
-
-    estimates, variances = \
-        sim.compute_estimators(inputs)
-
-    assert np.isclose(estimates, 3.12703401)
-    assert np.isclose(variances, 0.0090739)
-
-
-def test_modular_compute_estimators_return_type(spring_mlmc_simulator):
+def test_modular_compute_estimators_return_type(dummy_arange_simulator):
     """
     Ensures that compute_estimators() is returning a np.ndarray.
     """
-    sim = spring_mlmc_simulator
+    sim = dummy_arange_simulator
     sample_sizes = [3, 2, 1]
     inputs = sim.get_model_inputs_to_run_for_each_level(sample_sizes)
 
@@ -609,7 +471,6 @@ def test_get_model_inputs_three_samples_expected_output(dummy_arange_simulator):
     assert np.array_equal(inputs['level0'].ravel(), np.arange(5))
     assert np.array_equal(inputs['level1'].ravel(), np.arange(3,6))
     assert np.array_equal(inputs['level2'].ravel(), np.arange(5,6))
-
 
 
 def test_get_model_inputs_five_samples_expected_output(dummy_arange_simulator):
@@ -754,48 +615,6 @@ def test_simple_5D_store_model_inputs_for_each_level(dummy_arange_simulator,
     assert np.array_equal(level[2].flatten(), np.arange(9, 15))
     assert np.array_equal(level[3].flatten(), np.arange(12, 17))
     assert np.array_equal(level[4].flatten(), np.arange(15, 17))
-
-
-def test_store_model_inputs_to_run_for_each_level_return(spring_mlmc_simulator,
-                                                         temp_files):
-    """
-    Ensures that store_model_inputs_to_run_for_each_level() is properly storing
-    the inputs to text files using default file names and transitioning back to 
-    np.ndarray.
-    """
-    sim = spring_mlmc_simulator
-    sample_sizes = [3,2,1]
-
-    sim.store_model_inputs_to_run_for_each_level(sample_sizes, temp_files)
-
-    level0 = np.loadtxt(temp_files[0])
-    level1 = np.loadtxt(temp_files[1])
-    level2 = np.loadtxt(temp_files[2])
-
-
-    assert isinstance(level0, np.ndarray)
-    assert isinstance(level1, np.ndarray)
-    assert isinstance(level2, np.ndarray)
-
-
-def test_store_model_inputs_custom_file_names(spring_mlmc_simulator, temp_files):
-    """
-    Ensures that store_model_inputs_to_run_for_each_level() is properly storing
-    the inputs to text files using custom file names and transitioning back to 
-    np.ndarray.
-    """
-    sim = spring_mlmc_simulator
-    sample_sizes = [3, 2, 1]
-    fnames = temp_files
-    sim.store_model_inputs_to_run_for_each_level(sample_sizes, fnames)
-    
-    level0 = np.loadtxt(temp_files[0])
-    level1 = np.loadtxt(temp_files[1])
-    level2 = np.loadtxt(temp_files[2])
-
-    assert isinstance(level0, np.ndarray)
-    assert isinstance(level1, np.ndarray)
-    assert isinstance(level2, np.ndarray)
 
 
 def test_store_model_inputs_to_run_for_each_level_except(spring_mlmc_simulator):
@@ -963,37 +782,27 @@ def test_write_data_to_files(temp_files):
         os.remove('level%ssuffix.txt' % i)
 
 
-def test_write_output_diffs_to_custom_file(temp_files):
+def test_plot_output_diffs_one_file(temp_files):
     """
-    Ensures that write_data_to_file() is properly writing to file.    
+    Because these are being graphed, must be visually inspected, should expect
+    a contourf plot.
     """
-    output_diffs_list = [np.arange(5)]
-
-    MLMCSimulator._write_to_file('suffix.txt',
-                                 temp_files,
-                                 len(output_diffs_list),
-                                 output_diffs_list)
-
-    output_diffs = np.genfromtxt(temp_files[0])
-    
-    assert np.array_equal(output_diffs, np.arange(5))
-
-
-def test_plot_output_diffs(tmpdir):
-    p = tmpdir.mkdir('sub')
-    file_path = p.join('output_diffs.txt')
-    np.savetxt(str(file_path), np.linspace(-3, 3, 50).reshape(2, -1))
+    np.savetxt(temp_files[0], np.linspace(-3, 3, 50).reshape(2, -1))
 
     x = np.linspace(-3, 3, 5)
     y = x.copy()
 
-    MLMCSimulator.plot_output_diffs(x, y, [str(file_path)])
+    MLMCSimulator.plot_output_diffs(x, y, [temp_files[0]])
     plt.show()
 
-    assert file_path.exists()
+    assert True
 
 
-def test_plot_output_diffs_multiple_files(temp_files):    
+def test_plot_output_diffs_multiple_files(temp_files):
+    """
+    Because these are being graphed, must be visually inspected, should expect
+    three contourf plots.
+    """
     np.savetxt(temp_files[0], np.linspace(-5, 5, 50).reshape(2, -1))
     np.savetxt(temp_files[1], np.linspace(-4, 4, 50).reshape(2, -1))
     np.savetxt(temp_files[2], np.linspace(-3, 3, 50).reshape(2, -1))
@@ -1007,25 +816,20 @@ def test_plot_output_diffs_multiple_files(temp_files):
     assert True
     
 
-def test_plot_output_diffs_and_crack(tmpdir):    
-    p = tmpdir.mkdir('sub')
-    file_paths = \
-        [p.join('output_diffs_1.txt'),
-         p.join('output_diffs_2.txt'),
-         p.join('output_diffs_3.txt')]
-
-    np.savetxt(str(file_paths[0]), np.linspace(-5, 5, 50).reshape(2, -1))
-    np.savetxt(str(file_paths[1]), np.linspace(-4, 4, 50).reshape(2, -1))
-    np.savetxt(str(file_paths[2]), np.linspace(-3, 3, 50).reshape(2, -1))
+def test_plot_output_diffs_and_crack(temp_files):    
+    """
+    Because these are being graphed, must be visually inspected, should expect
+    a line in the center of contourf plots.
+    """
+    np.savetxt(temp_files[0], np.linspace(-5, 5, 50).reshape(2, -1))
+    np.savetxt(temp_files[1], np.linspace(-4, 4, 50).reshape(2, -1))
+    np.savetxt(temp_files[2], np.linspace(-3, 3, 50).reshape(2, -1))
 
     x = np.linspace(-5, 5, 5)
     y = x.copy()
     crack_data = [np.linspace(-2,2,2),[0,0], 'black']
-    MLMCSimulator.plot_output_diffs(x, y, map(str, file_paths),
-                                    crack_data=crack_data)
+    MLMCSimulator.plot_output_diffs(x, y, temp_files[:3], crack_data=crack_data)
+
     plt.show()
 
-    assert file_paths[0].exists()
-    assert file_paths[1].exists()
-    assert file_paths[2].exists()
-    
+    assert True
