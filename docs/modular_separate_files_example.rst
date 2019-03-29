@@ -162,6 +162,7 @@ With the ``sample_sizes`` defined in Step 3, MLMC can now be used to generate in
 Optionally, custom file names can be defined and given to ``store_model_inputs_to_run_for_each_level`` method. 
 
 .. code-block:: python
+
   # Step 5 - Store inputs to be used in model evaluation step:
   mlmc_simulator.store_model_inputs_to_run_for_each_level(sample_sizes)
 
