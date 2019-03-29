@@ -18,7 +18,7 @@ model_outputs_per_level = \
 
 # Step 7 - Aggregate model outputs to compute estimators:
 estimates, variances = \
-        MLMCSimulator.compute_estimators(model_outputs_per_level)
+    MLMCSimulator.compute_estimators(model_outputs_per_level)
 
 # Step 8 - Summarize results:
 
