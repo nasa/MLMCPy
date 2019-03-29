@@ -68,7 +68,7 @@ For this example, three levels will be employed, where each level corresponds to
 Step 1: Initialization; define the random input parameter 
 -------------------------------------------
 
-Note that because this example demonstrates the usage of modular MLMC over multiple files, Python modules and models will be imported/initialized in multiple scripts. 
+Note that because this example demonstrates the usage of modular MLMC over multiple files, modules and models will be imported/initialized in multiple scripts. 
 
 Begin by importing the needed Python modules, including MLMCPy classes and the SpringMassModel class that defines the spring mass numerical integrator:
 
@@ -135,9 +135,8 @@ Step 3: Initialize MLMC and calculate optimal sample sizes for each level
 With a random input defined in Step 1 and multiple fidelity models defined in Step 2, MLMC can now be used to estimate the maximum displacement using the ``MLMCSimulator`` class. 
 Here, the modular functions are utilized to calculate the optimal sample sizes per level. 
 
-Note ``epsilon`` is taken from the example found in the MLMCPy repository:
-``/MLMCPy/examples/spring_mass/from_model/adv_run_mlmc_from_model.py``
-
+Note ``epsilon`` is taken from the example found in the MLMCPy repo
+(``/MLMCPy/examples/spring_mass/from_model/adv_run_mlmc_from_model.py``):
 
 .. code-block:: python
 
@@ -166,12 +165,12 @@ Optionally, custom file names can be defined and given to ``store_model_inputs_t
   # Step 5 - Store inputs to be used in model evaluation step:
   mlmc_simulator.store_model_inputs_to_run_for_each_level(sample_sizes)
 
-Note that if custom file names are not given to the ``store_model_inputs_to_run_for_each_level`` method, a standardized filename of ``levelX_inputs.txt`` (where X is the level) will be generated.
+Note that if custom file names are not given to the ``store_model_inputs_to_run_for_each_level`` method, a standard file name of ``levelX_inputs.txt`` (where X is the level) will be generated.
 
 Step 5: Initialize models; generate model outputs for each level
 ---------------------------------------------------------------
 
-Because this step takes place in a separate script, begin by importing the needed Python modules and initialize the SpringMassModel class that defines the spring mass numerical integrator:
+This step takes place in a separate file, begin by importing the needed Python modules and initialize the SpringMassModel class that defines the spring mass numerical integrator:
 
 .. code-block:: python
 
@@ -227,7 +226,7 @@ Using the files generated in Step 4, generate model outputs for each level and s
 Step 6: Load model outputs; aggregate model outputs to compute estimators
 ---------------------------------------------------------------
 
-Because this step takes place in a separate script, begin by importing the MLMCSimulator class:
+This step takes place in a separate script, begin by importing the MLMCSimulator class:
 
 .. code-block:: python
 
@@ -240,7 +239,7 @@ Use the ``load_model_outputs_for_each_level`` method to load the outputs generat
   model_outputs_per_level = \
     MLMCSimulator.load_model_outputs_for_each_level()
 
-Note that the file names used in Step 5 ``levelX_outputs.txt`` are a standardized format. If custom file names are used, they must be passed to ``load_model_outputs_for_each_level`` as a list of file names.
+Note that the file names used in Step 5 ``levelX_outputs.txt`` are a standard format. If custom file names are used, they must be passed to ``load_model_outputs_for_each_level`` as a list of file names.
 
 The ``model_outputs_per_level`` are used to estimate the maximum displacement using the ``compute_estimators`` method.
 
