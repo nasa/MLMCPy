@@ -182,7 +182,7 @@ Note that this example demonstrates the use of the ``compute_costs_and_variances
 Step 5: Generate model inputs and aggregate model outputs to compute estimators
 ---------------------------------------------------------------
 
-With ``sample_sizes`` defined in Step 4, MLMC can now be used to generate inputs for each level. These inputs will then be used by the model's evaluate function the model outputs per level.
+With ``sample_sizes`` defined in Step 4, MLMC can now be used to generate inputs for each level. These inputs will then be used by the model's evaluate function to calculate the ``model_outputs_per_level``.
 The ``model_outputs_per_level`` are then used to estimate the maximum displacement using the ``compute_estimators`` method. Here, MLMC is able to obtain an estimate with the same level of precision that was calculated using the Monte Carlo Step 2.
 
 .. code-block:: python
@@ -235,7 +235,7 @@ Finally, the MLMC estimate is compared to the Monte Carlo reference solution.
   print "MLMC computational speedup: %s" %  (mc_total_cost / mlmc_total_cost)
 
 
-For one particular execution of this script in a single-core environment, the following results were obtained. Note that MLMC used 5703, 329, and 2 samples (model evaluations) on levels 1, 2, and 3, respectively, compared with 5000 samples of level 3 used by Monte Carlo simulation. The resulting computational speed up was 2.69
+For one particular execution of this script in a single-core environment, the following results were obtained. Note that MLMC used 5703, 329, and 2 samples (model evaluations) on levels 1, 2, and 3, respectively, compared with 5000 samples of level 3 used by Monte Carlo simulation. The resulting computational speed up was 2.69.
 
 ====================     =====================     =====================
 Description              MLMC Value                MC Value
