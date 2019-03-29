@@ -13,7 +13,7 @@ interface, and running MLMC with a hierarchy of these models (according to time
 step size) to obtain an estimator for a quantity of interest (max. displacement)
 within a prescribed precision. The full source code for this example can be 
 found in the MLMCPy repository: 
-``/MLMCPy/examples/spring_mass/from_model/run_mlmc_from_model.py``
+``/MLMCPy/examples/spring_mass/from_model/adv_run_mlmc_from_model.py``
 
 .. _spring-mass:
 
