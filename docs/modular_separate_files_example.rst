@@ -220,7 +220,7 @@ Using the files generated in Step 1, generate model outputs for each level and s
 
   np.savetxt("level2_outputs.txt", np.array(outputs_level2))
 
-Step 3: Load model outputs; aggregate model outputs to compute estimators
+Step 3: Load model outputs and aggregate model outputs to compute estimators
 ---------------------------------------------------------------
 
 This step takes place in a separate file, and can be found in the MLMCPy repo:

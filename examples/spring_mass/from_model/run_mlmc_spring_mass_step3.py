@@ -13,15 +13,16 @@ analysis into 3 steps/scripts. This is script #3 for computing MLMC estimators
 using previously calculated model outputs by loading them from file
 '''
 
+# Step 3 - Load model outputs and aggregate model outputs to compute estimators
+
 model_outputs_per_level = \
     MLMCSimulator.load_model_outputs_for_each_level()
 
-# Step 7 - Aggregate model outputs to compute estimators:
+# Aggregate model outputs to compute estimators:
 estimates, variances = \
     MLMCSimulator.compute_estimators(model_outputs_per_level)
 
-# Step 8 - Summarize results:
-
+# Summarize results:
 print
 print 'MLMC estimate: %s' % estimates
 print 'MLMC precision: %s' % variances

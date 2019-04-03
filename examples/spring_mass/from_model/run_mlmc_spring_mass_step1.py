@@ -18,7 +18,9 @@ MLMCPy to determine how many model evaluations to do on each level and the
 input parameters to perform the evaluations with.
 '''
 
-# Step 1 - Define random variable for spring stiffness:
+# Step 1 - Compute the optimal sample sizes and store model inputs:
+
+# Define random variable for spring stiffness:
 # Need to provide a sampleable function to create RandomInput instance in MLMCPy
 def beta_distribution(shift, scale, alpha, beta, size):
 
@@ -29,7 +31,7 @@ stiffness_distribution = RandomInput(distribution_function=beta_distribution,
                                      shift=1.0, scale=2.5, alpha=3., beta=2.,
                                      random_seed=1)
 
-# Step 2 - Initialize spring-mass models for MLMC. Here using three levels
+# Initialize spring-mass models for MLMC. Here using three levels
 # with MLMC defined by different time steps:
 model_level1 = SpringMassModel(mass=1.5, time_step=1.0, cost=0.00034791)
 model_level2 = SpringMassModel(mass=1.5, time_step=0.1, cost=0.00073748)
@@ -37,10 +39,10 @@ model_level3 = SpringMassModel(mass=1.5, time_step=0.01, cost=0.00086135)
 
 models = [model_level1, model_level2, model_level3]
 
-# Step 3 - Initialize MLMCSimulator:
+# Initialize MLMCSimulator:
 mlmc_simulator = MLMCSimulator(stiffness_distribution, models)
 
-# Step 4 - Calculate optimal sample size for each level:
+# Calculate optimal sample size for each level:
 # Optional - compute cost and variances of model (or user knows these beforehand)
 initial_sample_size = 100
 epsilon = np.sqrt(0.00170890122096)
@@ -52,5 +54,5 @@ costs, variances = \
 sample_sizes = mlmc_simulator.compute_optimal_sample_sizes(costs, variances,
                                                            epsilon)
 
-# Step 5 - Store inputs to be used in model evaluation step:
+# Store inputs to be used in model evaluation step:
 mlmc_simulator.store_model_inputs_to_run_for_each_level(sample_sizes)
