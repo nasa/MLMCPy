@@ -189,7 +189,7 @@ Initialize the model hierarchy as found in Step 1:
 
 Note for this step of this example, a list of models is not necessary.
 
-Using the files generated in Step 1, generate model outputs for each level and store them:
+Using the input files generated in Step 1, generate model outputs for each level and store them:
 
 .. code-block:: python
 
@@ -220,6 +220,8 @@ Using the files generated in Step 1, generate model outputs for each level and s
 
   np.savetxt("level2_outputs.txt", np.array(outputs_level2))
 
+Note the ``levelX_outputs.txt`` is a standard format used by MLMC, custom file names can be used instead.
+
 Step 3: Load model outputs and aggregate model outputs to compute estimators
 ---------------------------------------------------------------
 
@@ -237,7 +239,7 @@ Use the ``load_model_outputs_for_each_level`` method to load the outputs generat
 .. code-block:: python
 
   model_outputs_per_level = \
-    MLMCSimulator.load_model_outputs_for_each_level()
+      MLMCSimulator.load_model_outputs_for_each_level()
 
 Note that the files created in Step 2 ``levelX_outputs.txt`` are a standard format. If custom file names are used, they must be passed to ``load_model_outputs_for_each_level`` as a list of file names.
 
