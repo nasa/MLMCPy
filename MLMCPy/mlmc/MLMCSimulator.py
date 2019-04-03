@@ -2,7 +2,6 @@ import imp
 from datetime import timedelta
 import timeit
 import numpy as np
-import matplotlib.pyplot as plt
 
 from MLMCPy.input import Input
 from MLMCPy.model import Model
@@ -355,50 +354,7 @@ class MLMCSimulator(object):
             sizes.append(updated_size)
 
         return sizes[::-1]
-
-    @staticmethod
-    def plot_output_diffs(x, y, diffs_files, cmap='coolwarm', levels=6,
-                          crack_data=None, vmax=None, vmin=None):
-        """
-        Uses the output differences per level files generated in
-        compute_estimators and plots them using matplotlib's contourf function.
-        """
-        X, Y = np.meshgrid(x, y)
-        Z = MLMCSimulator._output_diffs_averages(diffs_files)
-
-        num_plots = len(Z)
-
-        for i in range(num_plots):
-            plt.figure(figsize=(6, 4))
-            plt.title('Level%s' % i)
-            if crack_data is not None:
-                plt.plot(*crack_data)
-
-            plt.contourf(X, Y, Z[i].reshape(-1, len(x), order='F'), levels,
-                         cmap=cmap, vmax=vmax, vmin=vmin)
-            plt.colorbar()
-
-    @staticmethod
-    def _output_diffs_averages(diffs_files):
-        """
-        Used by plot_output_diffs() to compute the averages of the output
-        differences per level. Then returns a list of numpy arrays.
-        """
-        output_diff_avgs = []
-
-        for filename in diffs_files:
-            data = np.genfromtxt(filename)
-
-            if data.ndim == 1:
-                data = data.reshape(1, -1)
-
-            num_samples = float(len(data))
-            avg = np.sum(data, axis=0) / num_samples
-
-            output_diff_avgs.append(avg)
-
-        return output_diff_avgs
-
+    
     def _setup_simulation(self, epsilon, initial_sample_sizes, sample_sizes):
         """
         Performs any necessary manipulation of epsilon and initial_sample_sizes.

@@ -2,7 +2,6 @@ import os
 import pytest
 import sys
 import numpy as np
-import matplotlib.pyplot as plt
 
 # Needed when running mpiexec. Be sure to run from tests directory.
 if 'PYTHONPATH' not in os.environ:
@@ -739,28 +738,6 @@ def test_load_model_outputs_for_each_level_exception():
         MLMCSimulator.load_model_outputs_for_each_level('Not an Integer.')
 
 
-def test_output_diffs_averages(tmpdir):
-    """
-    Ensures that _output_diffs_averages() is properly computing the averages
-    across the correct axis, and reshaping if necessary.
-    """
-    p = tmpdir.mkdir('sub')
-    file_paths = [p.join('level0.txt'),
-                  p.join('level1.txt'),
-                  p.join('level2.txt')]
-
-    np.savetxt(str(file_paths[0]), np.arange(6))
-    np.savetxt(str(file_paths[1]), np.arange(5))
-    np.savetxt(str(file_paths[2]), np.arange(4))
-
-    output_avgs = \
-        MLMCSimulator._output_diffs_averages(map(str, file_paths))
-    
-    assert np.array_equal(output_avgs[0], np.arange(6))
-    assert np.array_equal(output_avgs[1], np.arange(5))
-    assert np.array_equal(output_avgs[2], np.arange(4))
-
-
 def test_write_data_to_files(temp_files):
     """
     Ensures that write_data_to_file() is properly writing to file.    
@@ -781,55 +758,3 @@ def test_write_data_to_files(temp_files):
     for i in range(3):
         os.remove('level%ssuffix.txt' % i)
 
-
-def test_plot_output_diffs_one_file(temp_files):
-    """
-    Because these are being graphed, must be visually inspected, should expect
-    a contourf plot.
-    """
-    np.savetxt(temp_files[0], np.linspace(-3, 3, 50).reshape(2, -1))
-
-    x = np.linspace(-3, 3, 5)
-    y = x.copy()
-
-    MLMCSimulator.plot_output_diffs(x, y, [temp_files[0]])
-    plt.show()
-
-    assert True
-
-
-def test_plot_output_diffs_multiple_files(temp_files):
-    """
-    Because these are being graphed, must be visually inspected, should expect
-    three contourf plots.
-    """
-    np.savetxt(temp_files[0], np.linspace(-5, 5, 50).reshape(2, -1))
-    np.savetxt(temp_files[1], np.linspace(-4, 4, 50).reshape(2, -1))
-    np.savetxt(temp_files[2], np.linspace(-3, 3, 50).reshape(2, -1))
-
-    x = np.linspace(-5, 5, 5)
-    y = x.copy()
-
-    MLMCSimulator.plot_output_diffs(x, y, temp_files[:3])
-    plt.show()
-
-    assert True
-    
-
-def test_plot_output_diffs_and_crack(temp_files):    
-    """
-    Because these are being graphed, must be visually inspected, should expect
-    a line in the center of contourf plots.
-    """
-    np.savetxt(temp_files[0], np.linspace(-5, 5, 50).reshape(2, -1))
-    np.savetxt(temp_files[1], np.linspace(-4, 4, 50).reshape(2, -1))
-    np.savetxt(temp_files[2], np.linspace(-3, 3, 50).reshape(2, -1))
-
-    x = np.linspace(-5, 5, 5)
-    y = x.copy()
-    crack_data = [np.linspace(-2,2,2),[0,0], 'black']
-    MLMCSimulator.plot_output_diffs(x, y, temp_files[:3], crack_data=crack_data)
-
-    plt.show()
-
-    assert True
