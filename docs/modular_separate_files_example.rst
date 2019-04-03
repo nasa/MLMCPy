@@ -71,7 +71,7 @@ Step 1: Compute the optimal sample sizes and store model inputs
 Note that because this example demonstrates the usage of modular MLMC over multiple files, modules and models will be imported/initialized in multiple scripts. 
 
 This section can be found in the MLMCPy repo:
-(``/MLMCPy/examples/spring_mass/from_model/run_mlmc_spring_mass_step1.py``):
+(``/MLMCPy/examples/spring_mass/from_model/run_mlmc_spring_mass_step1.py``)
 
 Begin by importing the needed Python modules, including MLMCPy classes and the SpringMassModel class that defines the spring mass numerical integrator:
 
@@ -105,7 +105,7 @@ The first step in an analysis is to define the random variable representing the 
 
 .. code-block:: python
 
-    # Step 1 - Define random variable for spring stiffness:
+    # Define random variable for spring stiffness:
     # Need to provide a sampleable function to create RandomInput instance in MLMCPy
     def beta_distribution(shift, scale, alpha, beta, size):
 
@@ -121,7 +121,7 @@ In order to apply the MLMC method (Equation (3)), multiple levels of models (def
 
 .. code-block:: python
 
-  # Step 3 - Initialize spring-mass models for MLMC. Here using three levels 
+  # Initialize spring-mass models for MLMC. Here using three levels 
   # with MLMC defined by different time steps:
   model_level1 = SpringMassModel(mass=1.5, time_step=1.0, cost=0.00034791)
   model_level2 = SpringMassModel(mass=1.5, time_step=0.1, cost=0.00073748)
@@ -129,7 +129,7 @@ In order to apply the MLMC method (Equation (3)), multiple levels of models (def
 
   models = [model_level1, model_level2, model_level3]
 
-With a random input defined in Step 1 and multiple fidelity models defined in Step 2, MLMC can now be used to estimate the maximum displacement using the ``MLMCSimulator`` class. 
+With a random input and multiple fidelity models defined, MLMC can now be used to estimate the maximum displacement using the ``MLMCSimulator`` class. 
 Here, the modular functions are utilized to calculate the optimal sample sizes per level. 
 
 Note ``epsilon`` is taken from the example found in the MLMCPy repo:
@@ -137,7 +137,7 @@ Note ``epsilon`` is taken from the example found in the MLMCPy repo:
 
 .. code-block:: python
 
-  # Step 4 - Calculate optimal sample size for each level:
+  # Calculate optimal sample size for each level:
   # Optional - compute cost and variances of model (or user knows these beforehand)
   initial_sample_size = 100
   epsilon = np.sqrt(0.00170890122096)
@@ -152,11 +152,11 @@ Note ``epsilon`` is taken from the example found in the MLMCPy repo:
 Note that this example demonstrates the use of the ``compute_costs_and_variances`` method, but if the costs and variances are known values, they can be plugged in directly to the ``compute_optimal_sample_sizes`` method.
 
 With the ``sample_sizes`` defined in Step 3, MLMC can now be used to generate inputs for each level and then store them in a ``.txt`` file. 
-Optionally, custom file names can be defined and given to ``store_model_inputs_to_run_for_each_level`` method. 
+Optionally, custom file names can be given to ``store_model_inputs_to_run_for_each_level`` method. 
 
 .. code-block:: python
 
-  # Step 5 - Store inputs to be used in model evaluation step:
+  # Store inputs to be used in model evaluation step:
   mlmc_simulator.store_model_inputs_to_run_for_each_level(sample_sizes)
 
 Note that if custom file names are not given to the ``store_model_inputs_to_run_for_each_level`` method, a standard file name of ``levelX_inputs.txt`` (where X is the level) will be generated.
@@ -177,11 +177,11 @@ Begin by importing the needed Python modules and initialize the SpringMassModel 
 
 A snippet of the SpringMassModel class can be found in Step 1.
 
-Initialize the model hierarchy as found in Step 2:
+Initialize the model hierarchy as found in Step 1:
 
 .. code-block:: python
 
-  # Step 3 - Initialize spring-mass models for MLMC. Here using three levels 
+  # Initialize spring-mass models for MLMC. Here using three levels 
   # with MLMC defined by different time steps:
   model_level1 = SpringMassModel(mass=1.5, time_step=1.0, cost=0.00034791)
   model_level2 = SpringMassModel(mass=1.5, time_step=0.1, cost=0.00073748)
@@ -189,7 +189,7 @@ Initialize the model hierarchy as found in Step 2:
 
 Note for this step of this example, a list of models is not necessary.
 
-Using the files generated in Step 4, generate model outputs for each level and store them:
+Using the files generated in Step 1, generate model outputs for each level and store them:
 
 .. code-block:: python
 
@@ -232,25 +232,24 @@ Begin by importing the MLMCSimulator class:
 
   from MLMCPy.mlmc import MLMCSimulator
 
-Use the ``load_model_outputs_for_each_level`` method to load the outputs generated in Step 5:
+Use the ``load_model_outputs_for_each_level`` method to load the outputs generated in Step 2:
 
 .. code-block:: python
 
   model_outputs_per_level = \
     MLMCSimulator.load_model_outputs_for_each_level()
 
-Note that the file names used in Step 5 ``levelX_outputs.txt`` are a standard format. If custom file names are used, they must be passed to ``load_model_outputs_for_each_level`` as a list of file names.
+Note that the files created in Step 2 ``levelX_outputs.txt`` are a standard format. If custom file names are used, they must be passed to ``load_model_outputs_for_each_level`` as a list of file names.
 
 The ``model_outputs_per_level`` are used to estimate the maximum displacement using the ``compute_estimators`` method.
 
 .. code-block:: python
 
-  # Step 7 - Aggregate model outputs to compute estimators:
+  # Aggregate model outputs to compute estimators:
   estimates, variances = \
       MLMCSimulator.compute_estimators(model_outputs_per_level)
 
-Step 7: Summarize results
----------------------------------------------------------------
+Now, summarize the results:
 
 .. code-block:: python
   print 'MLMC estimate: %s' % estimates
