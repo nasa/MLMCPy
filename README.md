@@ -18,6 +18,12 @@ MLMCPy is intended for use with Python 2.7 and relies on the following packages:
 * mpi4py (optional for running in parallel)
 * pytest (optional for running unit tests)
 
+A requirements.txt file is included for easy installation of dependecies with pip:
+
+```
+pip install -r requirements.txt
+```
+
 Example Usage
 ---------------
 
@@ -61,7 +67,7 @@ mlmc_simulator = MLMCSimulator(stiffness_distribution, models)
 
 Getting Started
 ----------------
-MLMCPy can be installed via pip from [PyPI](https://pypi.org/project/MLMCPy/).
+MLMCPy can be installed via pip from [PyPI](https://pypi.org/project/MLMCPy/):
 
 ```
 pip install mlmcpy
@@ -71,11 +77,6 @@ MLMCPy can also be installed using the `git clone` command:
 
 ```
 git clone https://github.com/nasa/MLMCPy.git
-```
-A requirements.txt file is included for easy installation of dependecies with pip:
-
-```
-pip install -r requirements.txt
 ```
 
 The best way to get started with MLMCPy is to take a look at the scripts in the examples/ directory. A simple example of propagating uncertainty through a spring mass system can be found in the ``examples/spring_mass/from_model`` directory. There is a second example that demonstrates the case where a user has access to input-output data from multiple levels of models (rather than a model they can directly evaluate) in the ``examples/spring_mass/from_data/`` directory. For more information, see the source code documentation in ``docs/MLMCPy_documentation.pdf`` (a work in progress).
