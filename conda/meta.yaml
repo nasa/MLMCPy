@@ -10,7 +10,7 @@ source:
 build:
   noarch: python
   number: 0
-  script: python -m pip install -r requirements.txt
+  script: "{{ PYTHON }} -m pip install . -vv"
 
 requirements:
   host:
@@ -18,6 +18,8 @@ requirements:
     - pip
   run:
     - python
+    - numpy
+    - scipy
 
 about:
   home: https://github.com/nasa/MLMCPy
