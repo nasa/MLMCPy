@@ -26,5 +26,4 @@ about:
   license: APACHE
   license_file: LICENSE
   summary: 'MLMCPy is an open source Python implementation of the Multi-Level Monte Carlo (MLMC) method for uncertainty propagation.'
-  dev_url: https://github.com/nasa/MLMCPy
   doc_source_url: https://github.com/nasa/MLMCPy/blob/master/README.md
