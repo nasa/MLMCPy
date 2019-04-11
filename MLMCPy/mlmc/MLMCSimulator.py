@@ -145,7 +145,8 @@ class MLMCSimulator(object):
 
         return costs, variances
 
-    def compute_optimal_sample_sizes(self, costs, variances, user_epsilon=None):
+    def compute_optimal_sample_sizes(self, costs, variances, user_epsilon=None,
+                                     target_cost=None):
         """
         Computes the sample size for each level to be used in simulation.
 
@@ -160,6 +161,8 @@ class MLMCSimulator(object):
 
         if user_epsilon is not None:
             self._process_epsilon(user_epsilon)
+        elif target_cost is not None:
+            self._process_target_cost(target_cost)
 
         mu = self._compute_mu(costs, variances)
 
@@ -177,7 +180,7 @@ class MLMCSimulator(object):
 
             self._show_time_estimate(estimated_runtime)
 
-        if user_epsilon is not None:
+        if (user_epsilon, target_cost) is not None:
             return self._sample_sizes
 
         return None
