@@ -1,5 +1,3 @@
-import timeit
-
 from MLMCPy.mlmc import MLMCSimulator
 
 '''
@@ -15,20 +13,16 @@ analysis into 3 steps/scripts. This is script #3 for computing MLMC estimators
 using previously calculated model outputs by loading them from file
 '''
 
+# Step 3 - Load model outputs and aggregate model outputs to compute estimators
+
 model_outputs_per_level = \
     MLMCSimulator.load_model_outputs_for_each_level()
 
-#Step 6 - Aggregate model outputs to compute estimators:
-mlmc_start = timeit.default_timer()
-
+# Aggregate model outputs to compute estimators:
 estimates, variances = \
-        MLMCSimulator.compute_estimators(model_outputs_per_level)
+    MLMCSimulator.compute_estimators(model_outputs_per_level)
 
-mlmc_total_cost = timeit.default_timer() - mlmc_start
-
-#Step 7 - Summarize results:
-
+# Summarize results:
 print
 print 'MLMC estimate: %s' % estimates
 print 'MLMC precision: %s' % variances
-print 'MLMC total cost: %s' % mlmc_total_cost
