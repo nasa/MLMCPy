@@ -310,11 +310,13 @@ class MLMCSimulator:
         :param variances: ndarray of variances
         :return: ndarray of mu value for each QoI.
         """
-        sum_sqrt_vc = np.sum(np.sqrt(variances * costs), axis=0)
 
         if self._target_cost is None:
+            sum_sqrt_vc = np.sum(np.sqrt(variances * costs), axis=0)
             mu = np.power(self._epsilons, -2) * sum_sqrt_vc
         else:
+            max_variances = np.max(variances, axis=1).reshape(costs.shape)
+            sum_sqrt_vc = np.sum(np.sqrt(max_variances * costs), axis=0)
             mu = self._target_cost * float(self._num_cpus) / sum_sqrt_vc
 
         return mu
