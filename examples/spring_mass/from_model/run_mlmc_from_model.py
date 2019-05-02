@@ -12,7 +12,10 @@ displacement using multi-level Monte Carlo. Here, we use Model and RandomInput
 objects with functional forms as inputs to MLMCPy. See the
 /examples/spring_mass/from_data/ for an example of using precomputed data
 in files as inputs.
-p
+
+Demonstrates the modular ("advanced") usage of MLMCPy where a user splits the
+analysis into multiple steps within one script. For an implementation using
+steps across multiple scripts, see the files run_mlmc_spring_mass_step(1-3).py.
 '''
 
 
@@ -48,9 +51,9 @@ print "Target precision: ", precision_mc
 
 # Step 3 - Initialize spring-mass models for MLMC. Here using three levels 
 # with MLMC defined by different time steps
-model_level1 = SpringMassModel(mass=1.5, time_step=1.0)
-model_level2 = SpringMassModel(mass=1.5, time_step=0.1)
-model_level3 = SpringMassModel(mass=1.5, time_step=0.01)
+model_level1 = SpringMassModel(mass=1.5, time_step=1.0, cost=0.00034791)
+model_level2 = SpringMassModel(mass=1.5, time_step=0.1, cost=0.00073748)
+model_level3 = SpringMassModel(mass=1.5, time_step=0.01, cost=0.00086135)
 
 models = [model_level1, model_level2, model_level3]
 
