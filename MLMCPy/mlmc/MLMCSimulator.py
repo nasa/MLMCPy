@@ -373,6 +373,7 @@ class MLMCSimulator(object):
             self.compute_optimal_sample_sizes(costs, variances)
 
         else:
+            self._process_epsilon(epsilon)
             self._target_cost = None
             self._caching_enabled = False
             sample_sizes = self._verify_sample_sizes(sample_sizes, False)
