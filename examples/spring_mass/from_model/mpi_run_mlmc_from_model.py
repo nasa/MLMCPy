@@ -16,7 +16,7 @@ in files as inputs.
 '''
 
 # Step 0 - Set up MPI communicator
-comm = MPI.COMM_WORLD
+comm = MPI.COMM_WORLD.Clone()
 rank = comm.Get_rank()
 size = comm.Get_size()
 
@@ -35,12 +35,12 @@ stiffness_distribution = RandomInput(distribution_function=beta_distribution,
 
 # Step 2: Run standard Monte Carlo to generate a reference solution and target 
 # precision
-num_samples = 5000
-model = SpringMassModel(mass=1.5, time_step=0.01)
-input_samples = stiffness_distribution.draw_samples(num_samples)
-output_samples_mc = np.zeros(num_samples)
-
 if rank == 0:
+    num_samples = 5000
+    model = SpringMassModel(mass=1.5, time_step=0.01)
+    input_samples = stiffness_distribution.draw_samples(num_samples)
+    output_samples_mc = np.zeros(num_samples)
+
     # only run MC on root process
 
     start_mc = timeit.default_timer()
