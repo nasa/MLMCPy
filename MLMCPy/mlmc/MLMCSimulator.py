@@ -484,10 +484,10 @@ class MLMCSimulator:
         """
         sample_indices = np.empty(0)
         if self._caching_enabled:
-            sample_indices = np.argwhere(sample == self._cached_inputs[level])
-
+            bool_array = (sample == self._cached_inputs[level])
+            sample_indices = np.where((bool_array).all(axis=1))[0]
         if len(sample_indices) == 1:
-            output = self._cached_outputs[level, sample_indices[0]][0]
+            output = self._cached_outputs[level, sample_indices[0]]
         else:
             output = self._models[level].evaluate(sample)
 
