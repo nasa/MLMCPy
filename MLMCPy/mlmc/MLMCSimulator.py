@@ -354,11 +354,13 @@ class MLMCSimulator:
         :param variances: ndarray of variances
         :return: ndarray of mu value for each QoI.
         """
-        sum_sqrt_vc = np.sum(np.sqrt(variances * costs), axis=0)
 
         if self._target_cost is None:
+            sum_sqrt_vc = np.sum(np.sqrt(variances * costs), axis=0)
             mu = np.power(self._epsilons, -2) * sum_sqrt_vc
         else:
+            max_variances = np.max(variances, axis=1).reshape(costs.shape)
+            sum_sqrt_vc = np.sum(np.sqrt(max_variances * costs), axis=0)
             mu = self._target_cost * float(self._num_cpus) / sum_sqrt_vc
 
         return mu
@@ -526,10 +528,10 @@ class MLMCSimulator:
         """
         sample_indices = np.empty(0)
         if self._caching_enabled:
-            sample_indices = np.argwhere(sample == self._cached_inputs[level])
-
+            bool_array = (sample == self._cached_inputs[level])
+            sample_indices = np.where((bool_array).all(axis=1))[0]
         if len(sample_indices) == 1:
-            output = self._cached_outputs[level, sample_indices[0]][0]
+            output = self._cached_outputs[level, sample_indices[0]]
         else:
             output = self._models[level].evaluate(sample)
 
